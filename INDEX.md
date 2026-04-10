@@ -93,6 +93,7 @@ These are **templates to customize per project**. Humans read them, agents refer
 | Testing (anti-flakiness + CI gate) | [delivery/specs/testing.md](delivery/specs/testing.md) |
 | Git conventions (branches, commits, PR) | [delivery/specs/git-conventions.md](delivery/specs/git-conventions.md) |
 | Deployment (env vars, production guards) | [delivery/specs/deployment.md](delivery/specs/deployment.md) |
+| **Project Memory** (emergent patterns, cross-story coherence) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |
 
 ### Epics & stories (`delivery/epic-X/`)
 
@@ -186,6 +187,7 @@ Each phase emits a JSONL event → `delivery/metrics/events.jsonl` → `report.p
 | **Pre-coding gates** | Spec validation + test patterns (Layer 6) | [.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md), [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) |
 | **Failure pattern (FP-NNN)** | Reactive incident registry | [.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md) |
 | **Metrics event** | JSONL log entry at phase transitions | [.claude/specs/metrics-events.md](.claude/specs/metrics-events.md) |
+| **Project Memory** | Cross-story coherence (emergent patterns, shared components, architectural decisions) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |
 
 ---
 

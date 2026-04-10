@@ -249,6 +249,7 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 | `delivery/specs/testing.md` | All agents + CI | Anti-flakiness rules, Playwright + Venom patterns, CI gate |
 | `delivery/specs/git-conventions.md` | Coders + reviewers | Branch names, commit messages, PR discipline, immutability rules |
 | `delivery/specs/deployment.md` | Team Lead + agents | Env vars, dev modes (`make dev` / `make dev-test`), production safety guards |
+| **`delivery/specs/project-memory.md`** | **Tech spec writer + humans** | **Living file of emergent cross-story patterns. Only cross-story coherence mechanism in Kiat.** |
 | `delivery/epic-X/story-NN.md` | All agents | **THE SPEC** — acceptance criteria, contracts, edge cases (written by BMAD) |
 | `checklists/*.md` | Humans + agents | "Am I done?" templates (user-editable per project) |
 | `patterns/*.md` | Humans | Architectural patterns (user-editable per project) |
@@ -415,6 +416,28 @@ Coders run `kiat-test-patterns-check` at **Step 0.5** (right after context budge
 This converts *"did you read testing.md?"* from a trust question into a textual evidence question. The acknowledgment is either in the output or it isn't.
 
 Full rules in [`.claude/skills/kiat-validate-spec.md`](.claude/skills/kiat-validate-spec.md) and [`.claude/skills/kiat-test-patterns-check/SKILL.md`](.claude/skills/kiat-test-patterns-check/SKILL.md).
+
+---
+
+### Complementary Mechanism — Project Memory (cross-story coherence)
+
+The 6 enforcement layers above all operate at **story scope**: they fire on one story at a time, catch problems within that story, and have no view of the project as a whole. That's intentional — agents are deliberately isolated to keep context budgets tight.
+
+**But isolation has a cost: coherence drift.** Story 5 can invent a new pattern without knowing story 3 already solved the same problem differently. Over 15-20 stories, the project becomes a salad of inconsistent naming, duplicated components, and contradictory architectural choices. Each story is locally correct; the project is globally incoherent.
+
+**[`delivery/specs/project-memory.md`](delivery/specs/project-memory.md) is Kiat's answer to this.** It's a living document that captures **emergent patterns** across stories:
+
+- Naming conventions that emerged from real implementations
+- Shared UI components that should be reused, not recreated
+- API patterns by domain (how endpoints are structured per resource family)
+- Architectural decisions that span multiple stories
+- Known gotchas specific to this project
+
+**It's the only cross-story coherence mechanism in Kiat.** Unlike the 6 enforcement layers (which are mechanical and scoped to one story), `project-memory.md` is a **shared memory** that the tech-spec-writer reads *before* writing a new story's technical spec, to ensure the new story aligns with what's already established.
+
+**Maintenance:** manual, by humans, for now. An agent-driven maintenance mode may be added later once we know what patterns actually accumulate in practice.
+
+**Complementary mechanism at epic scope:** the `_epic.md` template includes an "Epic Patterns" section that captures patterns specific to one epic (shorter-lived, bounded scope). Cross-epic patterns get promoted to `project-memory.md`.
 
 ---
 
@@ -703,6 +726,7 @@ kiat/
 │       ├── design-system.md           # Colors, spacing, typography
 │       ├── frontend-architecture.md   # React patterns, hooks, accessibility
 │       ├── git-conventions.md         # Branches, commits, PR discipline
+│       ├── project-memory.md          # Emergent cross-story patterns (coherence mechanism)
 │       ├── security-checklist.md      # OWASP, RLS testing
 │       ├── service-communication.md   # DI patterns, error handling
 │       └── testing.md                 # Anti-flakiness rules + CI gate

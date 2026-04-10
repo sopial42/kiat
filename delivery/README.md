@@ -19,6 +19,7 @@ delivery/
 │   ├── design-system.md              # Colors, spacing, typography, Tailwind
 │   ├── frontend-architecture.md      # React patterns, hooks, accessibility
 │   ├── git-conventions.md            # Branches, commits, PR discipline
+│   ├── project-memory.md             # Emergent cross-story patterns (coherence)
 │   ├── security-checklist.md         # OWASP, RLS testing
 │   ├── service-communication.md      # DI patterns
 │   └── testing.md                    # Anti-flakiness rules (+ CI gate)
