@@ -1,10 +1,12 @@
 ---
 name: kiat-test-patterns-check
 description: >
-  Forced-response test patterns self-check. Invoked by kiat-backend-coder and
-  kiat-frontend-coder at Step 0.5 (after context budget check, BEFORE writing
-  any code or tests). Converts "did you read testing.md?" from a trust question
-  into a forced acknowledgment via scope-detection + selective block loading.
+  Forced-response test patterns self-check for Kiat coders. Use before writing
+  any test or production code to confirm which anti-flakiness patterns apply to
+  the current story, then load only the relevant rule blocks. Triggers at
+  Step 0.5 of the Kiat coder workflow, right after the context budget check.
+  Catches the "I skimmed testing.md last week" failure mode by requiring a
+  per-pattern verbatim acknowledgment that the reviewer can grep for later.
 allowed-tools:
   - Read
   - Grep
@@ -13,67 +15,55 @@ allowed-tools:
 
 # Test Patterns Self-Check (Router)
 
-**Purpose:** `delivery/specs/testing.md` has 26+ anti-flakiness rules. Coders skim them, forget under pressure, or decide "this story doesn't need it". This skill converts the passive checklist into a **forced acknowledgment per applicable pattern**, loaded selectively to keep context budget under control.
+## Why this skill exists
 
-**When invoked:** by `kiat-backend-coder` or `kiat-frontend-coder` at Step 0.5 — after the context budget check, BEFORE planning or writing any test.
+`delivery/specs/testing.md` carries the project's accumulated anti-flakiness rules — most of them learned from real production incidents. Every rule has a cost in time lost when it was discovered and a cost in reliability when it was violated. Yet the file is long, and coders under time pressure tend to skim it or assume "this story doesn't need it". By the time a reviewer catches the drift, the fix is a 45-minute cycle instead of a 30-second self-correction.
 
-**Output:** `TEST_PATTERNS: ACKNOWLEDGED` on line 1, followed by scope-detection answers and acknowledgment blocks for every applicable pattern.
+This skill turns "did you read testing.md?" from a trust question into a textual-evidence question. You answer 9 short scope questions, load only the rule blocks that apply, and paste each block's acknowledgment paragraph verbatim into your handoff. The reviewer greps for those paragraphs later and cross-checks them against your actual code. If the acknowledgment is absent or the code contradicts it, the drift is mechanical to detect.
 
----
+The selective loading matters because Kiat coders operate under a 25k-token context budget. Reading all 26+ rules for every story would blow the budget on most features. Loading only the applicable blocks keeps a typical story at 3-5 blocks (~3-5k tokens) instead of the full 26.
 
-## How It Works (Selective Loading)
+## How to use
 
-Unlike a monolithic checklist, this skill is a **router**. It works in 3 steps:
+The workflow is 3 steps. Do them in order — the scope detection comes before loading anything, because loading blocks you don't need wastes budget you may need later.
 
-1. **Read this SKILL.md** (short — scope detection questions + block registry)
-2. **Answer the 9 scope-detection questions** in writing (yes / no per question)
-3. **For every `yes`, Read ONLY the corresponding block file** from `blocks/`
+### Step 1 — Scope detection
 
-This keeps context load small: a story that only involves forms and Playwright E2E loads 2 block files (A + E), not 9. Average story loads 3-5 blocks.
+Read the story spec. For each of the 9 questions below, answer `yes` or `no` **in writing** in your output. Hedging ("maybe", "partially") is fine if you explain the edge case; the point is to force a conscious decision, not to pass a quiz.
 
----
+1. **A.** Does this story involve a form or input fields?
+2. **B.** Does this story involve auto-save (any `useAutoSave` usage, or "saves as user types")?
+3. **C.** Does this story involve Clerk auth, protected routes, or the project's auth wrapper hook?
+4. **D.** Does this story involve user-scoped data (RLS — "User B cannot see User A's rows")?
+5. **E.** Does this story involve Playwright E2E tests?
+6. **F.** Does this story involve Venom backend tests?
+7. **G.** Does this story involve async mutations, `useMutation`, PATCH endpoints, or optimistic locking via `updated_at`?
+8. **H.** Does this story involve file upload (S3, MinIO, or any multipart path)?
+9. **I.** Does this story involve multi-step wizards or stepper UI with state persistence?
 
-## Step 1: Scope Detection (Answer All 9)
+### Step 2 — Load applicable blocks
 
-Read the story spec. For each question below, answer **yes** or **no** in writing:
-
-1. **A.** Does this story involve a form or input fields? *(yes / no)*
-2. **B.** Does this story involve auto-save (`useAutoSave` or "saves as user types")? *(yes / no)*
-3. **C.** Does this story involve Clerk auth, protected routes, or `useAppAuth`? *(yes / no)*
-4. **D.** Does this story involve user-scoped data / RLS (user can't see other users' data)? *(yes / no)*
-5. **E.** Does this story involve Playwright E2E tests? *(yes / no)*
-6. **F.** Does this story involve Venom backend tests? *(yes / no)*
-7. **G.** Does this story involve async mutations, `useMutation`, PATCH endpoints, or optimistic locking (`updated_at`)? *(yes / no)*
-8. **H.** Does this story involve file upload, S3, or MinIO? *(yes / no)*
-9. **I.** Does this story involve multi-step wizards or stepper UI with state persistence? *(yes / no)*
-
----
-
-## Step 2: Load Applicable Blocks
-
-For each question answered `yes` in Step 1, **Read the corresponding block file** from the `blocks/` directory:
+For each `yes` in Step 1, read the corresponding file from `references/`:
 
 | ID | Topic | File |
 |---|---|---|
-| **A** | Forms / input fields | [`blocks/block-a-forms.md`](blocks/block-a-forms.md) |
-| **B** | Auto-save | [`blocks/block-b-autosave.md`](blocks/block-b-autosave.md) |
-| **C** | Clerk auth | [`blocks/block-c-clerk.md`](blocks/block-c-clerk.md) |
-| **D** | RLS / user-scoped data | [`blocks/block-d-rls.md`](blocks/block-d-rls.md) |
-| **E** | Playwright E2E | [`blocks/block-e-playwright.md`](blocks/block-e-playwright.md) |
-| **F** | Venom backend tests | [`blocks/block-f-venom.md`](blocks/block-f-venom.md) |
-| **G** | Async mutations / locking | [`blocks/block-g-mutations.md`](blocks/block-g-mutations.md) |
-| **H** | File upload / S3 / MinIO | [`blocks/block-h-file-upload.md`](blocks/block-h-file-upload.md) |
-| **I** | Multi-step wizards | [`blocks/block-i-wizards.md`](blocks/block-i-wizards.md) |
+| **A** | Forms / input fields | [`references/block-a-forms.md`](references/block-a-forms.md) |
+| **B** | Auto-save | [`references/block-b-autosave.md`](references/block-b-autosave.md) |
+| **C** | Clerk auth | [`references/block-c-clerk.md`](references/block-c-clerk.md) |
+| **D** | RLS / user-scoped data | [`references/block-d-rls.md`](references/block-d-rls.md) |
+| **E** | Playwright E2E | [`references/block-e-playwright.md`](references/block-e-playwright.md) |
+| **F** | Venom backend tests | [`references/block-f-venom.md`](references/block-f-venom.md) |
+| **G** | Async mutations / optimistic locking | [`references/block-g-mutations.md`](references/block-g-mutations.md) |
+| **H** | File upload / S3 / MinIO | [`references/block-h-file-upload.md`](references/block-h-file-upload.md) |
+| **I** | Multi-step wizards | [`references/block-i-wizards.md`](references/block-i-wizards.md) |
 
-**Rule (per CLAUDE.md meta-rule #4):** only load blocks where your Step 1 answer was `yes`. Do NOT load all 9 to "be safe" — that defeats the selective design. A 3-block load costs ~3x less context than loading all 9.
+Load only the blocks you answered `yes` to. Loading all 9 "to be safe" defeats the design — it costs roughly 3× the context of a targeted load and gives the reviewer no signal about what you actually thought was relevant.
 
----
+### Step 3 — Emit the acknowledgment
 
-## Step 3: Emit Acknowledgment
+Each block file ends with a short **Required acknowledgment** paragraph. Copy it verbatim into your output. Verbatim matters here because the reviewer runs a literal grep against your handoff — paraphrased text looks like drift and triggers a follow-up. The acknowledgment text is short by design; pasting it costs almost nothing.
 
-Each block file contains a short rule summary and a **Required acknowledgment** paragraph. You MUST paste the acknowledgment paragraph verbatim into your output.
-
-Your final output format:
+Your output format:
 
 ```
 TEST_PATTERNS: ACKNOWLEDGED
@@ -81,15 +71,15 @@ TEST_PATTERNS: ACKNOWLEDGED
 Story: story-NN-<slug>
 
 Scope detection:
-  A. Forms/input fields:        YES
-  B. Auto-save:                 YES
-  C. Clerk auth:                NO
-  D. RLS:                       YES
-  E. Playwright E2E:            YES
-  F. Venom backend tests:       YES
-  G. Async mutations / locking: YES
-  H. File upload:               NO
-  I. Multi-step wizards:        NO
+  A. Forms/input fields:         YES
+  B. Auto-save:                  YES
+  C. Clerk auth:                 NO
+  D. RLS:                        YES
+  E. Playwright E2E:             YES
+  F. Venom backend tests:        YES
+  G. Async mutations / locking:  YES
+  H. File upload:                NO
+  I. Multi-step wizards:         NO
 
 Applicable blocks: A, B, D, E, F, G (6 blocks loaded)
 
@@ -101,26 +91,28 @@ Applicable blocks: A, B, D, E, F, G (6 blocks loaded)
 
 ... (one block per YES)
 
-→ Proceeding to Step 1 (read spec).
+→ Proceeding to spec reading (Step 1 of coder workflow).
 ```
 
----
+## What happens next — drift detection
 
-## Enforcement Rules
+When the reviewer receives your handoff, they do two things with this block:
 
-1. **No skipping.** If a scope answer is `yes`, the corresponding block MUST be loaded and its acknowledgment MUST appear verbatim in your output. Paraphrasing is not acceptable — the rule text is load-bearing and the reviewer will grep for it.
+1. **Grep for `TEST_PATTERNS: ACKNOWLEDGED`** — if it's missing, the handoff is incomplete and the reviewer returns a `BLOCKED` verdict without reading further.
+2. **Cross-check each loaded block against the actual code** — if you acknowledged Block E rules but the Playwright test contains `page.waitForTimeout(500)`, that's a drift. The reviewer flags it as `BLOCKED` with a reference to the specific rule you contradicted.
 
-2. **All-NO is suspicious.** If every scope answer is `no`, justify why in writing (e.g., "pure config refactor, no tests needed"). A story with no applicable test patterns is rare and Team Lead may flag it.
+This is stricter than a normal "I noticed a bug" review because the acknowledgment is written evidence that you knew the rule. Catching the drift isn't about blame — it's about protecting the rule system itself. If acknowledgments don't correlate with code, the skill is ceremonial and the next incident will cost another team-week.
 
-3. **Audit trail.** Your handoff to the reviewer MUST include the full `TEST_PATTERNS: ACKNOWLEDGED` block. The reviewer greps for this line and cross-checks each loaded block against your actual implementation.
+## Edge cases
 
-4. **Drift detection.** If your actual code violates an acknowledgment you made (e.g., you acknowledged Block E rules but used `waitForTimeout` in a test), the reviewer flags it as `VERDICT: BLOCKED` with reference to the specific block you violated. This is a protocol violation, not just a bug.
+**Every answer is `no`.** Rare but possible — e.g., a pure config refactor, a README update, a log message tweak. If every scope answer is `no`, write one sentence explaining why (so the reviewer knows you looked and decided nothing applied, versus skipped the skill entirely). The reviewer will usually accept it; if the story has any test implications, they'll push back.
 
----
+**A question is ambiguous.** If you can't decide yes or no — for example, "the spec mentions a form but I'm only wiring up the submit handler, not the inputs" — answer `yes` and load the block. The cost of an unnecessary block is ~500 tokens; the cost of missing a rule is a 45-minute retry cycle.
 
-## Notes
+**The story needs a pattern not in the registry.** If you find a failure mode that isn't covered by any block, add a new block file under `references/`, register it in the table above, and document the underlying rule in `delivery/specs/testing.md`. The registry and the spec should stay in sync — if a new block exists here but not there, future coders won't know the rule is mandatory.
 
-- The selective loading is designed to keep context budget small. Load only what applies.
-- Blocks are short (30-60 lines each) and self-contained. You can load them in parallel if multiple apply.
-- If a new pitfall is discovered, add a new block file under `blocks/` and register it in the table above. Also update `delivery/specs/testing.md` with the reference.
-- The forced-response format works because it converts "did you read it?" from a trust question into a textual evidence question. The acknowledgment is either in the output or it isn't.
+## Maintenance
+
+- Block files are short by design (roughly 30-60 lines each). If a block grows past ~80 lines, split it or move detail into the spec file it references.
+- Acknowledgment paragraphs are the load-bearing text. Changing their wording means reviewers must update their grep; update both in the same commit.
+- When a new production incident surfaces a new rule, add the block before the story that would have been saved by it lands — otherwise the skill runs behind reality instead of ahead of it.

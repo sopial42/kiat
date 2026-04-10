@@ -137,7 +137,7 @@ Read in this order:
 2. **[structure.md](structure.md)** — Why each decision
 3. **[CLAUDE.md](CLAUDE.md)** — Universal coding rules
 4. **[.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md)** — How orchestration actually works
-5. **[.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md)** — How Phase 0 prevents bad specs from shipping
+5. **[.claude/skills/kiat-validate-spec/SKILL.md](.claude/skills/kiat-validate-spec/SKILL.md)** — How Phase 0 prevents bad specs from shipping
 6. **[.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md)** — How to learn from real failures
 
 ---

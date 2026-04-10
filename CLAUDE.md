@@ -44,6 +44,8 @@ Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/age
 
 Your full protocol is in [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-team-lead.md). Key phases: 0a spec validation, 0b context budget check (reads the story's `## Skills` section to validate budget), parallel coder launch, 3-way verdict handling, 45-min fix budget, metrics emission, failure pattern consultation at escalation. You receive stories that the tech spec writer has already written and validated.
 
+**Invocation requirement**: Team Lead uses the `Agent` tool to spawn coders and reviewers, which only works when Team Lead runs as the **main session thread** — sub-agents cannot spawn other sub-agents in Claude Code. Launch Team Lead via `claude --agent kiat-team-lead`, or set `"agent": "kiat-team-lead"` as the project default in `.claude/settings.json`. Invoking Team Lead via `@agent-kiat-team-lead` from an ordinary Claude session will fail silently when it tries to spawn coders.
+
 ### If you are a Coder (backend or frontend)
 
 Your agent definition ([kiat-backend-coder.md](.claude/agents/kiat-backend-coder.md) or [kiat-frontend-coder.md](.claude/agents/kiat-frontend-coder.md)) contains all critical rules baked in: Step 0 context budget self-check, Step 0.5 test patterns acknowledgment, spec reading, planning, building, test running, handoff. Read the story's `## Skills` section at Step 1 to know which contextual skills to load (in addition to the always-loaded `kiat-test-patterns-check`).

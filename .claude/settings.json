@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(make test-back:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(python3 .claude/tools/report.py:*)",
+      "Bash(python3 .claude/tools/doc-audit.py:*)"
+    ],
+    "deny": [
+      "Edit(delivery/metrics/events.jsonl)",
+      "Write(delivery/metrics/events.jsonl)"
+    ]
+  },
+  "hooks": {
+    "SubagentStop": [
+      {
+        "matcher": "kiat-backend-coder|kiat-frontend-coder",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/tools/hooks/check-test-patterns-ack.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "kiat-backend-reviewer|kiat-frontend-reviewer",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/tools/hooks/check-verdict-line.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

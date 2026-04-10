@@ -308,7 +308,7 @@ Kiat layers six mechanisms, from cheapest to hardest, so that even if one fails,
 
 #### Layer 1 — Machine-parseable verdicts (3-way outcome)
 
-Reviewers (`kiat-backend-reviewer`, `kiat-frontend-reviewer`) run a review skill (`kiat-review-backend.md`, `kiat-review-frontend.md`) that **mandates** one of three verdicts on the first line of output:
+Reviewers (`kiat-backend-reviewer`, `kiat-frontend-reviewer`) run a review skill (`kiat-review-backend/SKILL.md`, `kiat-review-frontend/SKILL.md`) that **mandates** one of three verdicts on the first line of output:
 
 ```
 VERDICT: APPROVED           ← merge-ready
@@ -349,7 +349,7 @@ Full budget rules in [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-te
 
 Some concerns are too **cross-layer** to catch with a general reviewer checklist. Clerk auth is the canonical example: a single auth bug can live in 5 files at once (frontend hook + middleware + backend JWT + Playwright fixture + env var), and the general `kiat-review-frontend` skill has 45 other things to check — Clerk gets skimmed.
 
-**Solution: a dedicated [`kiat-clerk-auth-review`](.claude/skills/kiat-clerk-auth-review.md) skill with a hard trigger rule baked into both reviewer agents.**
+**Solution: a dedicated [`kiat-clerk-auth-review`](.claude/skills/kiat-clerk-auth-review/SKILL.md) skill with a hard trigger rule baked into both reviewer agents.**
 
 The trigger is written as an imperative with an **explicit greppable pattern list**:
 > **You MUST run this skill if the diff touches ANY of: `@clerk/nextjs`, `useAppAuth`, `<ClerkProvider>`, `middleware.ts`, `clerkSetup`, `signInAsUserB`, `NEXT_PUBLIC_CLERK_*`, `Authorization: Bearer`, `ClerkAuthMiddleware`, `ENABLE_TEST_AUTH`, ...**
@@ -430,7 +430,7 @@ Full rules in [`.claude/specs/context-budgets.md`](.claude/specs/context-budgets
 
 Layers 1-5 catch problems at review time or via audit trails. **Layer 6 prevents two common failure modes from reaching coders at all** — both solved at Phase 0, before any code is written.
 
-**6a — Spec ambiguity ([`kiat-validate-spec`](.claude/skills/kiat-validate-spec.md))**
+**6a — Spec ambiguity ([`kiat-validate-spec`](.claude/skills/kiat-validate-spec/SKILL.md))**
 
 The single highest-ROI check in Kiat. BMAD writes specs in prose; prose is ambiguous. A vague verb like "validate email" or "handle errors" hides behind well-written sentences, then explodes into a multi-cycle review ping-pong when the coder interprets it one way and the reviewer expects another.
 
@@ -455,7 +455,7 @@ Coders run `kiat-test-patterns-check` at **Step 0.5** (right after context budge
 
 This converts *"did you read testing.md?"* from a trust question into a textual evidence question. The acknowledgment is either in the output or it isn't.
 
-Full rules in [`.claude/skills/kiat-validate-spec.md`](.claude/skills/kiat-validate-spec.md) and [`.claude/skills/kiat-test-patterns-check/SKILL.md`](.claude/skills/kiat-test-patterns-check/SKILL.md).
+Full rules in [`.claude/skills/kiat-validate-spec/SKILL.md`](.claude/skills/kiat-validate-spec/SKILL.md) and [`.claude/skills/kiat-test-patterns-check/SKILL.md`](.claude/skills/kiat-test-patterns-check/SKILL.md).
 
 ---
 
@@ -494,6 +494,23 @@ This is why Kiat invests in:
 6. **Pre-coding validation gates** → ambiguous specs and unread testing rules are caught before any code is written
 
 If compliance drifts in practice, the next enforcement lever is mechanical: have Team Lead automatically reject any review output missing the audit line and force a re-run. That's the final gate if trust erodes.
+
+---
+
+## 🧪 Skill Evaluation: Proving the Skills Actually Work
+
+Skills are prompts, and prompts don't have unit tests. Reading a SKILL.md ten times won't tell you whether Claude actually behaves the way the skill says it will. The only honest answer to *"does this skill pull its weight?"* is a **behavioral benchmark** — spawn two subagents on the same task, one with the skill loaded and one without, and measure the delta. If the delta is zero, the skill is ceremonial. If it's large, the skill is doing real work. Kiat uses the methodology from [`skill-creator`](https://github.com/anthropics/skills) verbatim: write fixtures, write assertions, spawn `with_skill` + `baseline` subagents in parallel, grade mechanically, aggregate into a `benchmark.json`, review in an HTML viewer, iterate.
+
+**Iteration-1 example (2026-04-11)** — the two most foundational skills, the ones that run on every story in the pipeline. 3 fixtures per skill (a clean story, a vague-verbs story, a structurally broken story for `validate-spec`; rich / under-specified / narrow-scope backend-only for `test-patterns-check`), spawned in parallel with a baseline for each:
+
+| Skill | with_skill pass | baseline pass | Δ pass | Δ time | Δ tokens |
+|---|---|---|---|---|---|
+| **kiat-validate-spec** | **100%** (17/17) | 63.3% (11/17) | **+37 pts** | ~0 s | +5k |
+| **kiat-test-patterns-check** | **100%** (31/31) | 68.9% (22/31) | **+31 pts** | **−26 s** 🔥 | +7k |
+
+Two findings worth keeping: (1) `kiat-test-patterns-check` is both **more accurate *and* faster** with the skill loaded — the router short-circuits to the relevant blocks (1 block on a narrow-scope backend-only fixture instead of 13 free-form concerns from the baseline), so the compact structured output wins on both axes. (2) The baseline on the "clean" fixture caught real cross-layer issues the skill missed (RFC3339Nano vs JS Date precision, RLS `WITH CHECK` omission) — useful signal that iteration-2 should add a deeper cross-layer consistency category to `validate-spec`. The extra ~5-7k tokens per run (to read the SKILL.md + applicable block files) is ~25% of the 25k coder context budget — modest price for a skill that demonstrably changes behavior.
+
+Re-run the loop any time a skill is refactored, a new skill is shipped, or a production incident traces back to skill drift. Don't run it on a schedule. The full iteration-1 workspace (fixtures, eval_metadata, grading, benchmark, HTML viewer) is at `/tmp/kiat-skills-workspace/` during the session that produced it; see [`skill-creator`'s SKILL.md](https://github.com/anthropics/skills) for the canonical commands.
 
 ---
 
@@ -735,14 +752,21 @@ kiat/
 │   │   ├── kiat-frontend-coder.md     # Next.js + React + Shadcn + Tailwind v4
 │   │   ├── kiat-backend-reviewer.md   # Backend quality gate (3-way verdict)
 │   │   └── kiat-frontend-reviewer.md  # Frontend quality gate (3-way verdict)
-│   ├── skills/                        # 6 kiat-* skills (some folder-based)
-│   │   ├── kiat-validate-spec.md      # Pre-coding spec validation (Layer 6a)
-│   │   ├── kiat-review-backend.md     # Structured backend review checklist
-│   │   ├── kiat-review-frontend.md    # Structured frontend review checklist
-│   │   ├── kiat-clerk-auth-review.md  # Clerk auth specialist (Layer 3, conditional)
+│   ├── skills/                        # 6 kiat-* skills (all folder-based per Agent Skills spec)
+│   │   ├── kiat-validate-spec/        # Pre-coding spec validation (Layer 6a)
+│   │   │   └── SKILL.md
+│   │   ├── kiat-review-backend/       # Structured backend review
+│   │   │   ├── SKILL.md               #   Protocol + verdict format
+│   │   │   └── references/checklist.md
+│   │   ├── kiat-review-frontend/      # Structured frontend review
+│   │   │   ├── SKILL.md
+│   │   │   └── references/checklist.md
+│   │   ├── kiat-clerk-auth-review/    # Clerk auth specialist (Layer 3, conditional)
+│   │   │   ├── SKILL.md
+│   │   │   └── references/checks.md
 │   │   ├── kiat-test-patterns-check/  # Forced-response test patterns (Layer 6b)
 │   │   │   ├── SKILL.md               #   Router + scope detection
-│   │   │   └── blocks/                #   9 pattern blocks loaded selectively
+│   │   │   └── references/            #   9 pattern blocks loaded selectively
 │   │   └── kiat-ui-ux-search/         # Wrapper for external ui-ux-pro-max skill
 │   │       ├── SKILL.md               #   Lightweight router (~1k tokens)
 │   │       └── references/            #   categories.md, when-to-use.md, invoke-patterns.md

@@ -30,10 +30,10 @@ Everything in Kiat, grouped by whether it's **framework IA** (`.claude/`) or **p
 
 | Skill | File | Purpose |
 |-------|------|---------|
-| **Validate Spec** | [.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md) | Pre-coding spec ambiguity detector (Layer 6a, used by tech-spec-writer + Team Lead) |
-| **Review Backend** | [.claude/skills/kiat-review-backend.md](.claude/skills/kiat-review-backend.md) | Structured backend review checklist (Clean Arch, security, Venom) |
-| **Review Frontend** | [.claude/skills/kiat-review-frontend.md](.claude/skills/kiat-review-frontend.md) | Structured frontend review checklist (styling, a11y, hooks, E2E) |
-| **Clerk Auth Review** | [.claude/skills/kiat-clerk-auth-review.md](.claude/skills/kiat-clerk-auth-review.md) | Specialist for any auth-touching diff (Layer 3, hard trigger rule) |
+| **Validate Spec** | [.claude/skills/kiat-validate-spec/SKILL.md](.claude/skills/kiat-validate-spec/SKILL.md) | Pre-coding spec ambiguity detector (Layer 6a, used by tech-spec-writer + Team Lead) |
+| **Review Backend** | [.claude/skills/kiat-review-backend/SKILL.md](.claude/skills/kiat-review-backend/SKILL.md) | Structured backend review (Clean Arch, security, Venom) — detailed checklist in `references/checklist.md` |
+| **Review Frontend** | [.claude/skills/kiat-review-frontend/SKILL.md](.claude/skills/kiat-review-frontend/SKILL.md) | Structured frontend review (styling, a11y, hooks, E2E) — detailed checklist in `references/checklist.md` |
+| **Clerk Auth Review** | [.claude/skills/kiat-clerk-auth-review/SKILL.md](.claude/skills/kiat-clerk-auth-review/SKILL.md) | Specialist for any auth-touching diff (Layer 3, hard trigger rule) |
 | **Test Patterns Check** | [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) | Forced-response test pattern acknowledgment (Layer 6b, router + 9 selective blocks) |
 | **UI/UX Search** | [.claude/skills/kiat-ui-ux-search/SKILL.md](.claude/skills/kiat-ui-ux-search/SKILL.md) | Search-on-demand wrapper for external [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (~85k tokens, queried via script) |
 
@@ -187,7 +187,7 @@ Each phase emits a JSONL event → `delivery/metrics/events.jsonl` → `report.p
 | **45-min fix budget** | Wall-clock retry budget (Layer 2) | [.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md) Retry Budget |
 | **Audit lines** | Mandatory traces of skill invocations (Layer 4) | agent definitions |
 | **Context budget** | 25k token hard limit per coder (Layer 5) | [.claude/specs/context-budgets.md](.claude/specs/context-budgets.md) |
-| **Pre-coding gates** | Spec validation + test patterns (Layer 6) | [.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md), [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) |
+| **Pre-coding gates** | Spec validation + test patterns (Layer 6) | [.claude/skills/kiat-validate-spec/SKILL.md](.claude/skills/kiat-validate-spec/SKILL.md), [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) |
 | **Failure pattern (FP-NNN)** | Reactive incident registry | [.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md) |
 | **Metrics event** | JSONL log entry at phase transitions | [.claude/specs/metrics-events.md](.claude/specs/metrics-events.md) |
 | **Project Memory** | Cross-story coherence (emergent patterns, shared components, architectural decisions) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |

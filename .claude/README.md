@@ -17,14 +17,24 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 │   ├── kiat-frontend-coder.md
 │   ├── kiat-backend-reviewer.md
 │   └── kiat-frontend-reviewer.md
-├── skills/                        # 5 kiat-* skills (review checklists + specialists)
-│   ├── kiat-review-backend.md
-│   ├── kiat-review-frontend.md
-│   ├── kiat-clerk-auth-review.md
-│   ├── kiat-validate-spec.md
-│   └── kiat-test-patterns-check/   # Router + 9 selective blocks
+├── skills/                        # 6 kiat-* skills (all folder-based per Agent Skills spec)
+│   ├── kiat-review-backend/
+│   │   ├── SKILL.md
+│   │   └── references/checklist.md
+│   ├── kiat-review-frontend/
+│   │   ├── SKILL.md
+│   │   └── references/checklist.md
+│   ├── kiat-clerk-auth-review/
+│   │   ├── SKILL.md
+│   │   └── references/checks.md
+│   ├── kiat-validate-spec/
+│   │   └── SKILL.md
+│   ├── kiat-test-patterns-check/   # Router + 9 selective blocks
+│   │   ├── SKILL.md
+│   │   └── references/             # block-a-forms.md … block-i-wizards.md
+│   └── kiat-ui-ux-search/          # Wrapper for external ui-ux-pro-max
 │       ├── SKILL.md
-│       └── blocks/
+│       └── references/
 ├── specs/                         # 3 framework specs (machinery, not conventions)
 │   ├── context-budgets.md         # Per-agent token budgets (Layer 5)
 │   ├── metrics-events.md          # JSONL event log schema
@@ -48,7 +58,7 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 - [./specs/context-budgets.md](./specs/context-budgets.md) — to run Phase 0b pre-flight check
 - [./specs/metrics-events.md](./specs/metrics-events.md) — to emit JSONL events at phase transitions
 - [./specs/failure-patterns.md](./specs/failure-patterns.md) — to consult before escalation
-- [./skills/kiat-validate-spec.md](./skills/kiat-validate-spec.md) — invoked at Phase 0a
+- [./skills/kiat-validate-spec/SKILL.md](./skills/kiat-validate-spec/SKILL.md) — invoked at Phase 0a
 
 ### `kiat-backend-coder` / `kiat-frontend-coder` read
 - [./skills/kiat-test-patterns-check/SKILL.md](./skills/kiat-test-patterns-check/SKILL.md) — invoked at Step 0.5
@@ -56,8 +66,8 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 - Plus project conventions in `delivery/specs/` (backend-conventions, frontend-architecture, etc.)
 
 ### `kiat-backend-reviewer` / `kiat-frontend-reviewer` read
-- [./skills/kiat-review-backend.md](./skills/kiat-review-backend.md) / [./skills/kiat-review-frontend.md](./skills/kiat-review-frontend.md) — REQUIRED
-- [./skills/kiat-clerk-auth-review.md](./skills/kiat-clerk-auth-review.md) — CONDITIONAL (hard trigger rule)
+- [./skills/kiat-review-backend/SKILL.md](./skills/kiat-review-backend/SKILL.md) / [./skills/kiat-review-frontend/SKILL.md](./skills/kiat-review-frontend/SKILL.md) — REQUIRED
+- [./skills/kiat-clerk-auth-review/SKILL.md](./skills/kiat-clerk-auth-review/SKILL.md) — CONDITIONAL (hard trigger rule)
 - Community skills (`differential-review`, `react-best-practices`, etc.) when applicable
 
 ### Humans read (weekly)

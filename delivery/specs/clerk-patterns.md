@@ -281,7 +281,7 @@ test.beforeEach(async ({ page }) => {
 
 **The authoritative list of Clerk gotchas and review rules lives in the framework skill, not here.**
 
-See [`.claude/skills/kiat-clerk-auth-review.md`](../../.claude/skills/kiat-clerk-auth-review.md) for:
+See [`.claude/skills/kiat-clerk-auth-review/SKILL.md`](../../.claude/skills/kiat-clerk-auth-review/SKILL.md) for:
 - Hard trigger rules (when the skill MUST run on a diff)
 - 7-category review checklist (provider/hooks, test-auth safety, JWT handling, signOut destruction, RLS isolation, rate limits, secrets)
 - Machine-parseable output format consumed by reviewers
@@ -331,7 +331,7 @@ func HandleClerkWebhook(c *gin.Context) {
 ## Best Practices (project-specific usage)
 
 For general Clerk security rules (JWT storage, validation, signOut, rate limits, production guards), see the authoritative source:
-[`.claude/skills/kiat-clerk-auth-review.md`](../../.claude/skills/kiat-clerk-auth-review.md).
+[`.claude/skills/kiat-clerk-auth-review/SKILL.md`](../../.claude/skills/kiat-clerk-auth-review/SKILL.md).
 
 This section only covers **project-specific** Clerk usage habits that don't belong in the framework skill:
 
@@ -343,7 +343,7 @@ This section only covers **project-specific** Clerk usage habits that don't belo
 ---
 
 See also:
-- [`.claude/skills/kiat-clerk-auth-review.md`](../../.claude/skills/kiat-clerk-auth-review.md) — Framework review checklist (authoritative rules)
+- [`.claude/skills/kiat-clerk-auth-review/SKILL.md`](../../.claude/skills/kiat-clerk-auth-review/SKILL.md) — Framework review checklist (authoritative rules)
 - [security-checklist.md](security-checklist.md) — General auth security
 - [testing.md](testing.md) — E2E testing with Clerk
 - [deployment.md](deployment.md) — Env vars and production guards
