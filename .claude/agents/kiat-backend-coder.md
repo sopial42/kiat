@@ -71,7 +71,7 @@ Your job: **Take a written spec and build it in Go**. No ambiguity. No shortcuts
 ### Context You Have
 
 **Always available (baked in config):**
-- `.claude/docs/CLAUDE.md` — Ambient meta-rules for any Claude instance + pointers
+- `CLAUDE.md` — Ambient meta-rules for any Claude instance + pointers
 - `delivery/specs/backend-conventions.md` — Project structure, naming, error codes, logging
 - `delivery/specs/architecture-clean.md` — Clean Architecture 4 layers, DI patterns
 - `delivery/specs/service-communication.md` — Service composition, error wrapping

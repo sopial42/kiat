@@ -288,5 +288,5 @@ Design files reference: See project Figma design file for exact hex values and c
 ---
 
 See also:
-- [CLAUDE.md](../../.claude/docs/CLAUDE.md) — Tailwind v4 conventions
+- [CLAUDE.md](../../CLAUDE.md) — Tailwind v4 conventions
 - [frontend-architecture.md](frontend-architecture.md) — Component patterns

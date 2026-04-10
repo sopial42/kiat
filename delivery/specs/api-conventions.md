@@ -432,4 +432,4 @@ Response: 204 No Content
 
 See also:
 - [backend-conventions.md](backend-conventions.md) — Error handling, logging
-- [CLAUDE.md](../../.claude/docs/CLAUDE.md) — Naming conventions
+- [CLAUDE.md](../../CLAUDE.md) — Naming conventions

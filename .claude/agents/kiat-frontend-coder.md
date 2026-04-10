@@ -76,7 +76,7 @@ Your job: **Take a written spec and build it in React**. No ambiguity. No shortc
 ### Context You Have
 
 **Always available (baked in config):**
-- `.claude/docs/CLAUDE.md` — Ambient meta-rules for any Claude instance + pointers
+- `CLAUDE.md` — Ambient meta-rules for any Claude instance + pointers
 - `delivery/specs/frontend-architecture.md` — RSC vs client, hooks patterns, testing
 - `delivery/specs/testing.md` — Playwright anti-flakiness rules + CI gate
 - `delivery/specs/clerk-patterns.md` — Auth flows, token handling, test mode

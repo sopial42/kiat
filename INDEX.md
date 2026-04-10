@@ -9,7 +9,7 @@ Everything in Kiat, grouped by whether it's **framework IA** (`.claude/`) or **p
 1. **[README.md](README.md)** — Vision, architecture, enforcement model (6 layers), monitoring
 2. **[GETTING_STARTED.md](GETTING_STARTED.md)** — New-user onboarding
 3. **[structure.md](structure.md)** — Architecture decision log
-4. **[.claude/docs/CLAUDE.md](.claude/docs/CLAUDE.md)** — Universal coding rules
+4. **[CLAUDE.md](CLAUDE.md)** — Universal coding rules
 
 ---
 
@@ -68,8 +68,8 @@ python3 kiat/.claude/tools/doc-audit.py --strict          # exit 1 if any doc fa
 
 | Doc | File | Audience |
 |-----|------|----------|
-| **CLAUDE.md** | [.claude/docs/CLAUDE.md](.claude/docs/CLAUDE.md) | All agents — universal rules |
-| **Docs README** | [.claude/docs/README.md](.claude/docs/README.md) | Framework doc index |
+| **CLAUDE.md** | [CLAUDE.md](CLAUDE.md) | All agents — universal rules |
+| **Docs README** | [.claude/README.md](.claude/README.md) | Framework doc index |
 
 ---
 

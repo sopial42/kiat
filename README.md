@@ -174,7 +174,7 @@ kiat-frontend-reviewer── invokes ──▶ │   (same hard trigger rule)
 
 AMBIENT CONTEXT (loaded by EVERY agent, always)
 ───────────────────────────────────────────────
-  .claude/docs/CLAUDE.md              ◄─ Universal meta-rules for
+  CLAUDE.md              ◄─ Universal meta-rules for
                                          any Claude instance +
                                          framework/project separation
                                          rule + pointers
@@ -225,7 +225,7 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 
 | Doc | Audience | Purpose |
 |-----|----------|---------|
-| `.claude/docs/CLAUDE.md` | All agents | Universal coding rules (no secrets, naming, error handling, testing, git) |
+| `CLAUDE.md` | All agents | Universal coding rules (no secrets, naming, error handling, testing, git) |
 | `.claude/agents/kiat-*.md` | Themselves | Agent system prompts (team-lead, coders, reviewers) |
 | `.claude/skills/kiat-*.md` | Agents invoking them | Structured skill checklists (review-backend, clerk-auth-review, validate-spec, etc.) |
 | `.claude/specs/context-budgets.md` | Team Lead | Per-agent token budgets (Layer 5 enforcement) |
@@ -743,7 +743,7 @@ kiat/
 
 1. **Read this README** (you're here ✅)
 2. **Read `structure.md`** (why each architectural decision)
-3. **Read `.claude/docs/CLAUDE.md`** (coding rules)
+3. **Read `CLAUDE.md`** (coding rules)
 4. **Pick an epic to build** → copy `delivery/epic-template/` → edit
 5. **Chat with BMAD Master** (agent in `.claude/agents/`) → get spec
 6. **Trigger Backend-Coder + Frontend-Coder** (in parallel)
@@ -755,7 +755,7 @@ kiat/
 ## 📖 Further Reading
 
 - **`structure.md`**: Architecture decision log (why did we choose this?)
-- **`.claude/docs/CLAUDE.md`**: Day-to-day coding rules
+- **`CLAUDE.md`**: Day-to-day coding rules
 - **`patterns/context-injection.md`**: How context flows through agents
 - **`patterns/infinite-loop-prevention.md`**: How we avoid reviewer ping-pong
 - **`.claude/agents/*.md`**: Per-agent system prompts + instructions

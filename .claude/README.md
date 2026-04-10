@@ -2,7 +2,7 @@
 
 This folder is **Kiat framework machinery only**. Project conventions live in `delivery/specs/`, not here.
 
-If you're looking for project-level docs (React patterns, REST conventions, Tailwind tokens, etc.), go to [`delivery/specs/`](../../delivery/specs/). If you're looking for universal coding rules that apply across all projects using Kiat, stay here and read [CLAUDE.md](CLAUDE.md).
+If you're looking for project-level docs (React patterns, REST conventions, Tailwind tokens, etc.), go to [`delivery/specs/`](../delivery/specs/). If you're looking for universal coding rules that apply across all projects using Kiat, read [`CLAUDE.md`](../CLAUDE.md) at the project root — it's the ambient context auto-loaded by Claude Code.
 
 ---
 
@@ -10,6 +10,7 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 
 ```
 .claude/
+├── README.md                      # This file (framework doc index)
 ├── agents/                        # 5 kiat-* agent system prompts
 │   ├── kiat-team-lead.md
 │   ├── kiat-backend-coder.md
@@ -28,12 +29,11 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 │   ├── context-budgets.md         # Per-agent token budgets (Layer 5)
 │   ├── metrics-events.md          # JSONL event log schema
 │   └── failure-patterns.md        # Reactive failure pattern registry
-├── tools/                         # Framework utilities
-│   └── report.py                  # Weekly health report generator
-└── docs/                          # Docs read by agents
-    ├── CLAUDE.md                  # Universal coding rules (all agents read this)
-    └── README.md                  # This file
+└── tools/                         # Framework utilities
+    └── report.py                  # Weekly health report generator
 ```
+
+**Note:** `CLAUDE.md` lives at the **project root**, not in `.claude/`. This is a deliberate exception to the "everything framework is in `.claude/`" rule — Claude Code auto-loads `CLAUDE.md` from the project root as ambient context for every session. Placing it elsewhere would break auto-loading.
 
 **Rule:** nothing in `.claude/` should be project-specific. If you find yourself wanting to edit a file here for "your project", that file belongs in `delivery/` instead.
 
@@ -42,22 +42,22 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 ## Who Reads What
 
 ### All agents (ambient context)
-- [CLAUDE.md](CLAUDE.md) — universal coding rules (secrets, naming, error handling, testing, git)
+- [`../CLAUDE.md`](../CLAUDE.md) — universal coding rules auto-loaded by Claude Code from the project root (separation rule, meta-rules, pointers to project conventions)
 
 ### `kiat-team-lead` reads
-- [../specs/context-budgets.md](../specs/context-budgets.md) — to run Phase 0b pre-flight check
-- [../specs/metrics-events.md](../specs/metrics-events.md) — to emit JSONL events at phase transitions
-- [../specs/failure-patterns.md](../specs/failure-patterns.md) — to consult before escalation
-- [../skills/kiat-validate-spec.md](../skills/kiat-validate-spec.md) — invoked at Phase 0a
+- [./specs/context-budgets.md](./specs/context-budgets.md) — to run Phase 0b pre-flight check
+- [./specs/metrics-events.md](./specs/metrics-events.md) — to emit JSONL events at phase transitions
+- [./specs/failure-patterns.md](./specs/failure-patterns.md) — to consult before escalation
+- [./skills/kiat-validate-spec.md](./skills/kiat-validate-spec.md) — invoked at Phase 0a
 
 ### `kiat-backend-coder` / `kiat-frontend-coder` read
-- [../skills/kiat-test-patterns-check/SKILL.md](../skills/kiat-test-patterns-check/SKILL.md) — invoked at Step 0.5
-- [../specs/context-budgets.md](../specs/context-budgets.md) — for self-check at Step 0
+- [./skills/kiat-test-patterns-check/SKILL.md](./skills/kiat-test-patterns-check/SKILL.md) — invoked at Step 0.5
+- [./specs/context-budgets.md](./specs/context-budgets.md) — for self-check at Step 0
 - Plus project conventions in `delivery/specs/` (backend-conventions, frontend-architecture, etc.)
 
 ### `kiat-backend-reviewer` / `kiat-frontend-reviewer` read
-- [../skills/kiat-review-backend.md](../skills/kiat-review-backend.md) / [../skills/kiat-review-frontend.md](../skills/kiat-review-frontend.md) — REQUIRED
-- [../skills/kiat-clerk-auth-review.md](../skills/kiat-clerk-auth-review.md) — CONDITIONAL (hard trigger rule)
+- [./skills/kiat-review-backend.md](./skills/kiat-review-backend.md) / [./skills/kiat-review-frontend.md](./skills/kiat-review-frontend.md) — REQUIRED
+- [./skills/kiat-clerk-auth-review.md](./skills/kiat-clerk-auth-review.md) — CONDITIONAL (hard trigger rule)
 - Community skills (`differential-review`, `react-best-practices`, etc.) when applicable
 
 ### Humans read (weekly)

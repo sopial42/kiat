@@ -38,15 +38,15 @@ These are the only rules that live in ambient context because they're about *how
 
 ### If you are Team Lead (orchestrator)
 
-Your full protocol is in [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md). Key phases: 0a spec validation, 0b context budget check, parallel coder launch, 3-way verdict handling, 45-min fix budget, metrics emission, failure pattern consultation at escalation.
+Your full protocol is in [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-team-lead.md). Key phases: 0a spec validation, 0b context budget check, parallel coder launch, 3-way verdict handling, 45-min fix budget, metrics emission, failure pattern consultation at escalation.
 
 ### If you are a Coder (backend or frontend)
 
-Your agent definition ([kiat-backend-coder.md](../agents/kiat-backend-coder.md) or [kiat-frontend-coder.md](../agents/kiat-frontend-coder.md)) contains all critical rules baked in: Step 0 context budget self-check, Step 0.5 test patterns acknowledgment, spec reading, planning, building, test running, handoff.
+Your agent definition ([kiat-backend-coder.md](.claude/agents/kiat-backend-coder.md) or [kiat-frontend-coder.md](.claude/agents/kiat-frontend-coder.md)) contains all critical rules baked in: Step 0 context budget self-check, Step 0.5 test patterns acknowledgment, spec reading, planning, building, test running, handoff.
 
 ### If you are a Reviewer
 
-Your agent definition ([kiat-backend-reviewer.md](../agents/kiat-backend-reviewer.md) or [kiat-frontend-reviewer.md](../agents/kiat-frontend-reviewer.md)) enforces the required review skill, the conditional Clerk auth skill (with hard trigger rule), and the `TEST_PATTERNS: ACKNOWLEDGED` verification. Output format is machine-parseable: first line must be `VERDICT: APPROVED | NEEDS_DISCUSSION | BLOCKED`.
+Your agent definition ([kiat-backend-reviewer.md](.claude/agents/kiat-backend-reviewer.md) or [kiat-frontend-reviewer.md](.claude/agents/kiat-frontend-reviewer.md)) enforces the required review skill, the conditional Clerk auth skill (with hard trigger rule), and the `TEST_PATTERNS: ACKNOWLEDGED` verification. Output format is machine-parseable: first line must be `VERDICT: APPROVED | NEEDS_DISCUSSION | BLOCKED`.
 
 ---
 
@@ -56,19 +56,19 @@ When you need project-specific information, go directly to the right file under 
 
 | What you need | Where to look |
 |---|---|
-| Clean Architecture, 4 layers | [`../../delivery/specs/architecture-clean.md`](../../delivery/specs/architecture-clean.md) |
-| Backend project structure, naming, error codes, logging | [`../../delivery/specs/backend-conventions.md`](../../delivery/specs/backend-conventions.md) |
-| Service communication, dependency injection | [`../../delivery/specs/service-communication.md`](../../delivery/specs/service-communication.md) |
-| Frontend patterns, hooks, RSC boundary | [`../../delivery/specs/frontend-architecture.md`](../../delivery/specs/frontend-architecture.md) |
-| Design system, colors, spacing, Tailwind tokens | [`../../delivery/specs/design-system.md`](../../delivery/specs/design-system.md) |
-| REST design, error codes, status codes | [`../../delivery/specs/api-conventions.md`](../../delivery/specs/api-conventions.md) |
-| Database migrations, RLS, timestamps | [`../../delivery/specs/database-conventions.md`](../../delivery/specs/database-conventions.md) |
-| Security checklist, OWASP, secrets, RLS testing | [`../../delivery/specs/security-checklist.md`](../../delivery/specs/security-checklist.md) |
-| Clerk auth flows, test mode, token handling | [`../../delivery/specs/clerk-patterns.md`](../../delivery/specs/clerk-patterns.md) |
-| Testing anti-flakiness, CI gate, Playwright + Venom | [`../../delivery/specs/testing.md`](../../delivery/specs/testing.md) |
-| Git branches, commits, PR discipline | [`../../delivery/specs/git-conventions.md`](../../delivery/specs/git-conventions.md) |
-| Environment vars, production guards, deployment | [`../../delivery/specs/deployment.md`](../../delivery/specs/deployment.md) |
-| Common dev commands (`make dev`, `npm run`, etc.) | [`../../delivery/README.md`](../../delivery/README.md) |
+| Clean Architecture, 4 layers | [`delivery/specs/architecture-clean.md`](delivery/specs/architecture-clean.md) |
+| Backend project structure, naming, error codes, logging | [`delivery/specs/backend-conventions.md`](delivery/specs/backend-conventions.md) |
+| Service communication, dependency injection | [`delivery/specs/service-communication.md`](delivery/specs/service-communication.md) |
+| Frontend patterns, hooks, RSC boundary | [`delivery/specs/frontend-architecture.md`](delivery/specs/frontend-architecture.md) |
+| Design system, colors, spacing, Tailwind tokens | [`delivery/specs/design-system.md`](delivery/specs/design-system.md) |
+| REST design, error codes, status codes | [`delivery/specs/api-conventions.md`](delivery/specs/api-conventions.md) |
+| Database migrations, RLS, timestamps | [`delivery/specs/database-conventions.md`](delivery/specs/database-conventions.md) |
+| Security checklist, OWASP, secrets, RLS testing | [`delivery/specs/security-checklist.md`](delivery/specs/security-checklist.md) |
+| Clerk auth flows, test mode, token handling | [`delivery/specs/clerk-patterns.md`](delivery/specs/clerk-patterns.md) |
+| Testing anti-flakiness, CI gate, Playwright + Venom | [`delivery/specs/testing.md`](delivery/specs/testing.md) |
+| Git branches, commits, PR discipline | [`delivery/specs/git-conventions.md`](delivery/specs/git-conventions.md) |
+| Environment vars, production guards, deployment | [`delivery/specs/deployment.md`](delivery/specs/deployment.md) |
+| Common dev commands (`make dev`, `npm run`, etc.) | [`delivery/README.md`](delivery/README.md) |
 | Epic and story specs | `delivery/epic-X/story-NN.md` |
 
 ---
@@ -79,13 +79,13 @@ Framework machinery — **not project-specific**, do not edit per project:
 
 | What you need | Where to look |
 |---|---|
-| 6 enforcement layers, monitoring philosophy, vision | [`../../README.md`](../../README.md) |
-| Navigation hub | [`../../INDEX.md`](../../INDEX.md) |
-| Agent definitions (5 kiat-* agents) | [`../agents/`](../agents/) |
-| Skill definitions (5 kiat-* skills) | [`../skills/`](../skills/) |
-| Context budgets spec (Layer 5) | [`../specs/context-budgets.md`](../specs/context-budgets.md) |
-| Metrics event schema (JSONL) | [`../specs/metrics-events.md`](../specs/metrics-events.md) |
-| Failure patterns registry | [`../specs/failure-patterns.md`](../specs/failure-patterns.md) |
+| 6 enforcement layers, monitoring philosophy, vision | [`README.md`](README.md) |
+| Navigation hub | [`INDEX.md`](INDEX.md) |
+| Agent definitions (5 kiat-* agents) | [`.claude/agents/`](.claude/agents/) |
+| Skill definitions (5 kiat-* skills) | [`.claude/skills/`](.claude/skills/) |
+| Context budgets spec (Layer 5) | [`.claude/specs/context-budgets.md`](.claude/specs/context-budgets.md) |
+| Metrics event schema (JSONL) | [`.claude/specs/metrics-events.md`](.claude/specs/metrics-events.md) |
+| Failure patterns registry | [`.claude/specs/failure-patterns.md`](.claude/specs/failure-patterns.md) |
 | Weekly health report tool | `python3 kiat/.claude/tools/report.py` |
 
 ---

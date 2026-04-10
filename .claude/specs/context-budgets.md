@@ -34,7 +34,7 @@ These are caps on **injected input context** before an agent starts its own work
 **Calibration step for your project** (run this once before launching the first story):
 ```bash
 # Measure all files a typical coder would load
-wc -c .claude/docs/CLAUDE.md \
+wc -c CLAUDE.md \
       delivery/specs/<your-architecture-doc>.md \
       delivery/specs/testing.md \
       delivery/specs/<your-convention-docs>.md \
@@ -100,7 +100,7 @@ A Backend-Coder's 25k budget generally splits into **two buckets**:
 
 ```bash
 # Ambient (always loaded by backend-coder)
-wc -c .claude/docs/CLAUDE.md \
+wc -c CLAUDE.md \
       delivery/specs/backend-conventions.md \
       delivery/specs/architecture-clean.md \
       delivery/specs/testing.md

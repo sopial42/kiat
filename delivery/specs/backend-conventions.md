@@ -606,4 +606,4 @@ if errors.Is(err, domain.ErrDuplicateEmail) {
 See also:
 - [architecture-clean.md](architecture-clean.md) — The 4 layers explained
 - [service-communication.md](service-communication.md) — Dependency injection patterns
-- [CLAUDE.md](../../.claude/docs/CLAUDE.md) — General naming and git conventions
+- [CLAUDE.md](../../CLAUDE.md) — General naming and git conventions

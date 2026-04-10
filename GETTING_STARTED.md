@@ -22,7 +22,7 @@ You have a complete agent-first SaaS starter kit. Here's how to get from zero to
   - `metrics-events.md` — JSONL event log schema
   - `failure-patterns.md` — reactive FP registry
 - ✅ **1 tool** ([.claude/tools/report.py](./.claude/tools/report.py)) — weekly health reports
-- ✅ **CLAUDE.md** ([.claude/docs/CLAUDE.md](./.claude/docs/CLAUDE.md)) — universal coding rules
+- ✅ **CLAUDE.md** ([CLAUDE.md](./CLAUDE.md)) — universal coding rules
 
 ### Project templates (`delivery/`, `checklists/`, `patterns/` — edit these per project)
 
@@ -135,7 +135,7 @@ Read in this order:
 
 1. **[README.md](README.md)** — Vision + the 6 enforcement layers + monitoring
 2. **[structure.md](structure.md)** — Why each decision
-3. **[.claude/docs/CLAUDE.md](.claude/docs/CLAUDE.md)** — Universal coding rules
+3. **[CLAUDE.md](CLAUDE.md)** — Universal coding rules
 4. **[.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md)** — How orchestration actually works
 5. **[.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md)** — How Phase 0 prevents bad specs from shipping
 6. **[.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md)** — How to learn from real failures

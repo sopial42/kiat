@@ -356,4 +356,4 @@ We originally polled every 5min → switched to webhooks after race condition.
 
 ---
 
-**Next**: Read `.claude/docs/CLAUDE.md` for day-to-day coding rules.
+**Next**: Read `CLAUDE.md` for day-to-day coding rules.
