@@ -6,6 +6,36 @@
 
 **T-Shirt Size**: S / M / L
 
+**Scope**: backend-only | frontend-only | both | infra
+
+---
+
+## Skills
+
+> Populated by `kiat-tech-spec-writer` when it writes the story.
+> Read by `kiat-team-lead` at Phase 0b (context budget pre-flight) and by the coders at Step 1.
+> See [`.claude/specs/available-skills.md`](../../.claude/specs/available-skills.md) for the registry of contextual skills.
+
+**Base (auto-loaded by coder agents, no action needed):**
+- `kiat-test-patterns-check` — Step 0.5 acknowledgment of applicable test patterns
+
+**Contextual for this story:**
+
+<!--
+If no additional skills are needed for this story, write:
+  No additional skills required.
+
+Otherwise list each contextual skill from .claude/specs/available-skills.md with a one-line justification:
+  - <skill-name> — <why this story needs it>
+
+Example:
+  - kiat-ui-ux-search — this story introduces a new card component that needs layout and typography recommendations
+  - differential-review — this story touches auth middleware, adversarial security analysis warranted
+
+Rule of thumb: be stingy. Every contextual skill adds tokens to the coder's context budget.
+Only list skills the story genuinely needs. When in doubt, leave it out — the coder can escalate if missing.
+-->
+
 ---
 
 ## Acceptance Criteria

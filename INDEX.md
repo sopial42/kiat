@@ -15,32 +15,35 @@ Everything in Kiat, grouped by whether it's **framework IA** (`.claude/`) or **p
 
 ## 🛡️ Framework (`.claude/` — IA/Kiat, do not mix with project)
 
-### Agents (5 — all `kiat-` prefixed)
+### Agents (6 — all `kiat-` prefixed)
 
 | Agent | File | Role |
 |-------|------|------|
+| **Tech Spec Writer** | [.claude/agents/kiat-tech-spec-writer.md](.claude/agents/kiat-tech-spec-writer.md) | **Default entry point** — translates user requests into structured story files, decides contextual skills |
 | **Team Lead** | [.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md) | Technical orchestrator (retry loops, test gates, story validation, metrics emission) |
 | **Backend-Coder** | [.claude/agents/kiat-backend-coder.md](.claude/agents/kiat-backend-coder.md) | Build Go API (Clean Arch, DI, Venom tests) |
 | **Frontend-Coder** | [.claude/agents/kiat-frontend-coder.md](.claude/agents/kiat-frontend-coder.md) | Build React UI (Shadcn, hooks, Playwright tests) |
 | **Backend-Reviewer** | [.claude/agents/kiat-backend-reviewer.md](.claude/agents/kiat-backend-reviewer.md) | Backend quality gate (3-way verdict) |
 | **Frontend-Reviewer** | [.claude/agents/kiat-frontend-reviewer.md](.claude/agents/kiat-frontend-reviewer.md) | Frontend quality gate (3-way verdict) |
 
-### Skills (5 — all `kiat-` prefixed)
+### Skills (6 — all `kiat-` prefixed)
 
 | Skill | File | Purpose |
 |-------|------|---------|
+| **Validate Spec** | [.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md) | Pre-coding spec ambiguity detector (Layer 6a, used by tech-spec-writer + Team Lead) |
 | **Review Backend** | [.claude/skills/kiat-review-backend.md](.claude/skills/kiat-review-backend.md) | Structured backend review checklist (Clean Arch, security, Venom) |
 | **Review Frontend** | [.claude/skills/kiat-review-frontend.md](.claude/skills/kiat-review-frontend.md) | Structured frontend review checklist (styling, a11y, hooks, E2E) |
-| **Clerk Auth Review** | [.claude/skills/kiat-clerk-auth-review.md](.claude/skills/kiat-clerk-auth-review.md) | Specialist for any auth-touching diff (Layer 3) |
-| **Validate Spec** | [.claude/skills/kiat-validate-spec.md](.claude/skills/kiat-validate-spec.md) | Pre-coding spec ambiguity detector (Layer 6a) |
-| **Test Patterns Check** | [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) | Forced-response test pattern acknowledgment (Layer 6b) |
+| **Clerk Auth Review** | [.claude/skills/kiat-clerk-auth-review.md](.claude/skills/kiat-clerk-auth-review.md) | Specialist for any auth-touching diff (Layer 3, hard trigger rule) |
+| **Test Patterns Check** | [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) | Forced-response test pattern acknowledgment (Layer 6b, router + 9 selective blocks) |
+| **UI/UX Search** | [.claude/skills/kiat-ui-ux-search/SKILL.md](.claude/skills/kiat-ui-ux-search/SKILL.md) | Search-on-demand wrapper for external [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (~85k tokens, queried via script) |
 
 ### Framework specs (not user-editable — Kiat machinery)
 
 | Spec | File | Purpose |
 |------|------|---------|
+| **Available Skills** | [.claude/specs/available-skills.md](.claude/specs/available-skills.md) | Registry of contextual skills with "when to use" criteria, read by tech-spec-writer |
 | **Context Budgets** | [.claude/specs/context-budgets.md](.claude/specs/context-budgets.md) | Per-agent token budgets (Layer 5) |
-| **Metrics Events** | [.claude/specs/metrics-events.md](.claude/specs/metrics-events.md) | JSONL event log schema (Team Lead writes) |
+| **Metrics Events** | [.claude/specs/metrics-events.md](.claude/specs/metrics-events.md) | JSONL event log schema (rollup-first v1.1) |
 | **Failure Patterns** | [.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md) | Reactive FP registry with recurrence counts |
 
 ### Framework tools

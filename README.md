@@ -40,26 +40,32 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 ┌──────────┐
 │   USER   │
 └────┬─────┘
-     │ "I want feature X"
+     │ "I want feature X" (informal request)
      ▼
-┌─────────────────────────┐
-│       BMAD MASTER       │  Métier / product agent (not part of Kiat — BYO)
-│  Challenges, writes     │
-│  story spec             │
-└────┬────────────────────┘
-     │ delivery/epic-X/story-NN.md
+┌──────────────────────────────────────────────────────────────────┐
+│                     kiat-tech-spec-writer                         │  ◄─── DEFAULT entry point
+│  • Reads user request + project conventions + project-memory      │      for new work
+│  • Asks clarifying questions if needed (≤ 2 rounds)               │
+│  • Decides which contextual skills the coders will need           │
+│    (consults .claude/specs/available-skills.md)                   │
+│  • Writes delivery/epic-X/story-NN.md with structured sections    │
+│    + ## Skills section listing contextual skills                  │
+│  • Self-validates via kiat-validate-spec                          │
+└────┬─────────────────────────────────────────────────────────────┘
+     │ delivery/epic-X/story-NN.md (CLEAR verdict)
      ▼
 ╔══════════════════════════════════════════════════════════════════╗
-║                     kiat-team-lead                                ║  ◄─── Entry point for Kiat
+║                     kiat-team-lead                                ║  ◄─── Pipeline orchestrator
 ║  ┌────────────────────────────────────────────────────────────┐  ║
-║  │ Phase 0a — run kiat-validate-spec                          │  ║
+║  │ Phase 0a — re-run kiat-validate-spec (defense in depth)    │  ║
 ║  │ ├─ CLEAR ──────────────────────────────────┐               │  ║
-║  │ ├─ NEEDS_CLARIFICATION ── ▶ back to BMAD ──┘ (≤ 2 rounds)  │  ║
+║  │ ├─ NEEDS_CLARIFICATION ── ▶ back to writer ┘ (≤ 2 rounds)  │  ║
 ║  │ └─ BLOCKED ─────────────▶ ESCALATE to user                 │  ║
 ║  │                                                             │  ║
 ║  │ Phase 0b — pre-flight context budget (wc -c / 4)           │  ║
+║  │ ├─ reads ## Skills section to estimate total cost          │  ║
 ║  │ ├─ pass ──────────────────────────────────┐                │  ║
-║  │ └─ overflow ──────────▶ back to BMAD for split request     │  ║
+║  │ └─ overflow ──────────▶ back to writer for split or trim   │  ║
 ║  └───────────────────────────────────────────┼────────────────┘  ║
 ║                                               │                    ║
 ║                    ┌──────────────────────────┴──┐                ║
@@ -119,7 +125,14 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
                   └────────────────────────────┘
 ```
 
-**Reading the diagram:** solid lines = normal flow. Every dotted-line escalation path exits the Kiat boundary (the double-walled box) — those are the moments where humans or BMAD step in. The rollup event at Phase 7 is the ONE write Team Lead does per story, and it's the exit marker.
+**Reading the diagram:** solid lines = normal flow. Every escalation path exits the Kiat boundary (the double-walled box) — those are the moments where humans or BMAD step in. The rollup event at Phase 7 is the ONE write Team Lead does per story, and it's the exit marker.
+
+**Two entry points to Kiat:**
+
+- **New work** (the common case): user describes what they want in natural language → `kiat-tech-spec-writer` translates it into a structured story file → Team Lead executes. This is the default and what you should always do for new features, bug fixes, or refactors.
+- **Existing story re-execution** (less common): user has a story file that already exists in `delivery/epic-X/story-NN.md` (e.g., re-running a story that was previously escalated, or the spec was hand-written) → user invokes Team Lead directly with the story path. The tech-spec-writer is skipped in this case because the story is already structured.
+
+**BMAD Master is not part of Kiat.** If you use BMAD as your product/métier agent, BMAD's output goes to the tech-spec-writer (not directly to Team Lead). BMAD writes the *what* and the *why*; the tech-spec-writer translates it into the *how*.
 
 ### Diagram B — Skill Loading Map (who loads what when)
 
@@ -127,27 +140,44 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 KIAT AGENTS                          SKILLS (loaded on invocation)
 ───────────                          ──────────────────────────────
 
-                                     ┌─ kiat-validate-spec         ◄─ Phase 0a
-kiat-team-lead   ─── invokes ───▶    │
-                                     └─ (no others — Team Lead has
-                                        no skills of its own)
+                                     ┌─ kiat-validate-spec         ◄─ Self-check before handoff
+kiat-tech-spec-writer ── invokes ──▶ │
+                                     └─ (consults
+                                        .claude/specs/available-skills.md
+                                        to decide which contextual
+                                        skills to list in the story
+                                        — does not load them itself)
 
-                                     ┌─ kiat-test-patterns-check   ◄─ Step 0.5
-kiat-backend-coder   ─── invokes ──▶ │   ├─ SKILL.md (router)
+                                     ┌─ kiat-validate-spec         ◄─ Phase 0a (defense in depth)
+kiat-team-lead   ─── invokes ───▶    │
+                                     └─ (no other skills — Team Lead
+                                        is pure orchestration)
+
+                                     ┌─ kiat-test-patterns-check   ◄─ Step 0.5 (always)
+                                     │   ├─ SKILL.md (router)
                                      │   └─ blocks/block-*.md
                                      │       (selective: only the
                                      │        ones matching scope)
-                                     │
-                                     └─ (and community skills per
-                                        story: sharp-edges, etc.)
-
-                                     ┌─ kiat-test-patterns-check   ◄─ Step 0.5
-kiat-frontend-coder   ─── invokes ─▶ │   ├─ SKILL.md (router)
-                                     │   └─ blocks/block-*.md
-                                     │       (selective)
+kiat-backend-coder   ─── invokes ──▶ │
+                                     ├─ Skills listed in story
+                                     │   ## Skills section
+                                     │   (e.g., differential-review
+                                     │    if auth/payments touched)
                                      │
                                      └─ (community skills per
-                                        story: react-best-practices,
+                                        story: sharp-edges, etc.)
+
+                                     ┌─ kiat-test-patterns-check   ◄─ Step 0.5 (always)
+                                     │   ├─ SKILL.md (router)
+                                     │   └─ blocks/block-*.md
+                                     │
+kiat-frontend-coder   ─── invokes ─▶ ├─ kiat-ui-ux-search          ◄─ CONTEXTUAL
+                                     │   (if story ## Skills lists it
+                                     │    — wraps external 85k-token
+                                     │    skill via search-on-demand)
+                                     │
+                                     └─ (community skills per story:
+                                        react-best-practices,
                                         composition-patterns, etc.)
 
                                      ┌─ kiat-review-backend        ◄─ REQUIRED
@@ -174,43 +204,51 @@ kiat-frontend-reviewer── invokes ──▶ │   (same hard trigger rule)
 
 AMBIENT CONTEXT (loaded by EVERY agent, always)
 ───────────────────────────────────────────────
-  CLAUDE.md              ◄─ Universal meta-rules for
+  CLAUDE.md                           ◄─ Universal meta-rules for
                                          any Claude instance +
                                          framework/project separation
                                          rule + pointers
 
 
-FRAMEWORK SPECS (loaded only by Team Lead)
-──────────────────────────────────────────
-  .claude/specs/context-budgets.md    ◄─ Consulted at Phase 0b
-  .claude/specs/metrics-events.md     ◄─ Consulted at Phase 7
-  .claude/specs/failure-patterns.md   ◄─ Consulted at escalation time
+FRAMEWORK SPECS (loaded by tech-spec-writer and Team Lead)
+──────────────────────────────────────────────────────────
+  .claude/specs/available-skills.md   ◄─ Consulted by tech-spec-writer
+                                         when deciding which contextual
+                                         skills a story needs
+  .claude/specs/context-budgets.md    ◄─ Consulted by Team Lead at Phase 0b
+  .claude/specs/metrics-events.md     ◄─ Consulted by Team Lead at Phase 7
+  .claude/specs/failure-patterns.md   ◄─ Consulted by Team Lead at escalation
 
 
 PROJECT CONVENTIONS (loaded on-demand per task)
 ───────────────────────────────────────────────
-  delivery/specs/*.md                 ◄─ Coders + reviewers load the
-                                         specific conventions they
+  delivery/specs/*.md                 ◄─ Tech-spec-writer + coders + reviewers
+                                         load the specific conventions they
                                          need for the current task.
-                                         NOT all loaded — selective
-                                         per story scope.
+                                         NOT all loaded — selective per story.
+  delivery/specs/project-memory.md    ◄─ Cross-story coherence: emergent
+                                         patterns across past stories.
+                                         Read by tech-spec-writer.
 ```
 
 **Key rules captured by Diagram B:**
 
-- **`kiat-team-lead` has zero skills of its own** — it's pure orchestration. It only invokes `kiat-validate-spec` at Phase 0a. Every other skill is owned by downstream agents.
+- **`kiat-tech-spec-writer` is the entry point for new work.** It reads project conventions, decides which contextual skills the coders will need (from `available-skills.md`), and writes a structured story file. It does NOT load contextual skills itself — it just lists them in the story's `## Skills` section so the coders know what to load.
+- **`kiat-team-lead` has zero skills of its own** — it's pure orchestration. It only invokes `kiat-validate-spec` at Phase 0a (re-validation, defense in depth — the tech-spec-writer already validated). Every other skill is owned by downstream agents.
 - **`kiat-test-patterns-check` loads selectively** — the router (`SKILL.md`) is always loaded by coders, but the 9 pattern blocks are loaded individually based on story scope (usually 3-5 blocks per story, not all 9).
+- **`kiat-ui-ux-search` is a search-on-demand wrapper** — the underlying [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) is 85k tokens, so we never load it eagerly. The coder loads only the lightweight wrapper (~1k) and queries the underlying skill via `search.py` only when needed.
 - **`kiat-clerk-auth-review` has a hard trigger rule** — reviewers MUST invoke it if the diff touches any auth-adjacent pattern (grep-based trigger list). This is the enforcement mechanism for cross-layer auth bugs.
 - **Community skills are NOT Kiat-owned** — they're third-party expertise libraries (`react-best-practices`, `composition-patterns`, `differential-review`, etc.). Kiat agents can invoke them but doesn't guarantee their behavior.
-- **CLAUDE.md is the only truly global ambient** — every Kiat agent has it in context, but it's minimal (88 lines) and contains only meta-rules + pointers, no project conventions.
+- **CLAUDE.md is the only truly global ambient** — every Kiat agent has it in context, but it's minimal (~95 lines) and contains only meta-rules + pointers, no project conventions.
 
 ---
 
 **Key flows summary (in plain English):**
 
-- **BMAD is outside Kiat.** Kiat starts at Team Lead and ends at the rollup event. BMAD is your métier agent — bring your own.
-- **Team Lead is the only orchestrator.** Coders and reviewers are never launched directly by humans or by each other. Everything routes through Team Lead.
-- **Pre-coding gates fire before any code.** `kiat-validate-spec` (Phase 0a) and pre-flight budget (Phase 0b) catch ambiguity and oversize stories **before** a coder is launched — the earliest possible failure point.
+- **Tech spec writer is the entry point.** Users describe what they want in natural language; the tech-spec-writer translates it into a structured story file with a `## Skills` section listing contextual skills.
+- **BMAD is outside Kiat.** If you use BMAD as your product/métier agent, BMAD's output goes to the tech-spec-writer, not directly to Team Lead.
+- **Team Lead is the orchestrator, not the entry point.** It receives stories that the tech-spec-writer (or a human) has already structured, and runs the pipeline.
+- **Pre-coding gates fire before any code.** `kiat-validate-spec` (Phase 0a) and pre-flight budget (Phase 0b, which reads the story's `## Skills` section to estimate cost) catch ambiguity and oversize stories **before** a coder is launched — the earliest possible failure point.
 - **Parallel coding.** Backend and Frontend coders run simultaneously once Phase 0 passes. They never wait on each other.
 - **3-way verdicts + 45-min fix budget.** Reviewers output `APPROVED / NEEDS_DISCUSSION / BLOCKED`. BLOCKED re-cycles within a time budget. NEEDS_DISCUSSION is arbitrated by Team Lead, never bounced back to the coder as "fix this".
 - **One rollup event per story.** Team Lead emits exactly one write to `events.jsonl` at story completion — success or escalation. `report.py` reads this weekly for health metrics.
@@ -225,13 +263,15 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 
 | Doc | Audience | Purpose |
 |-----|----------|---------|
-| `CLAUDE.md` | All agents | Universal coding rules (no secrets, naming, error handling, testing, git) |
-| `.claude/agents/kiat-*.md` | Themselves | Agent system prompts (team-lead, coders, reviewers) |
-| `.claude/skills/kiat-*.md` | Agents invoking them | Structured skill checklists (review-backend, clerk-auth-review, validate-spec, etc.) |
+| `CLAUDE.md` (project root) | All agents | Ambient context auto-loaded by Claude Code: meta-rules + framework/project separation + pointers |
+| `.claude/agents/kiat-*.md` | Themselves | 6 agent system prompts (tech-spec-writer, team-lead, 2 coders, 2 reviewers) |
+| `.claude/skills/kiat-*.md` | Agents invoking them | 6 structured skills (validate-spec, review-backend, review-frontend, clerk-auth-review, test-patterns-check, ui-ux-search) |
+| `.claude/specs/available-skills.md` | tech-spec-writer | Registry of contextual skills with "when to use" criteria |
 | `.claude/specs/context-budgets.md` | Team Lead | Per-agent token budgets (Layer 5 enforcement) |
-| `.claude/specs/metrics-events.md` | Team Lead, `report.py` | JSONL event log schema |
+| `.claude/specs/metrics-events.md` | Team Lead, `report.py` | JSONL event log schema (rollup-first v1.1) |
 | `.claude/specs/failure-patterns.md` | Team Lead | Reactive failure pattern registry |
 | `.claude/tools/report.py` | Humans (weekly) | Weekly health report generator |
+| `.claude/tools/doc-audit.py` | Humans (anytime) | Audit `delivery/specs/` against M1 (tokens) + M2 (structure ratio) |
 
 ### Project docs (`delivery/specs/`) — read by humans AND agents
 
@@ -680,53 +720,63 @@ The layout enforces a strict separation: **`.claude/` = IA/Kiat framework**, **`
 
 ```
 kiat/
+├── CLAUDE.md                          # Ambient context (auto-loaded by Claude Code)
 ├── README.md                          # This file — Kiat vision + enforcement model
 ├── INDEX.md                           # Navigation hub
 ├── GETTING_STARTED.md                 # New-user onboarding
 ├── structure.md                       # Architecture decision log
 │
 ├── .claude/                           # ═══ IA / Kiat framework ONLY ═══
-│   ├── agents/                        # Agent system prompts (all kiat- prefixed)
-│   │   ├── kiat-team-lead.md          # Technical orchestrator
-│   │   ├── kiat-backend-coder.md      # Go + Gin + Bun
-│   │   ├── kiat-frontend-coder.md     # Next.js + React + Shadcn
-│   │   ├── kiat-backend-reviewer.md   # Backend quality gate
-│   │   └── kiat-frontend-reviewer.md  # Frontend quality gate
-│   ├── skills/                        # Reusable agent skills (all kiat- prefixed)
+│   ├── README.md                      # Framework doc index
+│   ├── agents/                        # 6 kiat-* agent system prompts
+│   │   ├── kiat-tech-spec-writer.md   # Default entry point: writes story specs
+│   │   ├── kiat-team-lead.md          # Technical orchestrator (runs the pipeline)
+│   │   ├── kiat-backend-coder.md      # Go + Gin + Bun + Clean Architecture
+│   │   ├── kiat-frontend-coder.md     # Next.js + React + Shadcn + Tailwind v4
+│   │   ├── kiat-backend-reviewer.md   # Backend quality gate (3-way verdict)
+│   │   └── kiat-frontend-reviewer.md  # Frontend quality gate (3-way verdict)
+│   ├── skills/                        # 6 kiat-* skills (some folder-based)
+│   │   ├── kiat-validate-spec.md      # Pre-coding spec validation (Layer 6a)
 │   │   ├── kiat-review-backend.md     # Structured backend review checklist
 │   │   ├── kiat-review-frontend.md    # Structured frontend review checklist
-│   │   ├── kiat-clerk-auth-review.md  # Clerk auth specialist (Layer 3)
-│   │   ├── kiat-validate-spec.md      # Pre-coding spec validation (Layer 6a)
-│   │   └── kiat-test-patterns-check/  # Forced-response test patterns (Layer 6b)
-│   │       ├── SKILL.md               #   Router + scope detection
-│   │       └── blocks/                #   9 pattern blocks loaded selectively
-│   ├── specs/                         # Framework specs — machinery, not conventions
+│   │   ├── kiat-clerk-auth-review.md  # Clerk auth specialist (Layer 3, conditional)
+│   │   ├── kiat-test-patterns-check/  # Forced-response test patterns (Layer 6b)
+│   │   │   ├── SKILL.md               #   Router + scope detection
+│   │   │   └── blocks/                #   9 pattern blocks loaded selectively
+│   │   └── kiat-ui-ux-search/         # Wrapper for external ui-ux-pro-max skill
+│   │       ├── SKILL.md               #   Lightweight router (~1k tokens)
+│   │       └── references/            #   categories.md, when-to-use.md, invoke-patterns.md
+│   ├── specs/                         # 4 framework specs — machinery, not conventions
+│   │   ├── available-skills.md        # Skill registry (read by tech-spec-writer)
 │   │   ├── context-budgets.md         # Per-agent token budgets (Layer 5)
-│   │   ├── metrics-events.md          # JSONL event log schema
+│   │   ├── metrics-events.md          # JSONL event log schema (rollup-first v1.1)
 │   │   └── failure-patterns.md        # Reactive failure pattern registry
-│   ├── tools/                         # Framework utilities
-│   │   └── report.py                  # Weekly health report generator
-│   └── docs/                          # Docs consumed by agents
-│       ├── CLAUDE.md                  # Universal coding rules (all agents read this)
-│       └── README.md                  # Framework doc index
+│   └── tools/                         # Framework utilities
+│       ├── report.py                  # Weekly health report generator
+│       └── doc-audit.py               # M1 (tokens) + M2 (structure) audit on delivery/specs/
 │
 ├── delivery/                          # ═══ Project-owned ONLY ═══
-│   ├── README.md                      # Delivery conventions (epics, stories)
+│   ├── README.md                      # Delivery conventions (epics, stories, common cmds)
 │   ├── epic-X/                        # Per-epic folders with story specs
-│   │   └── story-NN.md                # Written by BMAD, consumed by coders
+│   │   ├── _epic.md                   # Epic header + Epic Patterns section
+│   │   └── story-NN.md                # Written by tech-spec-writer, consumed by coders
+│   ├── epic-template/                 # Templates for new epics
+│   │   ├── _epic.md
+│   │   └── story-NN-slug.md           # Includes ## Skills section
 │   ├── metrics/                       # Data written by Team Lead at runtime
-│   │   └── events.jsonl               # (generated when stories run)
-│   └── specs/                         # Project conventions — humans read these
+│   │   └── events.jsonl               # (generated when stories run, gitignored)
+│   └── specs/                         # Project conventions — humans + agents read these
 │       ├── api-conventions.md         # REST design, error codes
 │       ├── architecture-clean.md      # Clean Architecture 4 layers
+│       ├── ARCHITECTURE-OVERVIEW.md   # High-level project architecture
 │       ├── backend-conventions.md     # Project structure, naming, logging
-│       ├── clerk-patterns.md          # Clerk auth flows
+│       ├── clerk-patterns.md          # Clerk auth flows (project-side)
 │       ├── database-conventions.md    # Migrations, RLS, timestamps
 │       ├── deployment.md              # Env vars, dev modes, production guards
 │       ├── design-system.md           # Colors, spacing, typography
 │       ├── frontend-architecture.md   # React patterns, hooks, accessibility
 │       ├── git-conventions.md         # Branches, commits, PR discipline
-│       ├── project-memory.md          # Emergent cross-story patterns (coherence mechanism)
+│       ├── project-memory.md          # Emergent cross-story patterns (coherence)
 │       ├── security-checklist.md      # OWASP, RLS testing
 │       ├── service-communication.md   # DI patterns, error handling
 │       └── testing.md                 # Anti-flakiness rules + CI gate
