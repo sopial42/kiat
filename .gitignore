@@ -1,0 +1,22 @@
+# Runtime data written by Team Lead during real stories
+# (The schema lives in .claude/specs/metrics-events.md and is committed.
+# The data itself is project-specific and should never be in the Kiat repo.)
+delivery/metrics/*.jsonl
+
+# Python bytecode from running the framework tools
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor / OS cruft
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated reports (ephemeral — regenerate with report.py / doc-audit.py)
+*-report.md
+doc-audit.md
+health-report.md
