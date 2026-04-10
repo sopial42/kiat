@@ -33,7 +33,7 @@ The checklist is deliberately external to this file. When you're running the rev
 
 ### Phase 1 — Read spec and understand the contract
 
-Before looking at code, read the story spec at `delivery/epic-X/story-NN.md`. Extract:
+Before looking at code, read the story spec at `delivery/epics/epic-X/story-NN.md`. Extract:
 - the acceptance criteria the coder was aiming at,
 - the API contracts they were supposed to implement,
 - any database changes they were supposed to make,

@@ -65,14 +65,14 @@ Review the 10 files in `delivery/specs/` and edit anything that doesn't fit your
 ### Phase 2: Create Your First Epic (30 minutes)
 
 ```bash
-mkdir delivery/epic-1-landing
+mkdir delivery/epics/epic-1-landing
 # Write _epic.md with scope + objectives
 # Write story-01-<slug>.md with acceptance criteria
 ```
 
 ### Phase 3: Run Your First Story
 
-1. **You chat with BMAD Master** (BMAD is separate from Kiat — it's your product/metier agent). BMAD writes `delivery/epic-1-landing/story-01-<slug>.md`.
+1. **You chat with BMAD Master** (BMAD is separate from Kiat — it's your product/metier agent). BMAD writes `delivery/epics/epic-1-landing/story-01-<slug>.md`.
 
 2. **Team Lead picks up the story** and runs:
    - **Phase 0a**: `kiat-validate-spec` — checks for ambiguity. If `NEEDS_CLARIFICATION`, bounces questions back to BMAD before any coder runs.
@@ -111,8 +111,8 @@ Look for:
 
 - [ ] **Project specs customized** (the 10 files in `delivery/specs/`)
 - [ ] **Framework untouched** (unless you're changing Kiat itself)
-- [ ] **First epic planned** (`delivery/epic-1/_epic.md`)
-- [ ] **First story written** (`delivery/epic-1/story-01.md`)
+- [ ] **First epic planned** (`delivery/epics/epic-1/_epic.md`)
+- [ ] **First story written** (`delivery/epics/epic-1/story-01.md`)
 - [ ] **BMAD agent available** (not part of Kiat — bring your own)
 - [ ] **Ready to run Team Lead on story 1**
 

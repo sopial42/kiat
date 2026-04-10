@@ -25,7 +25,7 @@ This skill catches those ambiguities *before* any coder runs. When BMAD is still
 
 **When to invoke:** At Phase 0 of the Team Lead workflow, after the pre-flight context budget check passes, before launching any coder. Also use it when a coder escalates mid-story with "I can't tell what this means" — the skill's checklist usually surfaces the ambiguity quickly.
 
-**Input:** the story spec file at `delivery/epic-X/story-NN.md`.
+**Input:** the story spec file at `delivery/epics/epic-X/story-NN.md`.
 
 **Output:** `SPEC_VERDICT: CLEAR | NEEDS_CLARIFICATION | BLOCKED` on line 1, followed by a short report.
 

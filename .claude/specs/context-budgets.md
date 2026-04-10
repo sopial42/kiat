@@ -38,7 +38,7 @@ wc -c CLAUDE.md \
       delivery/specs/<your-architecture-doc>.md \
       delivery/specs/testing.md \
       delivery/specs/<your-convention-docs>.md \
-      delivery/epic-1/story-01-<slug>.md \
+      delivery/epics/epic-1/story-01-<slug>.md \
   | tail -1
 # Divide total bytes by 4 → token estimate
 # If > 25k, either trim conventions or raise the budget
@@ -106,7 +106,7 @@ wc -c CLAUDE.md \
       delivery/specs/testing.md
 
 # Per-story (typical)
-wc -c delivery/epic-*/story-01.md \
+wc -c delivery/epics/epic-*/story-01.md \
       delivery/specs/api-conventions.md \
       delivery/specs/database-conventions.md
 ```

@@ -9,7 +9,7 @@ This directory contains the product roadmap, user stories, acceptance criteria, 
 ```
 delivery/
 ├── README.md                         # This file
-├── specs/                            # Project conventions (user-editable per project)
+├── specs/                            # Technical conventions (architecture, design system, etc.)
 │   ├── api-conventions.md            # REST design, error codes, status codes
 │   ├── architecture-clean.md         # Clean Architecture 4 layers
 │   ├── backend-conventions.md        # Project structure, naming, logging
@@ -23,14 +23,22 @@ delivery/
 │   ├── security-checklist.md         # OWASP, RLS testing
 │   ├── service-communication.md      # DI patterns
 │   └── testing.md                    # Anti-flakiness rules (+ CI gate)
-├── metrics/                          # Runtime data (written by Team Lead)
-│   └── events.jsonl                  # JSONL event log
-├── epic-N-name/                      # Per-epic folders
-│   ├── _epic.md                      # Epic summary
-│   └── story-NN-slug.md              # Story specs (written by BMAD)
-└── epic-template/                    # Templates for new epics
-    ├── _epic.md
-    └── story-NN-slug.md
+├── business/                         # Business / domain documentation (written by BMAD)
+│   ├── README.md                     # What goes here — start here before adding files
+│   ├── glossary.md                   # Domain terms (create on demand)
+│   ├── personas.md                   # User personas (create on demand)
+│   ├── business-rules.md             # Compliance / invariants (create on demand)
+│   ├── domain-model.md               # Entities + relations at business level (create on demand)
+│   └── user-journeys.md              # End-to-end flows (create on demand)
+├── epics/                            # All epics, plus the template
+│   ├── epic-template/                # Template for new epics
+│   │   ├── _epic.md
+│   │   └── story-NN-slug.md
+│   └── epic-N-name/                  # Per-epic folders (written by kiat-tech-spec-writer from BMAD briefs)
+│       ├── _epic.md                  # Epic summary
+│       └── story-NN-slug.md          # Technical story spec (input to kiat-team-lead)
+└── metrics/                          # Runtime data (written by Team Lead only)
+    └── events.jsonl                  # JSONL rollup event log
 ```
 
 ---
@@ -83,13 +91,13 @@ delivery/
 ### 1. Create Epic Folder
 
 ```bash
-mkdir delivery/epic-25-my-feature
-cd delivery/epic-25-my-feature
+mkdir delivery/epics/epic-25-my-feature
+cd delivery/epics/epic-25-my-feature
 ```
 
 ### 2. Write Epic Header (`_epic.md`)
 
-See `epic-template/_epic.md` for template.
+See `epics/epic-template/_epic.md` for template.
 
 ```markdown
 # Epic 25: My Big Feature
@@ -115,7 +123,7 @@ See `epic-template/_epic.md` for template.
 
 ### 3. Write Stories (`story-NN-slug.md`)
 
-See `epic-template/story-NN-slug.md` for template.
+See `epics/epic-template/story-NN-slug.md` for template.
 
 Each story has:
 - **Objective**: What does this story deliver?

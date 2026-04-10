@@ -38,7 +38,7 @@ These are the only rules that live in ambient context because they're about *how
 
 ### If you are the Tech Spec Writer (entry point for new work)
 
-Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You translate informal user requests into structured story files in `delivery/epic-X/story-NN.md`, decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and hand off to Team Lead. **You are the default entry point** for any user request that becomes a story — never let coders start without going through you first, except when an existing story file is being re-executed.
+Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You translate informal user requests into structured story files in `delivery/epics/epic-X/story-NN.md`, decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and hand off to Team Lead. **You are the default entry point** for any user request that becomes a story — never let coders start without going through you first, except when an existing story file is being re-executed.
 
 ### If you are Team Lead (orchestrator)
 
@@ -75,7 +75,9 @@ When you need project-specific information, go directly to the right file under 
 | Git branches, commits, PR discipline | [`delivery/specs/git-conventions.md`](delivery/specs/git-conventions.md) |
 | Environment vars, production guards, deployment | [`delivery/specs/deployment.md`](delivery/specs/deployment.md) |
 | Common dev commands (`make dev`, `npm run`, etc.) | [`delivery/README.md`](delivery/README.md) |
-| Epic and story specs | `delivery/epic-X/story-NN.md` |
+| Business / domain documentation (glossary, personas, rules, domain model, user journeys) | [`delivery/business/`](delivery/business/) |
+| Epic and story technical specs (written by kiat-tech-spec-writer) | `delivery/epics/epic-X/story-NN.md` |
+| Epic / story templates | [`delivery/epics/epic-template/`](delivery/epics/epic-template/) |
 
 ---
 

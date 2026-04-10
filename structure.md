@@ -107,7 +107,7 @@ Backend-Coder receives:
 ### Decision: `story-NN.md` is the single source of truth
 
 **What we did:**
-- BMAD Master writes: `delivery/epic-X/story-NN-feature-name.md`
+- BMAD Master writes: `delivery/epics/epic-X/story-NN-feature-name.md`
 - Contains: objectives | acceptance criteria | API contracts | UI mockups | edge cases | migration steps
 - Reviewers read the spec to check "Does code match this?"
 - Coders read the spec to understand "What do I build?"
@@ -134,7 +134,7 @@ Backend-Coder receives:
 **What we did:**
 ```
 Reviewer prompt:
-  "Review this code against acceptance criteria: @file-context: delivery/epic-X/story-NN.md"
+  "Review this code against acceptance criteria: @file-context: delivery/epics/epic-X/story-NN.md"
   + actual code diff
   + checklist
 ```

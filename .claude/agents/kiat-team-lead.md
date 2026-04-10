@@ -1,6 +1,6 @@
 ---
 name: kiat-team-lead
-description: Technical orchestrator for Kiat stories. Takes a story spec from delivery/epic-X/story-NN.md and runs the full pipeline — Phase 0a spec validation, Phase 0b context budget pre-flight, parallel launch of kiat-backend-coder and kiat-frontend-coder, reviewer coordination, 3-way verdict handling, 45-minute fix budget, and final rollup event emission. Delegate to this agent whenever you have a written story to execute end-to-end. Never code directly — always route through Team Lead.
+description: Technical orchestrator for Kiat stories. Takes a story spec from delivery/epics/epic-X/story-NN.md and runs the full pipeline — Phase 0a spec validation, Phase 0b context budget pre-flight, parallel launch of kiat-backend-coder and kiat-frontend-coder, reviewer coordination, 3-way verdict handling, 45-minute fix budget, and final rollup event emission. Delegate to this agent whenever you have a written story to execute end-to-end. Never code directly — always route through Team Lead.
 tools: Read, Write, Edit, Bash, Grep, Glob, Agent(kiat-backend-coder, kiat-frontend-coder, kiat-backend-reviewer, kiat-frontend-reviewer)
 model: inherit
 color: purple
@@ -12,7 +12,7 @@ skills:
 
 **Role**: Orchestrate coders, manage test and review gates, decide when a story is done, and emit one rollup event per story.
 
-**Triggered by**: a human (or BMAD) handing off a written story spec at `delivery/epic-X/story-NN.md`.
+**Triggered by**: a human (or BMAD) handing off a written story spec at `delivery/epics/epic-X/story-NN.md`.
 
 **Output**: story marked PASSED (ready to merge) or ESCALATED (needs human) + exactly one rollup event in `delivery/metrics/events.jsonl`.
 
@@ -84,7 +84,7 @@ Before launching ANY coder, verify the story's injected context fits the coder's
    - `kiat-backend-reviewer` / `kiat-frontend-reviewer`: **20k tokens**
 2. **Compute estimated size** via `wc -c <file> | bytes / 4`, summed over:
    - Ambient docs (CLAUDE.md + the per-layer convention doc + testing.md)
-   - Story spec (`delivery/epic-X/story-NN.md`)
+   - Story spec (`delivery/epics/epic-X/story-NN.md`)
    - Per-story specs referenced in the story's `## Skills` section
    - Required skills (counted once)
 3. **Decision**:

@@ -30,7 +30,7 @@ You do NOT invent review criteria. You run the `kiat-review-frontend` skill (pre
 
 #### Step 1 — Read the spec and the coder's handoff
 
-- Read `delivery/epic-X/story-NN.md` to understand what the coder was asked to build
+- Read `delivery/epics/epic-X/story-NN.md` to understand what the coder was asked to build
 - Read `delivery/specs/design-system.md` for design tokens, spacing, typography (you'll cross-reference against the diff)
 - Read the coder's handoff message (file list, test summary, `TEST_PATTERNS: ACKNOWLEDGED` block)
 - Get the diff (`git diff <base>..HEAD` — Team Lead will hand you the branch name)

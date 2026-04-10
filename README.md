@@ -1,32 +1,31 @@
 # 🚀 Kiat — Starter Kit Agent-First SaaS
 
-> **The vision**: Humans interface with AI through natural conversation. BMAD Master writes specs. Agents code in parallel. Everyone debugs. Tests gate merges. Done.
+> **The vision**: You describe what you want in natural language. `kiat-tech-spec-writer` translates it into a structured technical story. `kiat-team-lead` runs the pipeline. Parallel coder and reviewer agents execute. `SubagentStop` hooks enforce the protocol. Done.
 
 This is a **generic, reusable starter kit** for building SaaS with:
 - **Go + Gin + Bun ORM** backend (Clean Architecture)
 - **Next.js App Router + Shadcn/UI + React Query** frontend
 - **Clerk** authentication
-- **Agent-first workflow**: BMAD for product decisions, parallel coder/reviewer/test agents, human approval gates
+- **Agent-first workflow**: `kiat-tech-spec-writer` translates informal requests into structured stories, `kiat-team-lead` orchestrates, parallel coder/reviewer agents ship the code. An optional upstream product agent (BMAD) can feed business knowledge via [`delivery/business/`](delivery/business/README.md) — that integration is still being tested and is not prescribed here.
 
 ---
 
 ## 🎯 The Vision: Why Kiat?
 
-### Problem We're Solving
-1. **Spec fragmentation**: Specs live in 5 places, agents miss context → duplicate errors
-2. **Agent coordination**: No clear "when do I use this skill?" → wasteful context, missed optimizations
-3. **Infinite loops**: Reviewer finds issue → coder fixes → reviewer finds new issue (no convergence)
-4. **Context explosion**: Agents loaded with entire codebase → token waste, slower thinking
-5. **Test gates unclear**: "Is this tested enough?" → subjective, non-gated merges
+### Problems we're solving
+1. **Business intent vs technical spec have different owners.** The *what* (user needs, business rules, domain model) and the *how* (API contracts, DB schemas, acceptance criteria) are usually smeared into one document, owned by nobody, and stale in both directions. Kiat splits them: optional business layer in `delivery/business/` (BMAD or a human), technical stories in `delivery/epics/` (written by `kiat-tech-spec-writer`).
+2. **Informal requests don't survive parallel execution.** "Add auto-save to the notes editor" is fine for a human. For two parallel coder agents building backend and frontend in isolation, it guarantees a contract mismatch. The tech-spec-writer is the single funnel that forces every new story through a structured spec before any code runs.
+3. **Infinite review loops.** Reviewer finds issue → coder fixes → reviewer finds new issue → repeat forever. Kiat caps this with a 45-minute wall-clock fix budget + 3-way verdicts (`APPROVED / NEEDS_DISCUSSION / BLOCKED`) so judgment calls escalate instead of looping.
+4. **Context explosion.** Agents loaded with the entire codebase waste tokens and think slower. Kiat enforces hard per-agent token budgets checked pre-flight, and skills load only what they need via progressive disclosure (`SKILL.md` + on-demand `references/`).
+5. **Skills drift silently.** A skill that looks well-designed can behave identically to no skill at all — audit lines get emitted, acknowledgments get pasted, but the underlying output is unchanged. Kiat runs behavioral evals (`with_skill` vs baseline) to measure the real delta. See [Skill Evaluation](#-skill-evaluation-proving-the-skills-actually-work).
 
-### Our Solution
-- **Single source of truth** per artifact (specs, architecture, testing patterns)
-- **Smart context injection** (agent loads only what it needs via @file-context + @skills)
-- **3-way review verdicts + time-budgeted retries** (no more "max 2 cycles" fairytale — see [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules))
-- **Pre-coding validation gates** (spec ambiguity + kiat-test-patterns-check caught before any coder is launched)
-- **Parallelizable workflow** (BMAD writes while coders wait; stories processed in parallel)
-- **Automated test gates** (Playwright in CI blocks merge until ✅)
-- **Observability from day one** (JSONL event log + markdown health reports — see [Monitoring & Reporting](#-monitoring--reporting))
+### Our solution
+- **Two-layer spec model.** Business knowledge in `delivery/business/` (optional, BMAD-compatible), technical stories in `delivery/epics/` (written by `kiat-tech-spec-writer` from informal requests + optionally the business layer).
+- **Single source of truth per artifact.** Conventions in `delivery/specs/`, framework machinery in `.claude/`, runtime data in `delivery/metrics/`. Never cross the streams.
+- **Pre-coding validation gates.** `kiat-validate-spec` catches ambiguity and contract gaps before any coder is launched; the 25k context budget pre-flight catches oversized stories.
+- **3-way review verdicts + time-budgeted retries** — see [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules).
+- **SubagentStop hooks for hard enforcement.** Coders can't hand off without emitting `TEST_PATTERNS: ACKNOWLEDGED`; reviewers can't hand off without `VERDICT:` as line 1. Exit 2 on violation, re-run forced.
+- **Observability from day one** — JSONL event log + markdown health reports. See [Monitoring & Reporting](#-monitoring--reporting).
 
 ---
 
@@ -48,11 +47,11 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 │  • Asks clarifying questions if needed (≤ 2 rounds)               │
 │  • Decides which contextual skills the coders will need           │
 │    (consults .claude/specs/available-skills.md)                   │
-│  • Writes delivery/epic-X/story-NN.md with structured sections    │
+│  • Writes delivery/epics/epic-X/story-NN.md with structured sections    │
 │    + ## Skills section listing contextual skills                  │
 │  • Self-validates via kiat-validate-spec                          │
 └────┬─────────────────────────────────────────────────────────────┘
-     │ delivery/epic-X/story-NN.md (CLEAR verdict)
+     │ delivery/epics/epic-X/story-NN.md (CLEAR verdict)
      ▼
 ╔══════════════════════════════════════════════════════════════════╗
 ║                     kiat-team-lead                                ║  ◄─── Pipeline orchestrator
@@ -130,7 +129,7 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 **Two entry points to Kiat:**
 
 - **New work** (the common case): user describes what they want in natural language → `kiat-tech-spec-writer` translates it into a structured story file → Team Lead executes. This is the default and what you should always do for new features, bug fixes, or refactors.
-- **Existing story re-execution** (less common): user has a story file that already exists in `delivery/epic-X/story-NN.md` (e.g., re-running a story that was previously escalated, or the spec was hand-written) → user invokes Team Lead directly with the story path. The tech-spec-writer is skipped in this case because the story is already structured.
+- **Existing story re-execution** (less common): user has a story file that already exists in `delivery/epics/epic-X/story-NN.md` (e.g., re-running a story that was previously escalated, or the spec was hand-written) → user invokes Team Lead directly with the story path. The tech-spec-writer is skipped in this case because the story is already structured.
 
 **BMAD Master is not part of Kiat.** If you use BMAD as your product/métier agent, BMAD's output goes to the tech-spec-writer (not directly to Team Lead). BMAD writes the *what* and the *why*; the tech-spec-writer translates it into the *how*.
 
@@ -251,7 +250,7 @@ PROJECT CONVENTIONS (loaded on-demand per task)
 - **Pre-coding gates fire before any code.** `kiat-validate-spec` (Phase 0a) and pre-flight budget (Phase 0b, which reads the story's `## Skills` section to estimate cost) catch ambiguity and oversize stories **before** a coder is launched — the earliest possible failure point.
 - **Parallel coding.** Backend and Frontend coders run simultaneously once Phase 0 passes. They never wait on each other.
 - **3-way verdicts + 45-min fix budget.** Reviewers output `APPROVED / NEEDS_DISCUSSION / BLOCKED`. BLOCKED re-cycles within a time budget. NEEDS_DISCUSSION is arbitrated by Team Lead, never bounced back to the coder as "fix this".
-- **One rollup event per story.** Team Lead emits exactly one write to `events.jsonl` at story completion — success or escalation. `report.py` reads this weekly for health metrics.
+- **Event log at phase transitions + rollup at the end.** Team Lead appends one JSON line per phase transition to `events.jsonl` (received, spec_validated, preflight, review, passed/escalated) and a final rollup at story completion. `report.py` reads these weekly for health metrics.
 
 ---
 
@@ -290,7 +289,7 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 | `delivery/specs/git-conventions.md` | Coders + reviewers | Branch names, commit messages, PR discipline, immutability rules |
 | `delivery/specs/deployment.md` | Team Lead + agents | Env vars, dev modes (`make dev` / `make dev-test`), production safety guards |
 | **`delivery/specs/project-memory.md`** | **Tech spec writer + humans** | **Living file of emergent cross-story patterns. Only cross-story coherence mechanism in Kiat.** |
-| `delivery/epic-X/story-NN.md` | All agents | **THE SPEC** — acceptance criteria, contracts, edge cases (written by BMAD) |
+| `delivery/epics/epic-X/story-NN.md` | All agents | **THE SPEC** — acceptance criteria, contracts, edge cases (written by BMAD) |
 | `checklists/*.md` | Humans + agents | "Am I done?" templates (user-editable per project) |
 | `patterns/*.md` | Humans | Architectural patterns (user-editable per project) |
 
@@ -401,10 +400,10 @@ The four layers above catch bad reviews and bad retries. **Layer 5 catches the p
 
 | Agent | Input budget |
 |---|---|
-| Team Lead | 10k tokens |
+| kiat-tech-spec-writer | unrestricted (reads business + specs on demand to write the story) |
+| kiat-team-lead | 10k tokens |
 | Backend-Coder / Frontend-Coder | **25k tokens** |
 | Backend-Reviewer / Frontend-Reviewer | 20k tokens |
-| BMAD Master | unrestricted |
 
 **How it's enforced:**
 1. **Pre-flight check (Team Lead — Phase 0)**: before launching any coder, Team Lead runs `wc -c` on every file it plans to inject, divides by 4 (no tokenizer needed, ±20% is fine for gating), and compares to the target agent's budget. If over, **escalate to BMAD with a split request** — do NOT launch the coder "to see if it works."
@@ -459,6 +458,25 @@ Full rules in [`.claude/skills/kiat-validate-spec/SKILL.md`](.claude/skills/kiat
 
 ---
 
+#### Layer 7 — Hard runtime enforcement via SubagentStop hooks
+
+Layers 1-6 are all **soft enforcement**: skills, prompts, audit lines. They work when the agent chooses to follow them, and they leave a paper trail when the agent doesn't. But a sufficiently rushed or confused agent can still hand off without emitting the load-bearing lines, and the downstream consumer only notices after the fact.
+
+**Layer 7 makes two specific protocol lines non-negotiable at the runtime level**, via Claude Code's `SubagentStop` hook mechanism wired through [`.claude/settings.json`](.claude/settings.json):
+
+| Hook | Agents matched | What it checks | Script |
+|---|---|---|---|
+| **Test-patterns acknowledgment** | `kiat-backend-coder`, `kiat-frontend-coder` | The session transcript must contain `TEST_PATTERNS: ACKNOWLEDGED` before the agent is allowed to finish | [`check-test-patterns-ack.sh`](.claude/tools/hooks/check-test-patterns-ack.sh) |
+| **Reviewer verdict line** | `kiat-backend-reviewer`, `kiat-frontend-reviewer` | The transcript must contain a line matching `VERDICT: (APPROVED|NEEDS_DISCUSSION|BLOCKED)` | [`check-verdict-line.sh`](.claude/tools/hooks/check-verdict-line.sh) |
+
+**Semantics:** each hook receives the transcript path on stdin, greps it for the required pattern, and exits `0` (pass) or `2` (block). On exit 2, Claude Code shows the hook's stderr message to the model and forces it to self-correct before actually handing off — it's a pre-commit hook, but for the agent's final output.
+
+**Why this matters:** the 6 previous layers can all be fooled by a coder or reviewer that "forgets" to emit the audit line. Layer 7 closes that gap — you can't forget, because the hook refuses to let you finish. The hook is trivially scriptable (both files are ~30 lines of bash), runs locally with zero dependencies beyond `grep`, and emits a specific failure message telling the model exactly which line is missing and why.
+
+**Combined with the skill eval loop** ([Skill Evaluation](#-skill-evaluation-proving-the-skills-actually-work)), this gives a two-layer quality gate: hooks catch protocol violations at runtime, evals catch skill design regressions before shipping.
+
+---
+
 ### Complementary Mechanism — Project Memory (cross-story coherence)
 
 The 6 enforcement layers above all operate at **story scope**: they fire on one story at a time, catch problems within that story, and have no view of the project as a whole. That's intentional — agents are deliberately isolated to keep context budgets tight.
@@ -492,8 +510,7 @@ This is why Kiat invests in:
 4. **Mandatory audit lines** → every skill invocation leaves a trace
 5. **Pre-flight context budgets** → oversized stories are split before they become silent failures
 6. **Pre-coding validation gates** → ambiguous specs and unread testing rules are caught before any code is written
-
-If compliance drifts in practice, the next enforcement lever is mechanical: have Team Lead automatically reject any review output missing the audit line and force a re-run. That's the final gate if trust erodes.
+7. **SubagentStop hooks for hard runtime enforcement** → coders and reviewers physically can't hand off without the load-bearing protocol lines
 
 ---
 
@@ -591,146 +608,6 @@ Until then, `python3 kiat/.claude/tools/report.py` once a week is more than enou
 
 ---
 
-## 🚦 Workflow: From Chat to Merge
-
-### Phase 1: Spec Writing (BMAD Master)
-```
-User/Client: "I want to add 2FA to login"
-    ↓
-BMAD Master Agent:
-  1. Challenge: "Is this feature for existing users or new signups? Security or UX?"
-  2. Propose spec: "Feature: 2FA setup flow → acceptance criteria → API contracts → edge cases"
-  3. If spec is big (XL tshirt): Launch adversarial review
-  4. Output: `delivery/epic-X/story-NN-2fa-setup.md` (DONE, ready to code)
-    ↓
-Human verification: "Looks good?" ✅
-```
-
-**BMAD context**:
-- ALL docs accessible (no restrictions)
-- Can call skills: `bmad-editorial-review-prose`, `bmad-editorial-review-structure`
-- Outputs to `delivery/` directory
-
----
-
-### Phase 2: Code (Parallel)
-```
-Backend-Coder Agent:
-  Context: CLAUDE.md + backend-architecture.md + testing-patterns.md + story-NN.md
-  Load skills: @clerk, @api-design (dynamic)
-  1. Read spec → extract: "Add POST /users/:id/2fa-enable"
-  2. Write migration + handler + tests
-  3. Output: PR-ready code + Playwright test
-    ↓
-Backend-Reviewer Agent:
-  Context: story-NN.md (spec) + CLAUDE.md + checklist
-  1. Check: "Does code match spec? Any security gaps?"
-  2. If M+ tshirt issue: Send detailed feedback
-  3. Output: List of issues (if any)
-    ↓
-[If issues] → Backend-Coder re-runs (reads reviewer output + fixes ALL in one session)
-[If clean] → Test gate
-```
-
-**Frontend same flow (parallel)**
-
----
-
-### Phase 3: Test Gate
-```
-Playwright tests (run in agent + CI):
-  1. If FAIL: Test-Debugger agent (or Coder) reads error + fixes code + reruns
-  2. Gated by the 45-min fix budget (see Enforcement Model) — not a hard cycle count
-  3. If PASS: Unblock merge
-```
-
----
-
-### Phase 4: Merge (Human)
-```
-Human verifies:
-  ✅ Specs written + approved
-  ✅ Code reviewed (no major issues)
-  ✅ Tests passing (Playwright + CI)
-  → Merge
-```
-
----
-
-## 🤖 Agent Configuration: Quick Reference
-
-| Agent | Triggered By | Context Size | Skills | Iteration Budget |
-|-------|--------------|--------------|--------|----------------|
-| **BMAD Master** | User chat | Unrestricted | bmad-editorial-*, brand-specific | N/A (orchestrator) |
-| **Team Lead** | BMAD output | 8-10k tokens (spec + story context) | None (pure orchestration) | N/A (time-gated) |
-| **Backend-Coder** | Team Lead | 12-15k tokens (story + arch) | clerk, next-best-practices, sharp-edges | 45-min fix budget |
-| **Frontend-Coder** | Team Lead | 12-15k tokens (story + arch + design) | clerk, react-best-practices, composition-patterns | 45-min fix budget |
-| **Backend-Reviewer** | After Backend-Coder | 10-12k tokens (story + checklist + code diff) | **kiat-review-backend** (REQUIRED), **kiat-clerk-auth-review** (conditional), differential-review | Verdict: APPROVED / NEEDS_DISCUSSION / BLOCKED |
-| **Frontend-Reviewer** | After Frontend-Coder | 10-12k tokens (story + checklist + code diff) | **kiat-review-frontend** (REQUIRED), **kiat-clerk-auth-review** (conditional), react-best-practices, composition-patterns, web-design-guidelines | Verdict: APPROVED / NEEDS_DISCUSSION / BLOCKED |
-| **Test-Debugger** (optional) | If tests fail | 8-10k tokens (test error + code) | None (pure debugging) | 45-min fix budget |
-
-**Key principle**: **Smaller context = faster thinking = better decisions**. Agents don't see the entire codebase.
-
----
-
-## 🔄 Preventing Infinite Loops
-
-**Problem**: Reviewer says "issue X" → Coder fixes → Reviewer says "now issue Y" → repeat forever.
-
-**Solution** (see full [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules) above):
-1. **3-way verdicts**: `APPROVED / NEEDS_DISCUSSION / BLOCKED` — judgment calls escalate instead of looping
-2. **Batch feedback**: Reviewer lists ALL issues at once; coder fixes them in one pass (no ping-pong)
-3. **45-min fix budget**: Re-cycles allowed while elapsed time < 45 min; exhausted budget → escalate to user
-4. **Convergence gate**: If reviewer finds 5+ issues in the same area → story is too ambitious → split into smaller story
-5. **Audit lines**: Every review output carries skill-invocation evidence, so silent shortcuts are detectable
-
----
-
-## 🎯 Context Injection: How Agents See Specs
-
-**Goal**: Reviewer needs to know "what was the acceptance criteria?" without reading entire Kotai codebase.
-
-**Solution**: File-centric injection
-```
-Reviewer prompt receives:
-  @file-context: delivery/epic-X/story-NN.md (spec)
-  @file-context: checklists/reviewer-checklist.md (role guide)
-  @inline: code diff from PR (git show)
-  @memory: MEMORY.md (if any prior context needed)
-```
-
-**Not included**:
-- Backend codebase (coder reads it, reviewer doesn't need it)
-- Full git history
-- Other epics (only THIS story)
-
-**Documented in**: `patterns/context-injection.md`
-
----
-
-## ✅ Checklists: "Am I Done?"
-
-Each agent has a checklist:
-- **Backend-Coder**: migration, handler, middleware, logging, error handling, PASSED tests
-- **Frontend-Coder**: component, hook, tests, accessibility, mobile responsive
-- **Reviewer**: spec compliance, security, performance, maintainability
-- **Tester**: E2E coverage, edge cases, offline behavior, a11y
-
-**No ambiguity: Checklist is the contract.**
-
----
-
-## 🛠️ Stack Details
-
-- **Backend**: Go 1.23 + Gin + Bun ORM + PostgreSQL 16
-- **Frontend**: Next.js 16 + App Router + React 19 + Shadcn/UI + Tailwind v4
-- **Auth**: Clerk (real auth in dev, test auth available)
-- **Database**: PostgreSQL (migrations tracked in `backend/migrations/`)
-- **Testing**: Playwright E2E + Venom backend tests
-- **Deployment**: Docker + Cloud Run (GCP)
-
----
-
 ## 📁 Folder Layout
 
 The layout enforces a strict separation: **`.claude/` = IA/Kiat framework**, **`delivery/` = project-owned**. No mixing.
@@ -745,6 +622,7 @@ kiat/
 │
 ├── .claude/                           # ═══ IA / Kiat framework ONLY ═══
 │   ├── README.md                      # Framework doc index
+│   ├── settings.json                  # Permissions allowlist + SubagentStop hook wiring (Layer 7)
 │   ├── agents/                        # 6 kiat-* agent system prompts
 │   │   ├── kiat-tech-spec-writer.md   # Default entry point: writes story specs
 │   │   ├── kiat-team-lead.md          # Technical orchestrator (runs the pipeline)
@@ -777,19 +655,30 @@ kiat/
 │   │   └── failure-patterns.md        # Reactive failure pattern registry
 │   └── tools/                         # Framework utilities
 │       ├── report.py                  # Weekly health report generator
-│       └── doc-audit.py               # M1 (tokens) + M2 (structure) audit on delivery/specs/
+│       ├── doc-audit.py               # M1 (tokens) + M2 (structure) audit on delivery/specs/
+│       └── hooks/                     # SubagentStop hooks (Layer 7 enforcement)
+│           ├── check-test-patterns-ack.sh   # Blocks coder handoff if TEST_PATTERNS: ACKNOWLEDGED missing
+│           └── check-verdict-line.sh        # Blocks reviewer handoff if VERDICT: line 1 missing
 │
 ├── delivery/                          # ═══ Project-owned ONLY ═══
 │   ├── README.md                      # Delivery conventions (epics, stories, common cmds)
-│   ├── epic-X/                        # Per-epic folders with story specs
-│   │   ├── _epic.md                   # Epic header + Epic Patterns section
-│   │   └── story-NN.md                # Written by tech-spec-writer, consumed by coders
-│   ├── epic-template/                 # Templates for new epics
-│   │   ├── _epic.md
-│   │   └── story-NN-slug.md           # Includes ## Skills section
+│   ├── business/                      # Business / domain documentation (written by BMAD)
+│   │   ├── README.md                  # What goes here and what doesn't
+│   │   ├── glossary.md                # Domain terms (create on demand)
+│   │   ├── personas.md                # User personas (create on demand)
+│   │   ├── business-rules.md          # Compliance / invariants (create on demand)
+│   │   ├── domain-model.md            # Entities + relations at business level (create on demand)
+│   │   └── user-journeys.md           # End-to-end flows (create on demand)
+│   ├── epics/                         # All epics, plus the template
+│   │   ├── epic-template/             # Template for new epics
+│   │   │   ├── _epic.md
+│   │   │   └── story-NN-slug.md       # Includes ## Skills section
+│   │   └── epic-N-name/               # Per-epic folders (technical story specs)
+│   │       ├── _epic.md               # Epic header + Epic Patterns section
+│   │       └── story-NN.md            # Written by tech-spec-writer, consumed by team-lead
 │   ├── metrics/                       # Data written by Team Lead at runtime
 │   │   └── events.jsonl               # (generated when stories run, gitignored)
-│   └── specs/                         # Project conventions — humans + agents read these
+│   └── specs/                         # Technical conventions — humans + agents read these
 │       ├── api-conventions.md         # REST design, error codes
 │       ├── architecture-clean.md      # Clean Architecture 4 layers
 │       ├── ARCHITECTURE-OVERVIEW.md   # High-level project architecture
@@ -815,36 +704,42 @@ kiat/
 
 ## 🚀 Getting Started with Kiat
 
-1. **Read this README** (you're here ✅)
-2. **Read `structure.md`** (why each architectural decision)
-3. **Read `CLAUDE.md`** (coding rules)
-4. **Pick an epic to build** → copy `delivery/epic-template/` → edit
-5. **Chat with BMAD Master** (agent in `.claude/agents/`) → get spec
-6. **Trigger Backend-Coder + Frontend-Coder** (in parallel)
-7. **Check reviewer output** → if issues, coder reruns
-8. **Verify tests pass** → merge
+The short version: read [`GETTING_STARTED.md`](GETTING_STARTED.md) for the canonical onboarding walkthrough (10-20 minutes). It covers customizing `delivery/specs/` to your stack, creating the first epic, and running the first story through the pipeline.
+
+The even shorter version, once you're set up:
+
+1. Describe what you want in natural language to `kiat-tech-spec-writer` — it writes `delivery/epics/epic-X/story-NN.md` and self-validates it.
+2. Invoke `kiat-team-lead` on that story as the **main session thread** (not via `@agent-kiat-team-lead`, because sub-agents can't spawn sub-agents in Claude Code). It runs Phase 0 → parallel coders → reviewers → rollup.
+3. Watch the rollup event in `delivery/metrics/events.jsonl` and the PR it produces.
+4. Run `python3 .claude/tools/report.py` once a week to check pipeline health.
+
+**BMAD integration** — If you use BMAD as your upstream product agent, point it at [`delivery/business/`](delivery/business/README.md) and let it accumulate domain knowledge there. `kiat-tech-spec-writer` reads those files on demand when a story touches the corresponding domain. The exact BMAD wiring is still being tested and will be documented once it's proven; for now, `delivery/business/` exists as the landing spot.
 
 ---
 
 ## 📖 Further Reading
 
-- **`structure.md`**: Architecture decision log (why did we choose this?)
-- **`CLAUDE.md`**: Day-to-day coding rules
-- **`patterns/context-injection.md`**: How context flows through agents
-- **`patterns/infinite-loop-prevention.md`**: How we avoid reviewer ping-pong
-- **`.claude/agents/*.md`**: Per-agent system prompts + instructions
+- [`CLAUDE.md`](CLAUDE.md) — Universal meta-rules auto-loaded into every Kiat agent (framework/project separation, load-on-demand rule, audit trail rule)
+- [`GETTING_STARTED.md`](GETTING_STARTED.md) — Onboarding walkthrough for a new project
+- [`INDEX.md`](INDEX.md) — Navigation hub (all docs at a glance)
+- [`.claude/agents/`](.claude/agents/) — The 6 kiat-* agent system prompts
+- [`.claude/skills/`](.claude/skills/) — The 6 kiat-* skills (SKILL.md + references/)
+- [`.claude/specs/`](.claude/specs/) — Framework machinery (budgets, metrics schema, failure patterns, skill registry)
+- [`delivery/specs/`](delivery/specs/) — Project technical conventions (architecture, security, testing, ...)
+- [`delivery/business/README.md`](delivery/business/README.md) — Business / domain documentation layout (BMAD-compatible)
+- Within this file: [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules), [Skill Evaluation](#-skill-evaluation-proving-the-skills-actually-work), [Monitoring & Reporting](#-monitoring--reporting)
 
 ---
 
 ## 🎓 Key Principles
 
-1. **Spec-first**: Agents code from written specs, not vague requirements
-2. **Single source of truth**: Each artifact (spec, arch, pattern) lives in ONE place
-3. **Smart context**: Agents load only what they need (no full codebase in every prompt)
-4. **Convergence**: Reviewer feedback → coder fixes ALL at once (no ping-pong)
-5. **Gated by tests**: Code only merges if Playwright + CI ✅
-6. **Human approval**: You decide when specs are good, when code is good, when to merge
-7. **Parallelizable**: BMAD writes specs while you review prior epic; Backend + Frontend code simultaneously
+1. **Spec-first.** Agents code from written specs, never from vague requirements. The tech-spec-writer is the only funnel for new work.
+2. **Single source of truth.** Each artifact (convention, spec, pattern) lives in exactly one place. Never duplicate — link.
+3. **Load only what you need.** Agents load the minimum context for the specific task, not the full codebase. Skills follow progressive disclosure (SKILL.md → references/ on demand).
+4. **Convergence, not ping-pong.** Reviewer feedback is batched — coder fixes everything in one pass. 3-way verdicts + 45-minute fix budget cap the loop.
+5. **Gate at the protocol, not at the test suite.** Until there's real code and real CI, the SubagentStop hooks + the 3-way verdict + the reviewer's test-pattern drift check are the enforcement surface. Tests will come later, as a complement, not as the primary gate.
+6. **Human approval.** You decide when specs are good, when code is ready to merge, and when to escalate. The pipeline runs autonomously within those bounds; the rollup event is the checkpoint.
+7. **Parallelizable at every layer.** Backend and frontend coders run simultaneously. Reviewers run simultaneously. Multiple stories can be processed in parallel as long as their context budgets and `delivery/business/` reads don't collide.
 
 ---
 

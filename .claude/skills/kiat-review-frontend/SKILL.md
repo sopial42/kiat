@@ -37,7 +37,7 @@ The checklist lives in `references/checklist.md`. Read it once at the start of P
 ### Phase 1 — Read spec and design system
 
 Before looking at code, read:
-- the story spec at `delivery/epic-X/story-NN.md` — for acceptance criteria, Figma references, and the intended user flows,
+- the story spec at `delivery/epics/epic-X/story-NN.md` — for acceptance criteria, Figma references, and the intended user flows,
 - the project design system at [`delivery/specs/design-system.md`](../../../delivery/specs/design-system.md) — for color tokens, spacing scale, typography rules, and component conventions.
 
 Reading the design system matters because "this uses the wrong color" is only a meaningful comment if you know what the right color is. Without the spec, you'll flag correct code as wrong; without the design system, you'll miss real drift.

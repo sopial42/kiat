@@ -52,7 +52,7 @@ The reviewer greps for that block. **Skipping this step is a protocol violation*
 
 #### Step 1 — Read the spec
 
-Read `delivery/epic-X/story-NN.md` end to end. Extract: acceptance criteria, API contracts, database changes, edge cases, test scenarios. Ask Team Lead for clarification in chat if anything is unclear — do NOT guess.
+Read `delivery/epics/epic-X/story-NN.md` end to end. Extract: acceptance criteria, API contracts, database changes, edge cases, test scenarios. Ask Team Lead for clarification in chat if anything is unclear — do NOT guess.
 
 #### Step 2 — Read only the conventions you need
 

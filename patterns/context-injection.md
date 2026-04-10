@@ -35,16 +35,16 @@
 **What**: Spec + design system + conventions (changes per-story)
 
 **Injected into**:
-- Backend-Coder: `delivery/epic-X/story-NN.md` + `delivery/specs/api-conventions.md` + `delivery/specs/database-conventions.md`
-- Frontend-Coder: `delivery/epic-X/story-NN.md` + `delivery/specs/design-system.md`
-- Reviewers: `delivery/epic-X/story-NN.md` + code diff + checklist
+- Backend-Coder: `delivery/epics/epic-X/story-NN.md` + `delivery/specs/api-conventions.md` + `delivery/specs/database-conventions.md`
+- Frontend-Coder: `delivery/epics/epic-X/story-NN.md` + `delivery/specs/design-system.md`
+- Reviewers: `delivery/epics/epic-X/story-NN.md` + code diff + checklist
 
 **Why**: Each story is different. New context per session keeps agents focused.
 
 **How to use**:
 ```
 Frontend-Coder session:
-  "Here's the spec for this story: @file-context: delivery/epic-25/story-03-hypothesis-photos.md
+  "Here's the spec for this story: @file-context: delivery/epics/epic-25/story-03-hypothesis-photos.md
    
    You also have access to the design system: @file-context: delivery/specs/design-system.md
    
@@ -108,7 +108,7 @@ Reviewer session (code review):
 User: "Story 42 is ready to code: https://github.com/...tree/story-42"
 
 Backend-Coder:
-  1. Read spec: @file-context: delivery/epic-25/story-42-webhook-handler.md
+  1. Read spec: @file-context: delivery/epics/epic-25/story-42-webhook-handler.md
   2. Extract: POST /webhooks/clerk → authenticate → process event → save to DB
   3. Check API contract: "What fields in request? What response?"
   4. Plan: Migration? Handler? Service method? Tests?
@@ -132,7 +132,7 @@ Backend-Coder: "Thanks, proceeding with those two events."
 **Session start:**
 ```
 Frontend-Coder:
-  1. Read spec: @file-context: delivery/epic-25/story-42-photo-upload.md
+  1. Read spec: @file-context: delivery/epics/epic-25/story-42-photo-upload.md
   2. Read design: @file-context: delivery/specs/design-system.md
   3. Extract: Button to upload photo → validate file size → show progress → display preview
   4. Check: Component library? Hook patterns? Error handling?
@@ -147,7 +147,7 @@ Frontend-Coder:
 **Review session:**
 ```
 Reviewer:
-  1. Read spec: @file-context: delivery/epic-25/story-42-webhook-handler.md
+  1. Read spec: @file-context: delivery/epics/epic-25/story-42-webhook-handler.md
   2. Read checklist: @file-context: checklists/kiat-backend-reviewer.md
   3. Read code diff: [coder provides git show output or links to diff]
   4. Audit:
@@ -172,7 +172,7 @@ Reviewer:
 **How it works**:
 ```
 Reviewer prompt template:
-  "Here's the spec you're reviewing against: @file-context: delivery/epic-X/story-NN.md
+  "Here's the spec you're reviewing against: @file-context: delivery/epics/epic-X/story-NN.md
    
    Here's the code diff: [git diff output]
    

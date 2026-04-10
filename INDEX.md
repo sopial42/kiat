@@ -98,10 +98,10 @@ These are **templates to customize per project**. Humans read them, agents refer
 | Deployment (env vars, production guards) | [delivery/specs/deployment.md](delivery/specs/deployment.md) |
 | **Project Memory** (emergent patterns, cross-story coherence) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |
 
-### Epics & stories (`delivery/epic-X/`)
+### Epics & stories (`delivery/epics/epic-X/`)
 
 - **[delivery/README.md](delivery/README.md)** — How to structure epics, stories, reviews
-- `delivery/epic-X/story-NN.md` — Story specs written by BMAD, consumed by Team Lead → coders
+- `delivery/epics/epic-X/story-NN.md` — Story specs written by BMAD, consumed by Team Lead → coders
 
 ### Runtime data (`delivery/metrics/`)
 
@@ -152,7 +152,7 @@ patterns/                              # User-editable templates
 ```
 User chat
     ↓
-BMAD Master (métier) → writes delivery/epic-X/story-NN.md
+BMAD Master (métier) → writes delivery/epics/epic-X/story-NN.md
     ↓
 Team Lead (technique) — runs:
     Phase 0a: kiat-validate-spec  (ambiguity check)
