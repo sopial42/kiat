@@ -164,11 +164,33 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 ### Diagram B — Skill Loading Map (who loads what when)
 
 ```
-KIAT AGENTS                          SKILLS (loaded on invocation)
+AGENTS                               SKILLS (loaded on invocation)
 ───────────                          ──────────────────────────────
 
+                                     ┌─ (no Kiat skills)
+                                     │    BMad is external to Kiat;
+                                     │    its only "skill" is reading
+                                     │    the two folder contracts
+                                     │    and respecting their rules
+BMad (upstream, external) ───────▶   │
+                                     └─ READS AS AMBIENT:
+                                        • delivery/business/README.md
+                                          (BMad writing protocol:
+                                           Explore / Capture / Plan
+                                           / Review modes, decision
+                                           tree, sizing discipline)
+                                        • delivery/epics/README.md
+                                          (two-layer story model,
+                                           Plan-mode protocol,
+                                           ## Business Context
+                                           boundary, handoff rules)
+
                                      ┌─ kiat-validate-spec         ◄─ Self-check before handoff
-kiat-tech-spec-writer ── invokes ──▶ │
+kiat-tech-spec-writer ── invokes ──▶ │    (runs at Step 6 in both
+                                     │     enrichment and greenfield
+                                     │     modes; the skill checks
+                                     │     both layers of the story)
+                                     │
                                      └─ (consults
                                         .claude/specs/available-skills.md
                                         to decide which contextual
@@ -229,12 +251,14 @@ kiat-frontend-reviewer── invokes ──▶ │   (same hard trigger rule)
                                      └─ web-design-guidelines      ◄─ OPTIONAL
 
 
-AMBIENT CONTEXT (loaded by EVERY agent, always)
-───────────────────────────────────────────────
+AMBIENT CONTEXT (loaded by EVERY Kiat agent, always)
+────────────────────────────────────────────────────
   CLAUDE.md                           ◄─ Universal meta-rules for
                                          any Claude instance +
                                          framework/project separation
                                          rule + pointers
+                                         (BMad sessions read this too
+                                          if they run inside Claude Code)
 
 
 FRAMEWORK SPECS (loaded by tech-spec-writer and Team Lead)
@@ -247,15 +271,38 @@ FRAMEWORK SPECS (loaded by tech-spec-writer and Team Lead)
   .claude/specs/failure-patterns.md   ◄─ Consulted by Team Lead at escalation
 
 
-PROJECT CONVENTIONS (loaded on-demand per task)
-───────────────────────────────────────────────
+PROJECT BUSINESS LAYER (BMad-owned, read on demand by tech-spec-writer)
+──────────────────────────────────────────────────────────────────────
+  delivery/business/README.md         ◄─ BMad reads this as ambient;
+                                         tech-spec-writer reads it to
+                                         understand what's authoritative
+                                         in the folder
+  delivery/business/glossary.md       ◄─ Read by tech-spec-writer if the
+  delivery/business/personas.md          story touches the corresponding
+  delivery/business/business-rules.md    domain. NOT all loaded —
+  delivery/business/domain-model.md      selective per story, based on
+  delivery/business/user-journeys.md     links in the ## Business Context.
+
+  delivery/epics/README.md            ◄─ BMad reads this for the
+                                         Plan-mode protocol + ##
+                                         Business Context boundary
+  delivery/epics/epic-X/_epic.md      ◄─ Two-layer: ## Business Context
+  delivery/epics/epic-X/story-NN.md      by BMad + technical sections
+                                         by tech-spec-writer. Both
+                                         layers read by Team Lead,
+                                         coders, and reviewers.
+
+
+PROJECT TECHNICAL CONVENTIONS (loaded on-demand per task)
+─────────────────────────────────────────────────────────
   delivery/specs/*.md                 ◄─ Tech-spec-writer + coders + reviewers
                                          load the specific conventions they
                                          need for the current task.
                                          NOT all loaded — selective per story.
-  delivery/specs/project-memory.md    ◄─ Cross-story coherence: emergent
-                                         patterns across past stories.
-                                         Read by tech-spec-writer.
+                                         BMad NEVER reads or writes here.
+  delivery/specs/project-memory.md    ◄─ Cross-story technical coherence:
+                                         emergent patterns across past
+                                         stories. Read by tech-spec-writer.
 ```
 
 **Key rules captured by Diagram B:**
@@ -361,7 +408,7 @@ Binary (APPROVED / BLOCKED) forces reviewers to shoehorn nuance into "fix this" 
 
 **Team Lead handles each verdict deterministically** — no guessing:
 - `APPROVED` → proceed to story validation
-- `NEEDS_DISCUSSION` → Team Lead arbitrates (pattern, spec ambiguity, UX tradeoff) or escalates to BMAD/user. **Never bounced back to the coder as "fix this"** — that was the old bug.
+- `NEEDS_DISCUSSION` → Team Lead arbitrates (pattern, spec ambiguity, UX tradeoff) or escalates to the relevant author (`kiat-tech-spec-writer` for technical-layer gaps, BMad for `## Business Context` gaps, user for design / UX / architecture tradeoffs). **Never bounced back to the coder as "fix this"** — that was the old bug.
 - `BLOCKED` → aggregate all issues, send to coder once, restart the fix-budget clock
 
 Full decision tree in [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-team-lead.md) (Phase 4).
@@ -583,7 +630,7 @@ Five metrics that actually change your behavior when they drift:
 
 | Metric | What it tells you |
 |---|---|
-| **Spec validation outcomes** | Is BMAD writing clear specs, or is clarification-rate climbing? |
+| **Spec validation outcomes** | Are both layers (BMad `## Business Context` and tech-spec-writer technical sections) clear, or is the clarification rate climbing on one of them? |
 | **Pre-flight overflow rate** | % of stories hitting the 25k context budget — drift ↑ = specs getting bloated |
 | **Verdict distribution** | APPROVED / NEEDS_DISCUSSION / BLOCKED ratio per reviewer over time |
 | **Fix-budget utilization** | Avg elapsed minutes + % of stories exhausting the 45-min budget |
@@ -632,7 +679,7 @@ Honest answer: **you don't have enough data yet.** A pretty chart with 3 data po
 
 When you read the report each week, these are the signals to act on:
 
-- **CLEAR rate < 70%** → BMAD specs are too ambiguous; tighten spec-writing guidance
+- **CLEAR rate < 70%** → stories are shipping with ambiguities. Check which layer the gaps are in: if it's `## Business Context` drift, BMad's Capture/Plan discipline needs tightening (probably a persona or glossary term missing in `delivery/business/`); if it's technical-layer drift, the tech-spec-writer's clarification loop needs to be more aggressive.
 - **Overflow rate > 20%** → stories are too big OR context budgets are too tight
 - **Avg cycles > 2.5** → reviewers finding too many issues OR coders submitting prematurely
 - **`test_patterns_consistent: false` recurring** → coders are acknowledging rules but not applying them; `kiat-test-patterns-check` needs teeth
