@@ -94,14 +94,26 @@ Applicable blocks: A, B, D, E, F, G (6 blocks loaded)
 → Proceeding to spec reading (Step 1 of coder workflow).
 ```
 
-## What happens next — drift detection
+## What happens next — drift detection (behavioral, not textual)
 
-When the reviewer receives your handoff, they do two things with this block:
+When the reviewer receives your handoff, they do three things with this block — and only the first is a textual check:
 
 1. **Grep for `TEST_PATTERNS: ACKNOWLEDGED`** — if it's missing, the handoff is incomplete and the reviewer returns a `BLOCKED` verdict without reading further.
-2. **Cross-check each loaded block against the actual code** — if you acknowledged Block E rules but the Playwright test contains `page.waitForTimeout(500)`, that's a drift. The reviewer flags it as `BLOCKED` with a reference to the specific rule you contradicted.
+2. **Grep each block's verbatim acknowledgment paragraph** — paraphrase is `BLOCKED` (it suggests you didn't actually open the block file).
+3. **Behavioral cross-check: for each acknowledged block, `rg` the diff for the block's forbidden patterns.** This is the real gate. The reviewer does NOT take your acknowledgment at face value — they grep the code for the specific anti-patterns the block lists, and any hit is a `BLOCKED` verdict with a `file:line` reference.
 
-This is stricter than a normal "I noticed a bug" review because the acknowledgment is written evidence that you knew the rule. Catching the drift isn't about blame — it's about protecting the rule system itself. If acknowledgments don't correlate with code, the skill is ceremonial and the next incident will cost another team-week.
+**Examples of the behavioral cross-check:**
+
+| Block acknowledged | Reviewer's grep on the diff | Drift signal |
+|---|---|---|
+| Block E (Playwright) | `rg -n "waitForTimeout\|describe\\.serial" frontend/e2e/` | Any match → BLOCKED |
+| Block F (Venom) | `rg -n "real-db\|db\\.Connect\|sqlx\\.Connect" backend/` | Any match → BLOCKED |
+| Block D (RLS) | `rg -n "SELECT .* FROM <table>" backend/` without a `user_id` scope clause | Any match → BLOCKED |
+| Block G (mutations) | PATCH handlers without `WHERE updated_at = ?` | Match → BLOCKED |
+
+**Consequence for you (the coder):** pasting the acknowledgment paragraph is necessary but not sufficient. If you acknowledge Block E and then write `page.waitForTimeout(500)`, the reviewer catches it mechanically — the ceremony protects the rule system, not your throughput. **The acknowledgment is a commitment, not a token.** If you cannot honestly commit to the rule, don't load the block, and scope detection honestly.
+
+Reviewers follow the full protocol in [`kiat-backend-reviewer.md`](../../agents/kiat-backend-reviewer.md) Step 5 and [`kiat-frontend-reviewer.md`](../../agents/kiat-frontend-reviewer.md) Step 6 — they contain the concrete grep recipes per block.
 
 ## Edge cases
 

@@ -73,24 +73,51 @@ Clerk-auth skill: BLOCKED (ran kiat-clerk-auth-review) — see issues below
 
 When in doubt whether a file touches Clerk, **run the skill**. The cost of a false positive is 30 seconds; the cost of a missed auth bug is much higher.
 
-#### Step 4 — Test patterns drift check
+#### Step 4 — Skills declaration check (story's `## Skills` section)
 
-The coder's handoff MUST contain a `TEST_PATTERNS: ACKNOWLEDGED` block from `kiat-test-patterns-check`.
+Open the story file and read its `## Skills` section. That list is what the tech-spec-writer decided the coder should load. Verify the coder actually used it:
 
-- **Missing** → `VERDICT: BLOCKED` with the note *"coder skipped mandatory kiat-test-patterns-check skill; re-run from Step 0.5 before resubmitting"*. Do NOT continue the review.
-- **Present but paraphrased** → `VERDICT: BLOCKED`. The acknowledgment paragraphs must be verbatim; paraphrase suggests the coder didn't actually read the block.
-- **Present and verbatim** → cross-check each acknowledged rule against the actual diff. Example: if Block F (Venom) was acknowledged but the test uses a real DB connection instead of mocks, that's drift → `VERDICT: BLOCKED` with a file:line reference to the violation.
+- **Any skill listed that is NOT referenced in the coder's handoff** (by name, in a "skills loaded" line, or by the audit trail of a skill output like `CLERK_VERDICT:` or `TEST_PATTERNS: ACKNOWLEDGED`) → `VERDICT: BLOCKED` with the note *"coder dropped skill `<name>` declared in story's ## Skills section; re-run from Step 2 before resubmitting"*.
+- **Any non-listed skill that the coder clearly invoked** (you see its audit line in the handoff but it wasn't in `## Skills`) → `VERDICT: NEEDS_DISCUSSION`, not BLOCKED. The coder may have spotted something the tech-spec-writer missed; Team Lead arbitrates with the tech-spec-writer.
+- `kiat-test-patterns-check` is always implicitly loaded (it's in the coder's frontmatter) and does NOT need to be in `## Skills` — don't flag it.
 
 **Audit line (always emit)**:
 ```
-Test-patterns check: ACKNOWLEDGED and consistent with implementation ✓
+Skills-declaration check: story lists [A, B, C]; handoff shows [A, B, C] ✓
+```
+or
+```
+Skills-declaration check: BLOCKED — story lists [A, B, C]; handoff shows [A, C] (missing B)
+```
+
+#### Step 5 — Test patterns drift check (behavioral, not textual)
+
+The coder's handoff MUST contain a `TEST_PATTERNS: ACKNOWLEDGED` block from `kiat-test-patterns-check`. **Verbatim match is necessary but not sufficient** — the reviewer's job is to verify the code actually follows the rules the coder acknowledged.
+
+Protocol:
+
+1. **Grep for the marker**:
+   - **Missing** → `VERDICT: BLOCKED` with the note *"coder skipped mandatory kiat-test-patterns-check skill; re-run from Step 0.5 before resubmitting"*. Do NOT continue.
+   - **Present but paraphrased** → `VERDICT: BLOCKED`. The acknowledgment paragraphs must be verbatim; paraphrase suggests the coder didn't actually read the block.
+   - **Present and verbatim** → go to step 2.
+
+2. **Behavioral cross-check** — for EACH acknowledged block, mechanically grep the diff for the forbidden patterns the block lists. Textual acknowledgment without behavioral compliance is drift, and drift is BLOCKED. Examples for backend:
+   - **Block F (Venom)** acknowledged → `rg -n "real-db|db\\.Connect|sqlx\\.Connect" <diff>` — if any match, the coder is using a real DB connection instead of the documented mock/fixture pattern. Drift → BLOCKED with the specific `file:line`.
+   - **Block D (RLS)** acknowledged → verify every new query includes a `user_id = ?` clause OR uses the project's RLS helper. Raw `SELECT * FROM <table>` without a scope filter is drift.
+   - **Block G (optimistic locking)** acknowledged → verify PATCH handlers use `WHERE updated_at = ?` or the documented helper; a PATCH that blindly overwrites is drift.
+
+   **Rule:** an acknowledgment you cannot cross-check against actual code is ceremonial. If you lack time to grep, flag it honestly in the body instead of silently approving — Team Lead will arbitrate. **Silent pass is worse than NEEDS_DISCUSSION.**
+
+**Audit line (always emit)**:
+```
+Test-patterns check: ACKNOWLEDGED + behavioral grep clean for blocks [A, D, F] ✓
 ```
 or
 ```
 Test-patterns check: BLOCKED — Block <X> drift at <file>:<line>: <detail>
 ```
 
-#### Step 5 — Emit the verdict
+#### Step 6 — Emit the verdict
 
 First line of your output is machine-parseable. Team Lead parses it deterministically:
 
@@ -106,7 +133,7 @@ or
 VERDICT: BLOCKED
 ```
 
-Then the full review body per the `kiat-review-backend` skill template, including the Clerk-auth and test-patterns audit lines.
+Then the full review body per the `kiat-review-backend` skill template, including the Clerk-auth, skills-declaration, and test-patterns audit lines.
 
 ---
 

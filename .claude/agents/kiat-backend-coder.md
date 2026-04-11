@@ -56,7 +56,14 @@ Read `delivery/epics/epic-X/story-NN.md` end to end. Extract: acceptance criteri
 
 #### Step 2 — Read only the conventions you need
 
-The story's `## Skills` section tells you which contextual skills to load. Beyond that, read on-demand from `delivery/specs/`:
+The story's `## Skills` section is **binding**: it lists the contextual skills the tech-spec-writer decided you need. Load **all** of them, load **only** them. Dropping a listed skill or adding an undeclared one are both drift signals the reviewer will catch.
+
+- **All listed skills must be loaded.** If a skill in the section doesn't apply in your opinion, stop and ask Team Lead — do not silently skip it.
+- **No extras.** If you think you need a skill that isn't in the list, pause and ask Team Lead; silently loading an undeclared skill blows the context budget the tech-spec-writer already sized.
+- **Emit an audit line** in your handoff listing the skills you loaded, so the reviewer can cross-check against the story's `## Skills` section mechanically (see Step 6 handoff format below).
+- `kiat-test-patterns-check` is implicitly loaded via your frontmatter and does NOT need to be in `## Skills` — it's always on.
+
+Beyond that, read on-demand from `delivery/specs/`:
 
 - Always: the story spec + the conventions for the layer(s) you touch
 - Backend work → [`backend-conventions.md`](../../delivery/specs/backend-conventions.md), [`architecture-clean.md`](../../delivery/specs/architecture-clean.md)
@@ -111,6 +118,9 @@ When tests pass, emit a structured handoff for Team Lead and the reviewer:
 ```
 Backend code ready for review.
 
+Skills loaded (per story's ## Skills section): [kiat-clerk-auth-review, kiat-ui-ux-search]
+  (matches story's ## Skills section exactly — no drops, no extras)
+
 Files changed:
   - backend/migrations/NNN_<slug>.sql (if any)
   - backend/internal/domain/<X>/...
@@ -130,7 +140,9 @@ Tests: ✅ make test-back passed
 Ready for kiat-backend-reviewer.
 ```
 
-The `TEST_PATTERNS: ACKNOWLEDGED` block is load-bearing — the reviewer greps for it literally. Don't paraphrase it.
+**Both audit lines are load-bearing.** The reviewer greps for them literally:
+- `Skills loaded (per story's ## Skills section):` — reviewer cross-checks against the story file. Drops or extras → BLOCKED.
+- `TEST_PATTERNS: ACKNOWLEDGED` — reviewer greps for the marker, then behaviorally cross-checks the diff against each acknowledged block's forbidden patterns. Don't paraphrase either line.
 
 ---
 

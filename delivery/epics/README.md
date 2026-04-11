@@ -91,6 +91,15 @@ As [persona], I want [goal], so that [value].
 
 The **user-facing acceptance criteria** that BMad writes are different from the **technical acceptance criteria** that the tech-spec-writer may add lower in the file. The user-facing ones are observable by the user ("I can see my patients sorted by risk"); the technical ones are implementation-bound ("`GET /patients?sort=risk` returns 200 with pagination headers").
 
+**Exact section headers (do not rename):**
+
+| Layer | Header in the file | Author |
+|---|---|---|
+| User-facing (inside `## Business Context`) | `### Acceptance criteria (user-facing)` | BMad |
+| Technical (top-level, below `## Business Context`) | `## Acceptance Criteria (technical)` | tech-spec-writer |
+
+Two different heading levels on purpose: the user-facing list is a sub-section of `## Business Context` (BMad's only sandbox), while the technical list is a peer of `## Backend`, `## Frontend`, etc. A story that drops the `(user-facing)` / `(technical)` suffix, or merges the two lists into one, is a two-layer boundary violation — stop and fix the structure before proceeding.
+
 ### Rules BMad respects when writing here
 
 1. **Propose before writing.** Before creating or modifying any file under `delivery/epics/`, BMad announces the exact path (`epic-NN-slug/_epic.md` or `epic-NN-slug/story-NN-slug.md`) and what it intends to put in the Business Context. It waits for green light. Say `direct` in your message to skip the green light for that specific write.

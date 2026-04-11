@@ -121,6 +121,19 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
 
 **On precision of timestamps:** Team Lead does NOT have a reliable system clock. The `ts`, `fix_budget_used_min`, and `total_elapsed_min` fields are best-effort estimates based on the conversation context. Acceptable precision: ±5 minutes. If Team Lead cannot estimate, set the minute fields to `null` — `report.py` will handle it gracefully.
 
+#### How Team Lead tracks the 45-minute fix budget (single source of truth)
+
+The rule itself (45 minutes per story, immediate escalations bypass the budget) is stated in [`README.md`](../../README.md#layer-2--wall-clock-retry-budget-not-cycle-count) (Layer 2) and in [`kiat-team-lead.md`](../agents/kiat-team-lead.md#retry-budget-time-based-not-cycle-based) (Retry budget section). The **tracking methodology** — how Team Lead turns that rule into a concrete timestamp — lives here because it is the same mechanism that feeds the `fix_budget_used_min` rollup field:
+
+1. **Start:** record `fix_budget_started_at` the first time you send BLOCKED issues back to a coder. This is the only clock. Do NOT start it on test failures inside Phase 3 unless those failures end up BLOCKED by a reviewer.
+2. **On each re-review cycle:** compute `elapsed = now - fix_budget_started_at` using your best-effort sense of wall-clock time from the conversation (message spacing, prior step durations). You do not have a real clock — ±5 minutes is acceptable.
+3. **Decision on each BLOCKED re-review:**
+   - `elapsed < 45 min` → allow another fix cycle, no matter the cycle number (cycle 3, 4, 5 all OK)
+   - `elapsed ≥ 45 min` → escalate with `reason: "fix_budget_exhausted"`, do NOT run another cycle
+4. **Rollup:** at story completion, `fix_budget_used_min = elapsed` at the final re-review (or `0` if the story never entered a fix cycle, or `null` if you truly cannot estimate).
+
+Immediate-escalation cases (security blocker, `NEEDS_DISCUSSION` that Team Lead cannot arbitrate, spec clarification request) bypass the clock entirely — see the Retry Budget section of `kiat-team-lead.md` for the full list. They produce `story_escalated` events with `fix_budget_used_min: null` when they fire before any fix cycle has started.
+
 ---
 
 ### `story_escalated` (PRIMARY — escalation path)

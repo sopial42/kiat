@@ -393,6 +393,18 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 
 Kiat layers seven mechanisms, from cheapest to hardest, so that even if one fails, the others catch the drift.
 
+**Quick reference (scannable):**
+
+1. **Machine-parseable verdicts** — reviewers emit `APPROVED / NEEDS_DISCUSSION / BLOCKED` on line 1
+2. **Wall-clock retry budget** — 45-min fix budget per story instead of a cycle count
+3. **Hard trigger rules for specialist skills** — greppable pattern list that *forces* the Clerk auth skill to run
+4. **Mandatory audit lines** — skill invocations must leave a greppable trace in the output
+5. **Context budgets** — hard per-agent token limit, pre-flight gate before launch
+6. **Pre-coding validation gates** — `kiat-validate-spec` + `kiat-test-patterns-check` at Phase 0
+7. **SubagentStop hooks** — runtime enforcement of audit lines via `.claude/settings.json`
+
+The sections below explain each layer in detail.
+
 #### Layer 1 — Machine-parseable verdicts (3-way outcome)
 
 Reviewers (`kiat-backend-reviewer`, `kiat-frontend-reviewer`) run a review skill (`kiat-review-backend/SKILL.md`, `kiat-review-frontend/SKILL.md`) that **mandates** one of three verdicts on the first line of output:

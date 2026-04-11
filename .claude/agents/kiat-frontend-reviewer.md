@@ -86,24 +86,53 @@ These are listed in [`.claude/specs/available-skills.md`](../specs/available-ski
 
 If the story's `## Skills` section lists one of these, run it and fold its findings into your issue list (category: performance / composition / design). If the section doesn't list it, **do not run it** — it costs tokens and the tech-spec-writer has already decided it isn't needed.
 
-#### Step 5 — Test patterns drift check
+#### Step 5 — Skills declaration check (story's `## Skills` section)
 
-The coder's handoff MUST contain a `TEST_PATTERNS: ACKNOWLEDGED` block from `kiat-test-patterns-check`.
+Open the story file and read its `## Skills` section. That list is what the tech-spec-writer decided the coder should load. Verify the coder actually used it:
 
-- **Missing** → `VERDICT: BLOCKED` with the note *"coder skipped mandatory kiat-test-patterns-check skill; re-run from Step 0.5 before resubmitting"*. Do NOT continue the review.
-- **Present but paraphrased** → `VERDICT: BLOCKED`. Paragraphs must be verbatim.
-- **Present and verbatim** → cross-check each acknowledged rule against the diff. Example: if Block E (Playwright) was acknowledged but a spec contains `page.waitForTimeout(500)`, that's drift → `VERDICT: BLOCKED` with the file:line reference.
+- **Any skill listed that is NOT referenced in the coder's handoff** (by name, in a "skills loaded" line, or by the audit trail of a skill output like `CLERK_VERDICT:` or `TEST_PATTERNS: ACKNOWLEDGED`) → `VERDICT: BLOCKED` with the note *"coder dropped skill `<name>` declared in story's ## Skills section; re-run from Step 2 before resubmitting"*.
+- **Any non-listed skill that the coder clearly invoked** (you see its audit line in the handoff but it wasn't in `## Skills`) → `VERDICT: NEEDS_DISCUSSION`. Team Lead arbitrates with the tech-spec-writer.
+- `kiat-test-patterns-check` is always implicitly loaded (coder frontmatter) and does NOT need to be in `## Skills` — don't flag it.
+- Optional community skills from Step 4 above (react-best-practices, composition-patterns, web-design-guidelines) also count — if the story lists them in `## Skills` but you didn't see the coder apply them, that's drift.
 
 **Audit line (always emit)**:
 ```
-Test-patterns check: ACKNOWLEDGED and consistent with implementation ✓
+Skills-declaration check: story lists [A, B, C]; handoff shows [A, B, C] ✓
+```
+or
+```
+Skills-declaration check: BLOCKED — story lists [A, B, C]; handoff shows [A, C] (missing B)
+```
+
+#### Step 6 — Test patterns drift check (behavioral, not textual)
+
+The coder's handoff MUST contain a `TEST_PATTERNS: ACKNOWLEDGED` block from `kiat-test-patterns-check`. **Verbatim match is necessary but not sufficient** — the reviewer's job is to verify the code actually follows the rules the coder acknowledged.
+
+Protocol:
+
+1. **Grep for the marker**:
+   - **Missing** → `VERDICT: BLOCKED` with the note *"coder skipped mandatory kiat-test-patterns-check skill; re-run from Step 0.5 before resubmitting"*. Do NOT continue.
+   - **Present but paraphrased** → `VERDICT: BLOCKED`. Paragraphs must be verbatim.
+   - **Present and verbatim** → go to step 2.
+
+2. **Behavioral cross-check** — for EACH acknowledged block, mechanically grep the diff for the forbidden patterns the block lists. Textual acknowledgment without behavioral compliance is drift, and drift is BLOCKED. Examples for frontend:
+   - **Block E (Playwright)** acknowledged → `rg -n "waitForTimeout|test\\.describe\\.serial" frontend/e2e/` — any match is drift. `waitForTimeout` is banned in favor of `await expect(...).toBeVisible()`; `describe.serial` is banned in favor of independent tests.
+   - **Block A (Forms)** acknowledged → verify form tests use `getByLabel` / `getByRole` rather than fragile selectors (`querySelectorAll('input')[3]`, `.nth-child`, raw CSS positions).
+   - **Block C (Clerk)** acknowledged → verify tests use the project's auth helper (`signInAsUserA`, `signInAsUserB`, `restoreUserA`) rather than hand-rolled `setExtraHTTPHeaders` or direct `Authorization:` header injection.
+   - **Block I (wizards)** acknowledged → verify step transitions are asserted via visible state (`await expect(page.getByRole('heading', {name: 'Step 2'})).toBeVisible()`) not by navigation timing.
+
+   **Rule:** an acknowledgment you cannot cross-check against actual code is ceremonial. If you lack time to grep, flag it honestly in the body instead of silently approving — Team Lead will arbitrate. **Silent pass is worse than NEEDS_DISCUSSION.**
+
+**Audit line (always emit)**:
+```
+Test-patterns check: ACKNOWLEDGED + behavioral grep clean for blocks [A, C, E] ✓
 ```
 or
 ```
 Test-patterns check: BLOCKED — Block <X> drift at <file>:<line>: <detail>
 ```
 
-#### Step 6 — Emit the verdict
+#### Step 7 — Emit the verdict
 
 First line of your output is machine-parseable:
 
@@ -119,7 +148,7 @@ or
 VERDICT: BLOCKED
 ```
 
-Then the full review body per the `kiat-review-frontend` skill template, including the Clerk-auth and test-patterns audit lines.
+Then the full review body per the `kiat-review-frontend` skill template, including the Clerk-auth, skills-declaration, and test-patterns audit lines.
 
 ---
 
