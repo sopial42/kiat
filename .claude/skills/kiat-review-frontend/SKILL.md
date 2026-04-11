@@ -112,7 +112,7 @@ Code works, tests pass, checklist clean. Needs Team Lead arbitration on:
 
 2. ...
 
-Not blocking merge. Awaiting Team Lead / BMAD / designer decision.
+Not blocking merge. Awaiting Team Lead / tech-spec-writer / designer decision.
 ```
 
 ### If `BLOCKED`

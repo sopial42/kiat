@@ -76,3 +76,46 @@ médicales d'un patient, avec un statut de confidentialité renforcé par la loi
 ```
 
 This lets the tech-spec-writer read the French definition for understanding, then use the English code identifier in the technical sections without losing the link.
+
+---
+
+## BMad writing protocol (rules for Claude sessions acting as BMad)
+
+This section governs what BMad writes **into `delivery/business/`**. Rules for writing in `delivery/epics/` live in [`../epics/README.md`](../epics/README.md). The two files are siblings by design — each folder owns the contract that governs it.
+
+### BMad's 4 input modes
+
+| Mode | When you use it | Lands in this folder? |
+|---|---|---|
+| **Explore** | Your idea is still fuzzy, you want to think out loud | Only if the exploration converges on a stable business fact |
+| **Capture** | You want to record a domain fact (term, persona, rule…) | **Yes — primary destination for this folder** |
+| **Plan** | You want to turn ideas into backlog (epic, story) | No — lands in `delivery/epics/` instead |
+| **Review** | You want BMad to audit what's already here | No writes; report only |
+
+You don't have to name the mode explicitly — BMad detects it from your phrasing. But the four modes are the vocabulary of the contract; if you're unsure what BMad is about to do, ask which mode it thinks it's in.
+
+### Capture-mode decision tree
+
+When BMad is in Capture mode, it routes the fact you gave it to exactly one of the five canonical files:
+
+| You tell BMad… | BMad writes to… |
+|---|---|
+| A vocabulary term that matters in the domain | `glossary.md` |
+| A user profile / archetype | `personas.md` |
+| An invariant rule (compliance, quota, constraint) | `business-rules.md` |
+| An entity + its relations at the business level (not SQL) | `domain-model.md` |
+| An end-to-end user flow from the user's POV | `user-journeys.md` |
+
+If the target file doesn't exist yet, BMad creates it the first time — always proposing the path before writing.
+
+### Rules BMad respects when writing here
+
+1. **Propose before writing.** Before any write, BMad announces the exact file and the exact section it intends to touch, and waits for green light. Say `direct` in your message to skip the green light for that specific capture.
+2. **Read before writing.** BMad re-reads the target file first, to avoid duplicates or contradictions with existing content.
+3. **No duplication** — cf. "Relationship with `delivery/epics/`" above. A business fact lives in one place in this folder; stories link to it, they do not recopy it.
+4. **Size discipline** — cf. "Sizing discipline" above. If a file approaches ~5k tokens, BMad proposes a split before writing more.
+5. **Zones BMad never touches.** `delivery/specs/` (technical conventions) and `.claude/` (Kiat framework machinery) are off-limits. If a capture is actually about code structure, API design, or framework behavior, BMad refuses and redirects.
+
+### What BMad does NOT write here
+
+Everything already listed in "What does NOT go here" above still holds — in particular, **no story specs and no epic briefs in this folder**. The business layer of every story (its `## Business Context` section) lives inside the story file itself, in `delivery/epics/epic-X/`. This folder is only for evergreen domain knowledge that outlives any single story.

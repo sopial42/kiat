@@ -1,27 +1,28 @@
 # 🚀 Kiat — Starter Kit Agent-First SaaS
 
-> **The vision**: You describe what you want in natural language. `kiat-tech-spec-writer` translates it into a structured technical story. `kiat-team-lead` runs the pipeline. Parallel coder and reviewer agents execute. `SubagentStop` hooks enforce the protocol. Done.
+> **The vision**: You describe your product idea in natural language. **BMad** captures the evergreen business knowledge and writes the `## Business Context` of each story (the *what* and the *why*). **`kiat-tech-spec-writer`** enriches the same story with the technical layer (the *how*). **`kiat-team-lead`** runs the pipeline: parallel coder and reviewer agents ship the code, SubagentStop hooks enforce the protocol. Done.
 
 This is a **generic, reusable starter kit** for building SaaS with:
 - **Go + Gin + Bun ORM** backend (Clean Architecture)
 - **Next.js App Router + Shadcn/UI + React Query** frontend
 - **Clerk** authentication
-- **Agent-first workflow**: `kiat-tech-spec-writer` translates informal requests into structured stories, `kiat-team-lead` orchestrates, parallel coder/reviewer agents ship the code. An optional upstream product agent (BMAD) can feed business knowledge via [`delivery/business/`](delivery/business/README.md) — that integration is still being tested and is not prescribed here.
+- **Two-layer agent workflow**: **BMad** (upstream product agent) writes the business layer — evergreen domain knowledge in [`delivery/business/`](delivery/business/README.md) and the `## Business Context` section of every story in [`delivery/epics/`](delivery/epics/README.md). **`kiat-tech-spec-writer`** then enriches the same story with the technical layer (Skills, API contracts, database, frontend, edge cases, tests). **`kiat-team-lead`** orchestrates the execution pipeline. BMad is **not** a Kiat agent — it's an external product agent (any Claude session acting as BMad works), but Kiat ships explicit folder-level contracts that govern what BMad is allowed to write where, so the integration is first-class rather than ad-hoc.
 
 ---
 
 ## 🎯 The Vision: Why Kiat?
 
 ### Problems we're solving
-1. **Business intent vs technical spec have different owners.** The *what* (user needs, business rules, domain model) and the *how* (API contracts, DB schemas, acceptance criteria) are usually smeared into one document, owned by nobody, and stale in both directions. Kiat splits them: optional business layer in `delivery/business/` (BMAD or a human), technical stories in `delivery/epics/` (written by `kiat-tech-spec-writer`).
+1. **Business intent vs technical spec have different owners, but usually live in one file owned by nobody.** The *what* (user needs, personas, business rules, domain model) and the *how* (API contracts, DB schemas, acceptance criteria) evolve on different clocks: the business layer is shaped by the product/métier voice and rarely changes once stable, while the technical layer is written just before a story ships and is often rewritten as the stack evolves. Smearing them into one document turns every edit into a merge conflict between two people who shouldn't be merging. Kiat splits them into **two layers living in the same story file**, each owned by a different author: **BMad** writes the `## Business Context` section at the top (user story, personas, user-facing acceptance criteria, links to `delivery/business/`), and **`kiat-tech-spec-writer`** appends all technical sections below. Each author has a hard contract saying what it's allowed to touch — see [`delivery/epics/README.md`](delivery/epics/README.md) and [`delivery/business/README.md`](delivery/business/README.md).
 2. **Informal requests don't survive parallel execution.** "Add auto-save to the notes editor" is fine for a human. For two parallel coder agents building backend and frontend in isolation, it guarantees a contract mismatch. The tech-spec-writer is the single funnel that forces every new story through a structured spec before any code runs.
 3. **Infinite review loops.** Reviewer finds issue → coder fixes → reviewer finds new issue → repeat forever. Kiat caps this with a 45-minute wall-clock fix budget + 3-way verdicts (`APPROVED / NEEDS_DISCUSSION / BLOCKED`) so judgment calls escalate instead of looping.
 4. **Context explosion.** Agents loaded with the entire codebase waste tokens and think slower. Kiat enforces hard per-agent token budgets checked pre-flight, and skills load only what they need via progressive disclosure (`SKILL.md` + on-demand `references/`).
 5. **Skills drift silently.** A skill that looks well-designed can behave identically to no skill at all — audit lines get emitted, acknowledgments get pasted, but the underlying output is unchanged. Kiat runs behavioral evals (`with_skill` vs baseline) to measure the real delta. See [Skill Evaluation](#-skill-evaluation-proving-the-skills-actually-work).
 
 ### Our solution
-- **Two-layer spec model.** Business knowledge in `delivery/business/` (optional, BMAD-compatible), technical stories in `delivery/epics/` (written by `kiat-tech-spec-writer` from informal requests + optionally the business layer).
-- **Single source of truth per artifact.** Conventions in `delivery/specs/`, framework machinery in `.claude/`, runtime data in `delivery/metrics/`. Never cross the streams.
+- **Two-layer story model, one file per story, two authors.** Business knowledge in [`delivery/business/`](delivery/business/README.md) (evergreen facts: glossary, personas, business-rules, domain-model, user-journeys) written by BMad. Story files in [`delivery/epics/`](delivery/epics/README.md) with a `## Business Context` section at the top written by BMad and everything-else-technical written by `kiat-tech-spec-writer` in enrichment mode. The tech-spec-writer **preserves the Business Context intact** and only appends below; BMad **never touches technical sections** or `delivery/specs/`. Each folder's README enforces its half of the contract.
+- **BMad has 4 input modes** (Explore / Capture / Plan / Review). Capture lands in `delivery/business/`, Plan lands in the `## Business Context` of an epic or story, Explore is think-out-loud-no-writes, Review is audit-only. See the [BMad writing protocol](delivery/business/README.md#bmad-writing-protocol-rules-for-claude-sessions-acting-as-bmad).
+- **Single source of truth per artifact.** Conventions in `delivery/specs/`, framework machinery in `.claude/`, runtime data in `delivery/metrics/`, business knowledge in `delivery/business/`, stories in `delivery/epics/`. Never cross the streams.
 - **Pre-coding validation gates.** `kiat-validate-spec` catches ambiguity and contract gaps before any coder is launched; the 25k context budget pre-flight catches oversized stories.
 - **3-way review verdicts + time-budgeted retries** — see [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules).
 - **SubagentStop hooks for hard enforcement.** Coders can't hand off without emitting `TEST_PATTERNS: ACKNOWLEDGED`; reviewers can't hand off without `VERDICT:` as line 1. Exit 2 on violation, re-run forced.
@@ -39,19 +40,45 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 ┌──────────┐
 │   USER   │
 └────┬─────┘
-     │ "I want feature X" (informal request)
+     │ "I want feature X" / "users struggle with Y" (informal product thinking)
      ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                     kiat-tech-spec-writer                         │  ◄─── DEFAULT entry point
-│  • Reads user request + project conventions + project-memory      │      for new work
-│  • Asks clarifying questions if needed (≤ 2 rounds)               │
-│  • Decides which contextual skills the coders will need           │
-│    (consults .claude/specs/available-skills.md)                   │
-│  • Writes delivery/epics/epic-X/story-NN.md with structured sections    │
-│    + ## Skills section listing contextual skills                  │
-│  • Self-validates via kiat-validate-spec                          │
+│                          BMad                                     │  ◄─── Business layer author
+│                    (external product agent)                       │      (upstream of Kiat)
+│  Modes: Explore / Capture / Plan / Review                          │
+│  • Capture → writes evergreen domain facts to delivery/business/   │
+│    (glossary / personas / business-rules / domain-model /          │
+│     user-journeys)                                                 │
+│  • Plan    → creates / updates an epic or story, writing ONLY the  │
+│    ## Business Context section (user story, personas,             │
+│    user-facing acceptance criteria, business rationale, links      │
+│    to delivery/business/)                                          │
+│  • NEVER writes technical sections, never touches delivery/specs/  │
+│    or .claude/ (enforced by folder-level contracts)                │
 └────┬─────────────────────────────────────────────────────────────┘
-     │ delivery/epics/epic-X/story-NN.md (CLEAR verdict)
+     │ delivery/epics/epic-X/story-NN.md with ## Business Context
+     │ (business layer complete; technical sections empty)
+     ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     kiat-tech-spec-writer                         │  ◄─── Technical layer author
+│                    (enrichment mode — default)                     │      (default entry point
+│  • Reads ## Business Context (preserves it intact — never rewrites)│       for new technical work)
+│  • Reads linked delivery/business/ files + relevant                │
+│    delivery/specs/ conventions + delivery/specs/project-memory.md  │
+│  • Asks clarifying questions if needed (≤ 2 rounds)                │
+│  • Decides which contextual skills the coders will need            │
+│    (consults .claude/specs/available-skills.md)                    │
+│  • Appends technical sections: Skills, Backend / API contracts,    │
+│    Frontend / Components, Database, Edge cases, Test scenarios,    │
+│    Out of scope                                                    │
+│  • Self-validates via kiat-validate-spec                           │
+│                                                                    │
+│  Greenfield mode (fallback — no prior BMad pass):                  │
+│  • Writes BOTH layers itself, using the user's request verbatim    │
+│    as the business intent                                          │
+└────┬─────────────────────────────────────────────────────────────┘
+     │ delivery/epics/epic-X/story-NN.md — both layers populated
+     │ (SPEC_VERDICT: CLEAR)
      ▼
 ╔══════════════════════════════════════════════════════════════════╗
 ║                     kiat-team-lead                                ║  ◄─── Pipeline orchestrator
@@ -97,8 +124,8 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
 ║   │                  ◀── re-cycle until APPROVED     │           ║
 ║   │                                                   │           ║
 ║   │  NEEDS_DISCUSSION ──▶ Team Lead arbitrates        │           ║
-║   │                       or escalates to BMAD/user  │           ║
-║   │                       (never back to coder)      │           ║
+║   │                       or escalates to writer /    │           ║
+║   │                       BMad / user (never coder)   │           ║
 ║   └──────────────────────────┬───────────────────────┘           ║
 ║                              │                                    ║
 ║                              ▼                                    ║
@@ -124,14 +151,15 @@ Two diagrams below: **Diagram A** shows the flow of a single story through the a
                   └────────────────────────────┘
 ```
 
-**Reading the diagram:** solid lines = normal flow. Every escalation path exits the Kiat boundary (the double-walled box) — those are the moments where humans or BMAD step in. The rollup event at Phase 7 is the ONE write Team Lead does per story, and it's the exit marker.
+**Reading the diagram:** solid lines = normal flow. Every escalation path exits the Kiat boundary (the double-walled box) — those are the moments where humans step in, or the flow bounces back to the tech-spec-writer / BMad. The rollup event at Phase 7 is the ONE write Team Lead does per story, and it's the exit marker.
 
-**Two entry points to Kiat:**
+**Three ways a story enters the pipeline:**
 
-- **New work** (the common case): user describes what they want in natural language → `kiat-tech-spec-writer` translates it into a structured story file → Team Lead executes. This is the default and what you should always do for new features, bug fixes, or refactors.
-- **Existing story re-execution** (less common): user has a story file that already exists in `delivery/epics/epic-X/story-NN.md` (e.g., re-running a story that was previously escalated, or the spec was hand-written) → user invokes Team Lead directly with the story path. The tech-spec-writer is skipped in this case because the story is already structured.
+1. **BMad-first (recommended for product work).** User thinks out loud with BMad about a user need; BMad captures the stable facts into `delivery/business/` (Capture mode) and writes the `## Business Context` section of a story (Plan mode). The user then invokes `kiat-tech-spec-writer` on the story file — it detects the pre-existing Business Context, runs in **enrichment mode**, and appends the technical layers without touching the business layer. Team Lead executes.
+2. **Tech-spec-writer-first (for pure technical work).** For refactors, bug fixes, or work with no new business intent, the user goes straight to `kiat-tech-spec-writer` with an informal request. The writer runs in **greenfield mode** and produces both layers itself (Business Context in the user's natural language, technical sections in English). Team Lead executes.
+3. **Re-execute an existing story.** The story file already has both layers filled in (e.g., re-running a story that was previously escalated). The user invokes `kiat-team-lead` directly on the story path. The tech-spec-writer is skipped because the story is already complete.
 
-**BMAD Master is not part of Kiat.** If you use BMAD as your product/métier agent, BMAD's output goes to the tech-spec-writer (not directly to Team Lead). BMAD writes the *what* and the *why*; the tech-spec-writer translates it into the *how*.
+**BMad is external to Kiat in the strict sense** — there is no `.claude/agents/bmad.md` shipped by Kiat. BMad is any Claude session you configure to act as the product voice. What Kiat provides instead are **folder-level contracts** that define exactly what BMad is allowed to write where: evergreen facts in [`delivery/business/`](delivery/business/README.md#bmad-writing-protocol-rules-for-claude-sessions-acting-as-bmad), Business Context sections in [`delivery/epics/`](delivery/epics/README.md#bmad-writing-protocol-rules-for-claude-sessions-acting-as-bmad). Every Kiat agent downstream (tech-spec-writer, team-lead, coders, reviewers) trusts these contracts — which is why the integration works without Kiat owning the BMad prompt.
 
 ### Diagram B — Skill Loading Map (who loads what when)
 
@@ -232,7 +260,8 @@ PROJECT CONVENTIONS (loaded on-demand per task)
 
 **Key rules captured by Diagram B:**
 
-- **`kiat-tech-spec-writer` is the entry point for new work.** It reads project conventions, decides which contextual skills the coders will need (from `available-skills.md`), and writes a structured story file. It does NOT load contextual skills itself — it just lists them in the story's `## Skills` section so the coders know what to load.
+- **`kiat-tech-spec-writer` is the Kiat-side entry point for new work.** It reads project conventions, decides which contextual skills the coders will need (from `available-skills.md`), and writes the technical layer of the story file. In enrichment mode (the common case once BMad is in the loop) it preserves the pre-existing `## Business Context` section intact and only appends technical sections below it. It does NOT load contextual skills itself — it just lists them in the story's `## Skills` section so the coders know what to load.
+- **BMad sits upstream of the tech-spec-writer, outside the .claude/ namespace.** BMad is not a Kiat agent — it's any Claude session configured to act as the product voice. It writes exclusively inside `delivery/business/` (evergreen domain knowledge) and the `## Business Context` section of epics/stories. The two folders each own an explicit [BMad writing protocol](delivery/business/README.md#bmad-writing-protocol-rules-for-claude-sessions-acting-as-bmad) that enforces the boundary.
 - **`kiat-team-lead` has zero skills of its own** — it's pure orchestration. It only invokes `kiat-validate-spec` at Phase 0a (re-validation, defense in depth — the tech-spec-writer already validated). Every other skill is owned by downstream agents.
 - **`kiat-test-patterns-check` loads selectively** — the router (`SKILL.md`) is always loaded by coders, but the 9 pattern blocks are loaded individually based on story scope (usually 3-5 blocks per story, not all 9).
 - **`kiat-ui-ux-search` is a search-on-demand wrapper** — the underlying [ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) is 85k tokens, so we never load it eagerly. The coder loads only the lightweight wrapper (~1k) and queries the underlying skill via `search.py` only when needed.
@@ -244,9 +273,10 @@ PROJECT CONVENTIONS (loaded on-demand per task)
 
 **Key flows summary (in plain English):**
 
-- **Tech spec writer is the entry point.** Users describe what they want in natural language; the tech-spec-writer translates it into a structured story file with a `## Skills` section listing contextual skills.
-- **BMAD is outside Kiat.** If you use BMAD as your product/métier agent, BMAD's output goes to the tech-spec-writer, not directly to Team Lead.
-- **Team Lead is the orchestrator, not the entry point.** It receives stories that the tech-spec-writer (or a human) has already structured, and runs the pipeline.
+- **Two-layer story model.** Every story file has a `## Business Context` section (written by BMad, in the project's business language) and technical sections below it (written by the tech-spec-writer, always in English). One file, two layers, two authors, explicit folder-level contracts stopping either author from writing in the other's territory.
+- **BMad is the upstream product voice.** For new product work, start with BMad — Capture mode accumulates evergreen facts in `delivery/business/`, Plan mode creates/updates the `## Business Context` of a story. BMad lives outside `.claude/` because it's not a Kiat agent; the folder READMEs in `delivery/business/` and `delivery/epics/` are Kiat's integration contract.
+- **Tech-spec-writer is the Kiat-side entry point.** It reads the Business Context (if present), loads the minimum project conventions, and appends Skills + API / DB / Frontend / Tests in the same file. For pure technical work (refactors, bug fixes) it also works in greenfield mode and writes both layers itself.
+- **Team Lead is the orchestrator, not the entry point.** It receives stories that the tech-spec-writer has already filled in and runs the pipeline.
 - **Pre-coding gates fire before any code.** `kiat-validate-spec` (Phase 0a) and pre-flight budget (Phase 0b, which reads the story's `## Skills` section to estimate cost) catch ambiguity and oversize stories **before** a coder is launched — the earliest possible failure point.
 - **Parallel coding.** Backend and Frontend coders run simultaneously once Phase 0 passes. They never wait on each other.
 - **3-way verdicts + 45-min fix budget.** Reviewers output `APPROVED / NEEDS_DISCUSSION / BLOCKED`. BLOCKED re-cycles within a time budget. NEEDS_DISCUSSION is arbitrated by Team Lead, never bounced back to the coder as "fix this".
@@ -272,7 +302,7 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 | `.claude/tools/report.py` | Humans (weekly) | Weekly health report generator |
 | `.claude/tools/doc-audit.py` | Humans (anytime) | Audit `delivery/specs/` against M1 (tokens) + M2 (structure ratio) |
 
-### Project docs (`delivery/specs/`) — read by humans AND agents
+### Project technical conventions (`delivery/specs/`) — read by humans AND agents
 
 | Doc | Audience | Purpose |
 |-----|----------|---------|
@@ -289,11 +319,22 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 | `delivery/specs/git-conventions.md` | Coders + reviewers | Branch names, commit messages, PR discipline, immutability rules |
 | `delivery/specs/deployment.md` | Team Lead + agents | Env vars, dev modes (`make dev` / `make dev-test`), production safety guards |
 | **`delivery/specs/project-memory.md`** | **Tech spec writer + humans** | **Living file of emergent cross-story patterns. Only cross-story coherence mechanism in Kiat.** |
-| `delivery/epics/epic-X/story-NN.md` | All agents | **THE SPEC** — acceptance criteria, contracts, edge cases (written by BMAD) |
-| `checklists/*.md` | Humans + agents | "Am I done?" templates (user-editable per project) |
-| `patterns/*.md` | Humans | Architectural patterns (user-editable per project) |
 
-**The separation test:** `find kiat/.claude/` lists framework files only; `find kiat/delivery/` lists project files only. Neither contains the other.
+### Project business layer (`delivery/business/` + `delivery/epics/`) — BMad-authored + tech-spec-writer-enriched
+
+| Doc | Audience | Purpose |
+|-----|----------|---------|
+| [`delivery/business/README.md`](delivery/business/README.md) | BMad + humans | Folder contract: what goes here, BMad's 4 input modes, Capture-mode decision tree, sizing discipline, zones BMad never touches |
+| `delivery/business/glossary.md` | BMad + tech-spec-writer | Evergreen domain terms (create on demand) |
+| `delivery/business/personas.md` | BMad + tech-spec-writer | User personas (create on demand) |
+| `delivery/business/business-rules.md` | BMad + tech-spec-writer | Compliance / invariants (create on demand) |
+| `delivery/business/domain-model.md` | BMad + tech-spec-writer | Business-level entities + relations (create on demand) |
+| `delivery/business/user-journeys.md` | BMad + tech-spec-writer | End-to-end flows (create on demand) |
+| [`delivery/epics/README.md`](delivery/epics/README.md) | BMad + humans | Folder contract: two-layer story model, BMad's Plan-mode protocol, the one section BMad writes (`## Business Context`), handoff to the tech-spec-writer |
+| `delivery/epics/epic-X/_epic.md` | All agents | Epic header. `## Business Context` written by BMad; rest written by humans or the tech-spec-writer |
+| `delivery/epics/epic-X/story-NN.md` | All agents | **THE STORY**. `## Business Context` written by BMad; `## Skills` + technical sections written by `kiat-tech-spec-writer` in enrichment mode |
+
+**The separation test:** `find kiat/.claude/` lists framework files only; `find kiat/delivery/` lists project files only. Neither contains the other. Inside `delivery/`, BMad writes exclusively in `business/` + the `## Business Context` section of `epics/`; the tech-spec-writer writes exclusively in the technical sections of `epics/`; neither touches `specs/` (technical conventions are human-owned).
 
 ---
 
@@ -301,9 +342,9 @@ Kiat enforces a **strict framework / project separation** — and the doc struct
 
 > The honest truth: **skills and docs don't force agent compliance — they're just more text in the context window.** Kiat's enforcement model is designed around this reality. We don't pretend agents are deterministic. We make their shortcuts **auditable** instead.
 
-### The 6 Enforcement Layers
+### The 7 Enforcement Layers
 
-Kiat layers six mechanisms, from cheapest to hardest, so that even if one fails, the others catch the drift.
+Kiat layers seven mechanisms, from cheapest to hardest, so that even if one fails, the others catch the drift.
 
 #### Layer 1 — Machine-parseable verdicts (3-way outcome)
 
@@ -431,16 +472,17 @@ Layers 1-5 catch problems at review time or via audit trails. **Layer 6 prevents
 
 **6a — Spec ambiguity ([`kiat-validate-spec`](.claude/skills/kiat-validate-spec/SKILL.md))**
 
-The single highest-ROI check in Kiat. BMAD writes specs in prose; prose is ambiguous. A vague verb like "validate email" or "handle errors" hides behind well-written sentences, then explodes into a multi-cycle review ping-pong when the coder interprets it one way and the reviewer expects another.
+The single highest-ROI check in Kiat. Specs are written in prose; prose is ambiguous. A vague verb like "validate email" or "handle errors" hides behind well-written sentences, then explodes into a multi-cycle review ping-pong when the coder interprets it one way and the reviewer expects another. The two-layer story model doesn't fix this on its own — BMad's `## Business Context` can still be vague ("users should be able to manage their care plans"), and the tech-spec-writer's technical sections can still gap ("endpoint: `POST /patients` — validates input"). `kiat-validate-spec` runs against **both layers** and catches drift on either side.
 
 Team Lead runs the `kiat-validate-spec` skill at **Phase 0a**, *before* the context budget check, *before* any coder is launched. The skill:
 - Greps the spec for a curated list of vague verbs (*handle, validate, process, manage, support, optimize, ensure, proper, robust, efficient, reasonable*)
 - Checks API/DB/UI contract completeness against the story scope
 - Verifies cross-layer consistency (backend field names match frontend types)
+- Verifies the **business/technical** cross-layer boundary too: if the Business Context mentions a persona, glossary term, or business rule, the technical sections must handle it (no orphan user-facing acceptance criteria without a matching technical check)
 - Enumerates missing edge cases (concurrency, empty states, network failure)
 - Outputs `SPEC_VERDICT: CLEAR | NEEDS_CLARIFICATION | BLOCKED`
 
-**Why this catches the most bugs:** BMAD is still in the conversation. A 5-minute clarification round is infinitely cheaper than a 45-minute fix-budget retry cycle on a story where the coder guessed wrong.
+**Why this catches the most bugs:** the tech-spec-writer is still in the conversation at Phase 0a, and BMad is one handoff away. A 5-minute clarification round (to either author, depending on which layer the gap is in) is infinitely cheaper than a 45-minute fix-budget retry cycle on a story where the coder guessed wrong.
 
 **6b — Test-patterns inheritance ([`kiat-test-patterns-check`](.claude/skills/kiat-test-patterns-check/SKILL.md))**
 
@@ -479,7 +521,7 @@ Layers 1-6 are all **soft enforcement**: skills, prompts, audit lines. They work
 
 ### Complementary Mechanism — Project Memory (cross-story coherence)
 
-The 6 enforcement layers above all operate at **story scope**: they fire on one story at a time, catch problems within that story, and have no view of the project as a whole. That's intentional — agents are deliberately isolated to keep context budgets tight.
+The 7 enforcement layers above all operate at **story scope**: they fire on one story at a time, catch problems within that story, and have no view of the project as a whole. That's intentional — agents are deliberately isolated to keep context budgets tight.
 
 **But isolation has a cost: coherence drift.** Story 5 can invent a new pattern without knowing story 3 already solved the same problem differently. Over 15-20 stories, the project becomes a salad of inconsistent naming, duplicated components, and contradictory architectural choices. Each story is locally correct; the project is globally incoherent.
 
@@ -491,7 +533,7 @@ The 6 enforcement layers above all operate at **story scope**: they fire on one 
 - Architectural decisions that span multiple stories
 - Known gotchas specific to this project
 
-**It's the only cross-story coherence mechanism in Kiat.** Unlike the 6 enforcement layers (which are mechanical and scoped to one story), `project-memory.md` is a **shared memory** that the tech-spec-writer reads *before* writing a new story's technical spec, to ensure the new story aligns with what's already established.
+**It's the only cross-story coherence mechanism in Kiat.** Unlike the 7 enforcement layers (which are mechanical and scoped to one story), `project-memory.md` is a **shared memory** that the tech-spec-writer reads *before* writing a new story's technical spec, to ensure the new story aligns with what's already established.
 
 **Maintenance:** manual, by humans, for now. An agent-driven maintenance mode may be added later once we know what patterns actually accumulate in practice.
 
@@ -614,11 +656,10 @@ The layout enforces a strict separation: **`.claude/` = IA/Kiat framework**, **`
 
 ```
 kiat/
-├── CLAUDE.md                          # Ambient context (auto-loaded by Claude Code)
+├── CLAUDE.md                          # Ambient meta-rules (auto-loaded by Claude Code)
 ├── README.md                          # This file — Kiat vision + enforcement model
 ├── INDEX.md                           # Navigation hub
 ├── GETTING_STARTED.md                 # New-user onboarding
-├── structure.md                       # Architecture decision log
 │
 ├── .claude/                           # ═══ IA / Kiat framework ONLY ═══
 │   ├── README.md                      # Framework doc index
@@ -662,21 +703,23 @@ kiat/
 │
 ├── delivery/                          # ═══ Project-owned ONLY ═══
 │   ├── README.md                      # Delivery conventions (epics, stories, common cmds)
-│   ├── business/                      # Business / domain documentation (written by BMAD)
-│   │   ├── README.md                  # What goes here and what doesn't
+│   ├── business/                      # Business layer — BMad writes here (Capture mode)
+│   │   ├── README.md                  # Folder contract + BMad writing protocol (Explore/Capture/Plan/Review modes)
 │   │   ├── glossary.md                # Domain terms (create on demand)
 │   │   ├── personas.md                # User personas (create on demand)
 │   │   ├── business-rules.md          # Compliance / invariants (create on demand)
 │   │   ├── domain-model.md            # Entities + relations at business level (create on demand)
 │   │   └── user-journeys.md           # End-to-end flows (create on demand)
-│   ├── epics/                         # All epics, plus the template
-│   │   ├── epic-template/             # Template for new epics
-│   │   │   ├── _epic.md
-│   │   │   └── story-NN-slug.md       # Includes ## Skills section
-│   │   └── epic-N-name/               # Per-epic folders (technical story specs)
-│   │       ├── _epic.md               # Epic header + Epic Patterns section
-│   │       └── story-NN.md            # Written by tech-spec-writer, consumed by team-lead
-│   ├── metrics/                       # Data written by Team Lead at runtime
+│   ├── epics/                         # The backlog — two-layer story files (Jira-equivalent)
+│   │   ├── README.md                  # Two-layer story model + BMad writing protocol (Plan mode → ## Business Context only)
+│   │   ├── epic-template/             # Templates for new epics
+│   │   │   ├── _epic.md               # Both layers: Business Context (BMad) + technical
+│   │   │   └── story-NN-slug.md       # Both layers: Business Context (BMad) + Skills/API/DB/FE/tests (tech-spec-writer)
+│   │   └── epic-N-name/               # Per-epic folders — two authors, two layers per file
+│   │       ├── _epic.md               # BMad writes Business Context; tech-spec-writer + humans fill the rest
+│   │       └── story-NN.md            # BMad writes Business Context; tech-spec-writer enriches in enrichment mode
+│   ├── metrics/                       # Runtime data (Team Lead-written only)
+│   │   ├── README.md                  # What lives here + writer/reader rules
 │   │   └── events.jsonl               # (generated when stories run, gitignored)
 │   └── specs/                         # Technical conventions — humans + agents read these
 │       ├── api-conventions.md         # REST design, error codes
@@ -693,9 +736,6 @@ kiat/
 │       ├── security-checklist.md      # OWASP, RLS testing
 │       ├── service-communication.md   # DI patterns, error handling
 │       └── testing.md                 # Anti-flakiness rules + CI gate
-│
-├── checklists/                        # Project checklist templates (user-editable)
-└── patterns/                          # Project architectural patterns (user-editable)
 ```
 
 **The separation test:** `find kiat/.claude/` lists the exact framework files (Kiat IP). `find kiat/delivery/` lists the exact project-owned files (your project's code and conventions). Neither list contaminates the other.
@@ -704,16 +744,19 @@ kiat/
 
 ## 🚀 Getting Started with Kiat
 
-The short version: read [`GETTING_STARTED.md`](GETTING_STARTED.md) for the canonical onboarding walkthrough (10-20 minutes). It covers customizing `delivery/specs/` to your stack, creating the first epic, and running the first story through the pipeline.
+The short version: read [`GETTING_STARTED.md`](GETTING_STARTED.md) for the canonical onboarding walkthrough. It covers customizing `delivery/specs/` to your stack, bootstrapping `delivery/business/` with BMad, creating the first epic, and running the first story through the pipeline.
 
 The even shorter version, once you're set up:
 
-1. Describe what you want in natural language to `kiat-tech-spec-writer` — it writes `delivery/epics/epic-X/story-NN.md` and self-validates it.
-2. Invoke `kiat-team-lead` on that story as the **main session thread** (not via `@agent-kiat-team-lead`, because sub-agents can't spawn sub-agents in Claude Code). It runs Phase 0 → parallel coders → reviewers → rollup.
-3. Watch the rollup event in `delivery/metrics/events.jsonl` and the PR it produces.
-4. Run `python3 .claude/tools/report.py` once a week to check pipeline health.
+1. **Talk to BMad** about the product need in natural language. BMad captures evergreen domain facts into `delivery/business/` (Capture mode), then drafts a story under `delivery/epics/epic-X/story-NN.md` with only the `## Business Context` section filled in (Plan mode).
+2. **Invoke `kiat-tech-spec-writer`** on the story file. It detects the pre-existing Business Context, runs in enrichment mode, and appends Skills + API contracts + database + frontend + edge cases + tests. Self-validates.
+3. **Invoke `kiat-team-lead`** on the enriched story as the **main session thread** (not via `@agent-kiat-team-lead`, because sub-agents can't spawn sub-agents in Claude Code). It runs Phase 0 → parallel coders → reviewers → rollup.
+4. Watch the rollup event in `delivery/metrics/events.jsonl` and the PR it produces.
+5. Run `python3 .claude/tools/report.py` once a week to check pipeline health.
 
-**BMAD integration** — If you use BMAD as your upstream product agent, point it at [`delivery/business/`](delivery/business/README.md) and let it accumulate domain knowledge there. `kiat-tech-spec-writer` reads those files on demand when a story touches the corresponding domain. The exact BMAD wiring is still being tested and will be documented once it's proven; for now, `delivery/business/` exists as the landing spot.
+**Pure technical work** (refactor, bug fix, no new business intent) — skip step 1 and go straight to the tech-spec-writer. It will operate in greenfield mode and produce both layers itself.
+
+**BMad setup** — BMad is external to Kiat. Point any Claude session at [`delivery/business/README.md`](delivery/business/README.md) and [`delivery/epics/README.md`](delivery/epics/README.md) — these two folder READMEs define the full contract BMad must respect (4 input modes, Capture-mode decision tree, Plan-mode handoff, boundaries). No agent definition, no prompt engineering — just reading the folder contracts is enough.
 
 ---
 
@@ -726,20 +769,22 @@ The even shorter version, once you're set up:
 - [`.claude/skills/`](.claude/skills/) — The 6 kiat-* skills (SKILL.md + references/)
 - [`.claude/specs/`](.claude/specs/) — Framework machinery (budgets, metrics schema, failure patterns, skill registry)
 - [`delivery/specs/`](delivery/specs/) — Project technical conventions (architecture, security, testing, ...)
-- [`delivery/business/README.md`](delivery/business/README.md) — Business / domain documentation layout (BMAD-compatible)
+- [`delivery/business/README.md`](delivery/business/README.md) — Business layer folder contract + BMad writing protocol (Capture mode, 5 canonical files, sizing discipline)
+- [`delivery/epics/README.md`](delivery/epics/README.md) — Two-layer story model + BMad writing protocol (Plan mode, `## Business Context` boundary, handoff to tech-spec-writer)
 - Within this file: [Enforcement Model](#-enforcement-model-how-we-make-agents-actually-follow-rules), [Skill Evaluation](#-skill-evaluation-proving-the-skills-actually-work), [Monitoring & Reporting](#-monitoring--reporting)
 
 ---
 
 ## 🎓 Key Principles
 
-1. **Spec-first.** Agents code from written specs, never from vague requirements. The tech-spec-writer is the only funnel for new work.
-2. **Single source of truth.** Each artifact (convention, spec, pattern) lives in exactly one place. Never duplicate — link.
-3. **Load only what you need.** Agents load the minimum context for the specific task, not the full codebase. Skills follow progressive disclosure (SKILL.md → references/ on demand).
-4. **Convergence, not ping-pong.** Reviewer feedback is batched — coder fixes everything in one pass. 3-way verdicts + 45-minute fix budget cap the loop.
-5. **Gate at the protocol, not at the test suite.** Until there's real code and real CI, the SubagentStop hooks + the 3-way verdict + the reviewer's test-pattern drift check are the enforcement surface. Tests will come later, as a complement, not as the primary gate.
-6. **Human approval.** You decide when specs are good, when code is ready to merge, and when to escalate. The pipeline runs autonomously within those bounds; the rollup event is the checkpoint.
-7. **Parallelizable at every layer.** Backend and frontend coders run simultaneously. Reviewers run simultaneously. Multiple stories can be processed in parallel as long as their context budgets and `delivery/business/` reads don't collide.
+1. **Two layers, two authors, one file.** Every story has a `## Business Context` (written by BMad, business language) and technical sections (written by `kiat-tech-spec-writer`, English). Each author has a hard contract forbidding them from writing in the other's territory.
+2. **Spec-first.** Agents code from written specs, never from vague requirements. BMad is the upstream funnel for business intent; the tech-spec-writer is the Kiat-side funnel for technical execution.
+3. **Single source of truth.** Each artifact (convention, spec, domain fact, story) lives in exactly one place. Never duplicate — link. Stories link to `delivery/business/` for persona/glossary/rule definitions; they never restate them.
+4. **Load only what you need.** Agents load the minimum context for the specific task, not the full codebase. Skills follow progressive disclosure (SKILL.md → references/ on demand). BMad's 5 domain files are read selectively (glossary + domain-model for domain work, personas + user-journeys for user-facing work, business-rules for compliance work).
+5. **Convergence, not ping-pong.** Reviewer feedback is batched — coder fixes everything in one pass. 3-way verdicts + 45-minute fix budget cap the loop.
+6. **Gate at the protocol, not at the test suite.** Until there's real code and real CI, the SubagentStop hooks + the 3-way verdict + the reviewer's test-pattern drift check are the enforcement surface. Tests will come later, as a complement, not as the primary gate.
+7. **Human approval.** You decide when specs are good, when code is ready to merge, and when to escalate. The pipeline runs autonomously within those bounds; the rollup event is the checkpoint.
+8. **Parallelizable at every layer.** Backend and frontend coders run simultaneously. Reviewers run simultaneously. Multiple stories can be processed in parallel as long as their context budgets and `delivery/business/` reads don't collide.
 
 ---
 

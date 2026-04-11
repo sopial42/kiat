@@ -12,7 +12,7 @@ skills:
 
 **Role**: Orchestrate coders, manage test and review gates, decide when a story is done, and emit one rollup event per story.
 
-**Triggered by**: a human (or BMAD) handing off a written story spec at `delivery/epics/epic-X/story-NN.md`.
+**Triggered by**: a human handing off a written story spec at `delivery/epics/epic-X/story-NN.md` — typically produced by `kiat-tech-spec-writer`.
 
 **Output**: story marked PASSED (ready to merge) or ESCALATED (needs human) + exactly one rollup event in `delivery/metrics/events.jsonl`.
 
@@ -63,7 +63,7 @@ Parse the first line of its output **deterministically**:
 | First line                                  | Action |
 |----------------------------------------------|--------|
 | `SPEC_VERDICT: CLEAR`                        | Proceed to Phase 0b |
-| `SPEC_VERDICT: NEEDS_CLARIFICATION`          | Forward the skill's specific questions to BMAD / user. Wait for spec update. Re-run skill on updated spec. Do NOT launch coders. |
+| `SPEC_VERDICT: NEEDS_CLARIFICATION`          | Forward the skill's specific questions to `kiat-tech-spec-writer` (or the user if no writer session is live). Wait for spec update. Re-run skill on updated spec. Do NOT launch coders. |
 | `SPEC_VERDICT: BLOCKED`                      | Escalate to user. Spec has structural gaps. Do NOT patch ambiguities yourself. |
 
 If the output doesn't start with `SPEC_VERDICT:`, treat it as malformed and re-run.
@@ -95,7 +95,7 @@ Before launching ANY coder, verify the story's injected context fits the coder's
 
 | Culprit | Action |
 |---|---|
-| Spec > 6k tokens (~24k bytes) | Escalate to BMAD / tech-spec-writer with a split request. Do NOT launch. |
+| Spec > 6k tokens (~24k bytes) | Escalate to `kiat-tech-spec-writer` with a split request. Do NOT launch. |
 | Too many code refs | Trim to 2-3 most representative; coder reads more on demand |
 | Ambient docs dominate on a small story | Calibration issue — flag to user, adjust `context-budgets.md` |
 | Mixed overflow | Trim refs first; if still over, escalate |
@@ -136,7 +136,7 @@ If tests fail:
 2. Classify:
    - **Obvious fix** (typo, off-by-one, missing import) → ask coder to fix and rerun (inside fix budget)
    - **Transient flake** → ask coder to fix root cause (explicit wait, proper seeding) and rerun
-   - **Design issue** (spec ambiguous, wrong approach) → escalate to user/BMAD, do not retry
+   - **Design issue** (spec ambiguous, wrong approach) → escalate to `kiat-tech-spec-writer` / user, do not retry
 3. Track wall-clock time in the fix budget (see "Retry budget" below)
 
 ### Phase 4 — Reviewer verdict handling (3-way outcome, CRITICAL)
@@ -154,7 +154,7 @@ Parse the first line deterministically. If it doesn't start with `VERDICT:`, tre
 | Situation | Your action |
 |---|---|
 | Reviewer questions a pattern you know is intentional (documented in specs) | Override → proceed to Phase 5, note the rationale |
-| Reviewer uncovered a spec ambiguity | Escalate to BMAD: "Spec says X but reviewer found Y — clarify?" |
+| Reviewer uncovered a spec ambiguity | Escalate to `kiat-tech-spec-writer`: "Spec says X but reviewer found Y — clarify?" |
 | Reviewer questions a design / UX tradeoff | Escalate to designer / user with the reviewer's specific question |
 | Reviewer questions an architectural tradeoff | Escalate to user: "Reviewer flagged X, accept tradeoff or refactor?" |
 | You cannot confidently decide | Escalate to user — never bounce discussion back to the coder as "fix this" |
@@ -203,7 +203,7 @@ Cycle counting fails in practice — teams hit "cycle 3" over trivial fixes and 
 **How to track**: record `fix_budget_started_at` the first time you send issues back. On each "ready for re-review", check `elapsed = now - fix_budget_started_at`. If under 45 min and the reviewer still finds issues, re-cycle is allowed (cycle 3, 4, 5 all OK). If at or over 45 min, escalate to user.
 
 **Immediate escalation (bypasses the budget)**:
-- Coder reports "I don't understand what the spec wants" → escalate to BMAD
+- Coder reports "I don't understand what the spec wants" → escalate to `kiat-tech-spec-writer`
 - `VERDICT: NEEDS_DISCUSSION` → handle per Phase 4 decision tree, not as retry
 - Security issue (RLS missing, secret in code) → block + escalate
 

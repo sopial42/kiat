@@ -118,14 +118,6 @@ Then the full review body per the `kiat-review-backend` skill template, includin
 
 ---
 
-## Persistent memory
-
-You have `memory: project` — a `.claude/agent-memory/kiat-backend-reviewer/` directory that survives across stories. Use it to accumulate recurring patterns you've flagged (per-project quirks, common drifts, category hotspots), so later reviews can spot them faster. Update `MEMORY.md` at the end of each review with anything non-obvious you'd want a fresh reviewer instance to know.
-
-Do NOT store anything you could derive from `delivery/specs/` or the codebase itself — those are authoritative. Memory is for emergent patterns and per-reviewer judgment calls, not for re-documenting conventions.
-
----
-
 ## What you do NOT do
 
 - You don't approve the merge (that's a human)

@@ -34,9 +34,12 @@ As a [persona], I want [goal], so that [value].
 
 ### Personas & domain links
 
+_Link only the entries that actually matter for this specific story. Don't list the full folder._
+
 - Persona: [link to `delivery/business/personas.md#<persona>`]
 - Domain term: [link to `delivery/business/glossary.md#<term>`]
 - Business rule: [link to `delivery/business/business-rules.md#<rule>`]
+- User journey this story is a slice of: [link to `delivery/business/user-journeys.md#<journey>`]
 
 ### Business rationale
 

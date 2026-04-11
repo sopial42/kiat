@@ -23,9 +23,13 @@ This file is the **single source of truth for contextual skills**. If a skill is
 
 These are loaded automatically by their parent agents at session startup. **Do not list them in story `## Skills` sections** — that would be redundant and confusing.
 
-*(None yet — this is a future migration target. See `.claude/specs/context-budgets.md` for the tradeoff discussion on eager-loading vs on-demand.)*
+| Skill | Parent agent | Declared in |
+|---|---|---|
+| `kiat-validate-spec` | `kiat-tech-spec-writer` | frontmatter `skills:` — used at Step 6 (self-validation before handoff) |
 
-Currently, Kiat skills are invoked dynamically by their parent agents rather than declared in frontmatter. This may change after the first few real stories reveal which skills are worth eager-loading.
+All other Kiat skills are invoked **dynamically** by their parent agents (at a specific phase or step in the agent's protocol), not via frontmatter. This is intentional: dynamic invocation lets the agent control *when* the skill runs and keeps the ambient context small. The tech-spec-writer is the single exception because `kiat-validate-spec` is load-bearing — it gates every single handoff.
+
+If a future skill proves it must run on every session (no conditional path), it can be promoted to this table. Until then, the default is dynamic invocation.
 
 ---
 
@@ -156,7 +160,7 @@ When writing a story, the tech-spec-writer:
 Contextual skills declared in a story's `## Skills` section count against the coder's 25k context budget during the Phase 0b pre-flight check. Team Lead reads the `## Skills` section, estimates the total cost, and either:
 
 - **Proceeds** if the sum (ambient docs + story spec + contextual skills) fits the budget
-- **Escalates to BMAD / tech-spec-writer** if it doesn't, asking to either trim skills or split the story
+- **Escalates to `kiat-tech-spec-writer`** if it doesn't, asking to either trim skills or split the story
 
 This enforcement is why the registry matters: the tech-spec-writer needs to know the approximate cost of each skill to make responsible decisions.
 

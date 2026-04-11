@@ -16,12 +16,12 @@ These are caps on **injected input context** before an agent starts its own work
 
 | Agent | Max input context | Rationale |
 |---|---|---|
+| **Tech Spec Writer** | unrestricted | Writes story specs — reads business + project specs on demand; no downstream budget pressure on its own session. |
 | **Team Lead** | **10k tokens** | Pure orchestration — spec + story metadata + recent review outputs. No codebase. |
-| **Backend-Coder** | **25k tokens** | Spec + backend-architecture.md + relevant specs + a few existing files for patterns. |
+| **Backend-Coder** | **25k tokens** | Spec + architecture-clean.md + backend-conventions.md + relevant specs + a few existing files for patterns. |
 | **Frontend-Coder** | **25k tokens** | Spec + frontend-architecture.md + design-system.md + a few existing components. |
 | **Backend-Reviewer** | **20k tokens** | Spec + kiat-review-backend skill + kiat-clerk-auth-review (if triggered) + code diff. |
 | **Frontend-Reviewer** | **20k tokens** | Spec + kiat-review-frontend skill + kiat-clerk-auth-review (if triggered) + code diff. |
-| **BMAD Master** | unrestricted | Writes specs — needs broad context, no downstream budget pressure. |
 
 **Why not bigger?** Not because the model can't handle more, but because:
 1. **Reasoning quality degrades** well before the 1M hard limit (observable around 60-100k of dense technical context)
@@ -44,7 +44,7 @@ wc -c CLAUDE.md \
 # If > 25k, either trim conventions or raise the budget
 ```
 
-The 25k ceiling is a **working hypothesis**, not a measured truth. If your first few stories consistently run at ~18k, you have headroom and the budget is right. If they consistently hit 30k+, either your conventions are too verbose (trim them) or your stories are genuinely too large (BMAD splits them) or the budget itself needs adjustment — that's a calibration decision based on real data.
+The 25k ceiling is a **working hypothesis**, not a measured truth. If your first few stories consistently run at ~18k, you have headroom and the budget is right. If they consistently hit 30k+, either your conventions are too verbose (trim them) or your stories are genuinely too large (`kiat-tech-spec-writer` splits them) or the budget itself needs adjustment — that's a calibration decision based on real data.
 
 ---
 
@@ -113,7 +113,7 @@ wc -c delivery/epics/epic-*/story-01.md \
 
 **Red flags in measurement:**
 - Ambient > 15k tokens → conventions are bloated; trim ruthlessly
-- Per-story > 10k tokens → either story specs are too ambitious (split with BMAD) or conventions are being double-loaded
+- Per-story > 10k tokens → either story specs are too ambitious (ask `kiat-tech-spec-writer` to split them) or conventions are being double-loaded
 - Ambient + per-story > 22k with zero headroom → you'll hit overflow on any above-average story; reduce one or the other
 
 ---
@@ -131,7 +131,7 @@ Estimated: 34k tokens
 
 Breakdown:
 - CLAUDE.md:                    ~3k
-- backend-architecture.md:      ~5k
+- architecture-clean.md:        ~5k
 - testing.md:                   ~4k
 - story-27-patient-bulk-import: ~11k ← SPEC IS OVERSIZED
 - api-conventions.md:           ~3k
@@ -144,16 +144,16 @@ Total:                          ~34k (BUDGET: 25k, OVER BY 9k)
 
 | Culprit | Action |
 |---|---|
-| **Spec > 6k tokens** | Escalate to BMAD: *"Story is too large for one coder session. Split into N sub-stories with distinct acceptance criteria."* |
+| **Spec > 6k tokens** | Escalate to `kiat-tech-spec-writer`: *"Story is too large for one coder session. Split into N sub-stories with distinct acceptance criteria."* |
 | **Too many code references** | Trim to the 2-3 most representative; coder can read more on demand |
 | **Ambient docs dominant, story small** | Budget is calibrated wrong — adjust this file, not the story |
-| **Mixed (spec slightly too big + code refs slightly too big)** | Try trimming refs first; if still > budget, escalate to BMAD |
+| **Mixed (spec slightly too big + code refs slightly too big)** | Try trimming refs first; if still > budget, escalate to `kiat-tech-spec-writer` |
 
-### Step 3 — Escalate to BMAD with a concrete ask
+### Step 3 — Escalate to the tech-spec-writer with a concrete ask
 When the spec itself is the overflow culprit, Team Lead escalates **before** launching any coder:
 
 ```
-To BMAD:
+To kiat-tech-spec-writer:
 Story story-27-patient-bulk-import exceeds the Backend-Coder context budget
 (34k estimated vs 25k hard limit). The spec is ~11k tokens.
 
@@ -179,7 +179,7 @@ Even with Team Lead's pre-flight check, coders should self-verify on startup:
 3. If estimate exceeds your budget (25k for coders, 20k for reviewers):
    - **STOP** — do not start coding
    - Report to Team Lead: *"Context budget exceeded: estimated Xk tokens vs budget Yk. Breakdown: [...]"*
-   - Wait for Team Lead to escalate to BMAD
+   - Wait for Team Lead to escalate to `kiat-tech-spec-writer`
 
 This is defense in depth — if Team Lead mis-counts or a file grows between pre-flight and launch, the coder catches it.
 

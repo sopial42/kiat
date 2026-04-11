@@ -4,11 +4,11 @@ description: >
   Pre-coding spec validation for Kiat stories. Use this skill to detect
   ambiguity, missing acceptance criteria, undefined edge cases, vague verbs,
   and cross-layer contract mismatches before any coder is launched. The
-  cheapest place to fix a bad spec is while BMAD is still in the conversation
-  and no code has been written yet — a 5-minute clarification here prevents
-  45-minute retry cycles downstream. Reach for this whenever a new story
-  arrives, when an existing story is being re-scoped, or when a coder escalates
-  that the spec isn't answerable as written.
+  cheapest place to fix a bad spec is while the tech-spec-writer is still in
+  the conversation and no code has been written yet — a 5-minute clarification
+  here prevents 45-minute retry cycles downstream. Reach for this whenever a
+  new story arrives, when an existing story is being re-scoped, or when a
+  coder escalates that the spec isn't answerable as written.
 allowed-tools:
   - Read
   - Grep
@@ -21,7 +21,7 @@ allowed-tools:
 
 The earliest failure point in the Kiat pipeline is an ambiguous story spec. A single vague word — "validate", "handle", "process" — can trigger a multi-cycle review ping-pong because the coder interprets it one way and the reviewer expects another. Every such cycle burns ~45 minutes of agent time and breaks the flow state of whoever is orchestrating.
 
-This skill catches those ambiguities *before* any coder runs. When BMAD is still in the loop, a clarification costs five minutes; once a coder has planned around a misreading, the same clarification costs a retry cycle plus the cognitive overhead of unwinding the wrong mental model. The math heavily favours catching things early, so the skill is deliberately tuned to err on the side of flagging — a false positive costs a question, a false negative costs a retry.
+This skill catches those ambiguities *before* any coder runs. When the tech-spec-writer is still in the loop, a clarification costs five minutes; once a coder has planned around a misreading, the same clarification costs a retry cycle plus the cognitive overhead of unwinding the wrong mental model. The math heavily favours catching things early, so the skill is deliberately tuned to err on the side of flagging — a false positive costs a question, a false negative costs a retry.
 
 **When to invoke:** At Phase 0 of the Team Lead workflow, after the pre-flight context budget check passes, before launching any coder. Also use it when a coder escalates mid-story with "I can't tell what this means" — the skill's checklist usually surfaces the ambiguity quickly.
 
@@ -167,9 +167,9 @@ Testability: <summary>
 SPEC_VERDICT: NEEDS_CLARIFICATION
 
 Story works conceptually but has ambiguities that will cause review ping-pong.
-Returning to BMAD with specific questions — do not launch coders yet.
+Returning to the tech-spec-writer (or user) with specific questions — do not launch coders yet.
 
-Questions for BMAD:
+Questions for kiat-tech-spec-writer:
 
 1. <Category>: <brief description> (line <N>)
    - <the specific ambiguity>
@@ -195,7 +195,7 @@ attempt.
 
 2. ...
 
-→ BMAD must rewrite this story before it can be validated.
+→ kiat-tech-spec-writer must rewrite this story before it can be validated.
 ```
 
 ## Decision logic
@@ -203,7 +203,7 @@ attempt.
 | Situation | Verdict |
 |---|---|
 | All checklist items pass | `CLEAR` |
-| Minor ambiguities (1-4 vague verbs, missing edge cases) that BMAD can answer in a few minutes | `NEEDS_CLARIFICATION` |
+| Minor ambiguities (1-4 vague verbs, missing edge cases) that the tech-spec-writer can answer in a few minutes | `NEEDS_CLARIFICATION` |
 | Structural gaps (no acceptance criteria, missing API contract, cross-layer mismatch, no Figma on a new-component story) | `BLOCKED` |
 | You find one structural gap and several ambiguities | `BLOCKED` (structural gaps take precedence; list the ambiguities in the body too) |
 | You're unsure whether something is a real problem | `NEEDS_CLARIFICATION` (never hide doubt behind `CLEAR`) |
@@ -212,5 +212,5 @@ attempt.
 
 - This skill is deliberately fast — five minutes of scanning, not a deep architectural review. It's a cheap early gate, not a replacement for the reviewer's later checks.
 - `NEEDS_CLARIFICATION` is the normal outcome on first pass, not a failure. Most real stories will come back with 1-3 clarifications; that's the skill doing its job. Don't apologize for returning questions.
-- `BLOCKED` is rare and means BMAD wrote something that doesn't meet the minimum bar. Don't try to patch it — escalate to the user.
+- `BLOCKED` is rare and means the tech-spec-writer produced something that doesn't meet the minimum bar. Don't try to patch it — escalate to the user.
 - The grep pass in Category 2 is the highest-yield mechanical step. Do it even when the spec reads smoothly — vague verbs hide well.

@@ -105,9 +105,9 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
 - `ts` (required): ISO 8601 UTC timestamp of when the story was marked PASSED
 - `story`, `epic`, `event` (required): standard identification
 - `outcome` (required): always `"passed"` for this event type
-- `bmad_spec_bytes` (int): byte size of the story spec at reception
+- `bmad_spec_bytes` (int): byte size of the **full story file** at reception (both layers: `## Business Context` written by BMad + technical sections written by the tech-spec-writer). Field name kept for schema backward-compat; the value covers both layers.
 - `spec_verdict` (enum): final verdict from `kiat-validate-spec` after any clarification rounds (`CLEAR` | `NEEDS_CLARIFICATION` | `BLOCKED`)
-- `spec_clarification_rounds` (int): number of BMAD clarification rounds before `CLEAR` was reached
+- `spec_clarification_rounds` (int): number of clarification rounds (to the tech-spec-writer and/or BMad, depending on which layer the gap was in) before `CLEAR` was reached
 - `preflight` (object): per-agent context budget pre-flight results. Keys are agent names; values are `{estimated_tokens, budget, result}`. Omit keys for agents that weren't launched (e.g., no backend work).
 - `reviews` (object): per-domain review rollup. Keys are `"backend"` and/or `"frontend"`. Each contains:
   - `cycles` (int): total number of review cycles (1 means approved on first try)
@@ -125,7 +125,7 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
 
 ### `story_escalated` (PRIMARY — escalation path)
 
-Emitted by Team Lead **once per escalated story**, at the moment Team Lead escalates to BMAD, user, or designer.
+Emitted by Team Lead **once per escalated story**, at the moment Team Lead escalates to `kiat-tech-spec-writer`, BMad, user, or designer (depending on which layer the blocker is in).
 
 ```json
 {
@@ -154,7 +154,7 @@ Emitted by Team Lead **once per escalated story**, at the moment Team Lead escal
 
 Everything in `story_rollup` PLUS:
 - `outcome` (required): always `"escalated"` for this event type
-- `escalated_to` (enum): `"bmad"` | `"user"` | `"designer"`
+- `escalated_to` (enum): `"tech-spec-writer"` | `"bmad"` | `"user"` | `"designer"`
 - `reason` (enum): `"spec_blocked"` | `"spec_clarification_loop"` | `"budget_overflow"` | `"fix_budget_exhausted"` | `"needs_discussion"` | `"security_blocker"` | `"test_flakiness"` | `"other"`
 - `reached_phase` (string): which phase the story reached before escalation — `"0a"` | `"0b"` | `"1"` | `"2"` | `"3"` | `"4"` | `"5"`
 - `failure_pattern_id` (string, optional): if the escalation matches a documented `FP-NNN` in `failure-patterns.md`
@@ -171,7 +171,7 @@ The event types below are from v1.0 (intra-story phase transitions). Team Lead s
 ---
 
 ### 1. `received` (legacy)
-Emitted when Team Lead picks up a new story from BMAD.
+Emitted when Team Lead picks up a new story (written by `kiat-tech-spec-writer`, with a BMad-authored `## Business Context` on top when applicable).
 
 ```json
 {
@@ -203,10 +203,10 @@ Emitted after the `kiat-validate-spec` skill runs. Captures the SPEC_VERDICT.
 
 **Fields:**
 - `verdict` (enum): `"CLEAR"` | `"NEEDS_CLARIFICATION"` | `"BLOCKED"`
-- `clarifications_requested` (int): number of questions sent to BMAD (0 if CLEAR)
+- `clarifications_requested` (int): number of questions sent back to the tech-spec-writer (and/or BMad for Business Context gaps) (0 if CLEAR)
 
 On `NEEDS_CLARIFICATION`, a second `spec_validated` event is emitted after
-BMAD's rewrite is re-validated — this lets reports count how many
+the rewrite is re-validated — this lets reports count how many
 clarification rounds a story needed.
 
 ---
@@ -232,8 +232,8 @@ Emitted for each coder after the context budget pre-flight check.
 - `budget` (int): hard limit for that agent
 - `result` (enum): `"pass"` | `"overflow"`
 
-On `overflow`, Team Lead escalates to BMAD; a subsequent `preflight` event
-captures the re-check after the split.
+On `overflow`, Team Lead escalates to `kiat-tech-spec-writer` with a split
+request; a subsequent `preflight` event captures the re-check after the split.
 
 ---
 
@@ -326,14 +326,14 @@ Emitted when a coder receives BLOCKED feedback and starts the 45-min clock.
 ---
 
 ### 8. `escalated` (legacy)
-Emitted when Team Lead escalates to BMAD or user (any reason).
+Emitted when Team Lead escalates to `kiat-tech-spec-writer`, BMad, user, or designer (any reason).
 
 ```json
 {
   "ts": "2026-04-10T14:45:00Z",
   "story": "story-27",
   "event": "escalated",
-  "to": "bmad",
+  "to": "tech-spec-writer",
   "reason": "fix_budget_exhausted",
   "elapsed_min": 47,
   "failure_pattern_id": "FP-003"
@@ -341,7 +341,7 @@ Emitted when Team Lead escalates to BMAD or user (any reason).
 ```
 
 **Fields:**
-- `to` (enum): `"bmad"` | `"user"` | `"designer"`
+- `to` (enum): `"tech-spec-writer"` | `"bmad"` | `"user"` | `"designer"`
 - `reason` (enum):
   - `"spec_blocked"` — kiat-validate-spec returned BLOCKED
   - `"spec_clarification"` — kiat-validate-spec returned NEEDS_CLARIFICATION
@@ -409,7 +409,7 @@ JSONL is append-only).
    emit {"event": "story_rollup", "outcome": "passed", ...all fields from the rollup schema above}
    ```
 
-2. **Escalation path** — on escalating to BMAD / user / designer:
+2. **Escalation path** — on escalating to `kiat-tech-spec-writer` / BMad / user / designer:
    ```
    emit {"event": "story_escalated", "outcome": "escalated", "escalated_to": ..., "reason": ..., "reached_phase": ...}
    ```

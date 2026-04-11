@@ -1,15 +1,16 @@
 # Kiat Starter Kit — Complete Index
 
-Everything in Kiat, grouped by whether it's **framework IA** (`.claude/`) or **project-owned** (`delivery/`, `checklists/`, `patterns/`).
+Everything in Kiat, grouped by whether it's **framework IA** (`.claude/`) or **project-owned** (`delivery/`).
 
 ---
 
 ## 📖 Quick Start (Read These First)
 
-1. **[README.md](README.md)** — Vision, architecture, enforcement model (6 layers), monitoring
-2. **[GETTING_STARTED.md](GETTING_STARTED.md)** — New-user onboarding
-3. **[structure.md](structure.md)** — Architecture decision log
-4. **[CLAUDE.md](CLAUDE.md)** — Universal coding rules
+1. **[README.md](README.md)** — Vision, two-layer story model, enforcement model (7 layers), monitoring
+2. **[GETTING_STARTED.md](GETTING_STARTED.md)** — New-user onboarding (BMad bootstrap → first story → first run)
+3. **[CLAUDE.md](CLAUDE.md)** — Universal meta-rules (ambient context)
+4. **[delivery/business/README.md](delivery/business/README.md)** — Business layer folder contract + BMad writing protocol
+5. **[delivery/epics/README.md](delivery/epics/README.md)** — Two-layer story model + BMad Plan-mode protocol
 
 ---
 
@@ -76,9 +77,20 @@ python3 kiat/.claude/tools/doc-audit.py --strict          # exit 1 if any doc fa
 
 ---
 
-## 📋 Project (`delivery/`, `checklists/`, `patterns/` — user-editable per project)
+## 📋 Project (`delivery/` — user-editable per project)
 
-### Project conventions (`delivery/specs/`)
+### Business layer (`delivery/business/` + `delivery/epics/`)
+
+Business knowledge written by **BMad** (upstream product agent), governed by folder-level contracts:
+
+| File | Role |
+|---|---|
+| [delivery/business/README.md](delivery/business/README.md) | Folder contract: BMad's 4 input modes, Capture decision tree, sizing discipline, boundaries |
+| [delivery/epics/README.md](delivery/epics/README.md) | Two-layer story model + BMad's Plan-mode protocol (`## Business Context` boundary) + handoff to tech-spec-writer |
+| delivery/business/{glossary,personas,business-rules,domain-model,user-journeys}.md | Evergreen domain knowledge, created on demand |
+| delivery/epics/epic-template/ | Story + epic templates (both layers pre-scaffolded) |
+
+### Project technical conventions (`delivery/specs/`)
 
 These are **templates to customize per project**. Humans read them, agents reference them.
 
@@ -101,19 +113,11 @@ These are **templates to customize per project**. Humans read them, agents refer
 ### Epics & stories (`delivery/epics/epic-X/`)
 
 - **[delivery/README.md](delivery/README.md)** — How to structure epics, stories, reviews
-- `delivery/epics/epic-X/story-NN.md` — Story specs written by BMAD, consumed by Team Lead → coders
+- `delivery/epics/epic-X/story-NN.md` — Story specs written by `kiat-tech-spec-writer`, consumed by Team Lead → coders
 
 ### Runtime data (`delivery/metrics/`)
 
-- `delivery/metrics/events.jsonl` — Written by Team Lead at each phase transition. Read by `.claude/tools/report.py`. (Created when stories start running.)
-
-### Project checklists
-
-- [checklists/](checklists/) — "Am I done?" templates per role (user-editable)
-
-### Project patterns
-
-- [patterns/](patterns/) — Architectural patterns (context injection, skill orchestration, etc.) — user-editable
+- `delivery/metrics/events.jsonl` — Written by Team Lead at each phase transition. Read by `.claude/tools/report.py`. Created when stories start running; the `.jsonl` file itself is gitignored.
 
 ---
 
@@ -121,26 +125,25 @@ These are **templates to customize per project**. Humans read them, agents refer
 
 ```
 kiat/
-├── README.md                          # Vision + enforcement model
+├── CLAUDE.md                          # Ambient meta-rules (auto-loaded by Claude Code)
+├── README.md                          # Vision + 7-layer enforcement model
 ├── INDEX.md                           # This file
 ├── GETTING_STARTED.md                 # Onboarding
-├── structure.md                       # Architecture decisions
 │
 ├── .claude/                           # ═══ IA / Kiat framework ONLY ═══
-│   ├── agents/                        # 5 kiat-* agents
-│   ├── skills/                        # 5 kiat-* skills
-│   ├── specs/                         # 3 framework specs (context/metrics/patterns)
-│   ├── tools/                         # report.py
-│   └── docs/                          # CLAUDE.md + framework README
+│   ├── README.md                      # Framework doc index
+│   ├── settings.json                  # Permissions + SubagentStop hook wiring (Layer 7)
+│   ├── agents/                        # 6 kiat-* agent system prompts
+│   ├── skills/                        # 6 kiat-* skills (folder-based)
+│   ├── specs/                         # 4 framework specs (available-skills / context-budgets / metrics-events / failure-patterns)
+│   └── tools/                         # report.py, doc-audit.py, hooks/
 │
 └── delivery/                          # ═══ Project-owned ONLY ═══
     ├── README.md                      # Delivery conventions
-    ├── specs/                         # 10 project conventions (user-editable)
-    ├── metrics/                       # events.jsonl (runtime data)
-    └── epic-X/                        # Story specs (written by BMAD)
-
-checklists/                            # User-editable templates
-patterns/                              # User-editable templates
+    ├── business/                      # BMAD-compatible business / domain docs
+    ├── specs/                         # Project technical conventions (architecture, testing, design system, …)
+    ├── epics/                         # epic-template/ + epic-N-name/story-NN.md
+    └── metrics/                       # events.jsonl (runtime data, gitignored)
 ```
 
 **The separation test:** `find kiat/.claude/` gives framework files only. `find kiat/delivery/` gives project files only. Neither contains the other.
@@ -149,13 +152,23 @@ patterns/                              # User-editable templates
 
 ## 🎯 Workflow at a Glance
 
+Kiat stories are written by **two authors into the same file** — BMad owns the business layer, the tech-spec-writer owns the technical layer. See [`delivery/business/README.md`](delivery/business/README.md) and [`delivery/epics/README.md`](delivery/epics/README.md) for the folder-level contracts.
+
 ```
-User chat
+User: informal product thinking ("I want X", "users struggle with Y")
     ↓
-BMAD Master (métier) → writes delivery/epics/epic-X/story-NN.md
+BMad (external product agent, governed by folder contracts)
+    • Capture mode → evergreen domain facts land in delivery/business/
+    • Plan mode    → ## Business Context section of delivery/epics/epic-X/story-NN.md
     ↓
-Team Lead (technique) — runs:
-    Phase 0a: kiat-validate-spec  (ambiguity check)
+kiat-tech-spec-writer (enrichment mode — default when Business Context exists)
+    • Reads ## Business Context intact, never rewrites it
+    • Reads linked delivery/business/ + delivery/specs/ on demand
+    • Appends Skills, Backend, Frontend, Database, Edge cases, Tests
+    • Self-validates via kiat-validate-spec
+    ↓
+Team Lead — runs:
+    Phase 0a: kiat-validate-spec  (ambiguity check on both layers)
     Phase 0b: pre-flight context budget (25k hard limit)
     ↓
 Backend-Coder + Frontend-Coder (parallel)
@@ -168,11 +181,13 @@ Backend-Reviewer + Frontend-Reviewer (parallel)
     ↓
 Team Lead arbitrates per verdict
     45-min fix budget for BLOCKED retries
-    Escalates NEEDS_DISCUSSION to BMAD/user
-    Emits metrics events at every phase
+    Escalates NEEDS_DISCUSSION to tech-spec-writer / BMad / user
+    Emits rollup event at Phase 7
     ↓
 Story PASSED → Human merges
 ```
+
+**Fast path for pure technical work** (refactors, bug fixes): skip BMad, go straight to `kiat-tech-spec-writer` which runs in **greenfield mode** and produces both layers itself.
 
 Each phase emits a JSONL event → `delivery/metrics/events.jsonl` → `report.py` generates weekly health reports.
 
@@ -182,7 +197,10 @@ Each phase emits a JSONL event → `delivery/metrics/events.jsonl` → `report.p
 
 | Term | Meaning | Reference |
 |------|---------|-----------|
-| **6 Enforcement Layers** | Kiat's core design (verdicts, time budgets, specialist skills, audit lines, context budgets, pre-coding gates) | [README.md](README.md#️-enforcement-model-how-we-make-agents-actually-follow-rules) |
+| **Two-layer story model** | Every story file has a `## Business Context` (written by BMad, business language) and technical sections (written by `kiat-tech-spec-writer`, English). One file, two authors, two hard contracts. | [delivery/epics/README.md](delivery/epics/README.md) |
+| **BMad's 4 input modes** | Explore / Capture / Plan / Review. Capture lands in `delivery/business/`, Plan lands in `## Business Context` of an epic or story. | [delivery/business/README.md](delivery/business/README.md#bmad-writing-protocol-rules-for-claude-sessions-acting-as-bmad) |
+| **Enrichment mode vs greenfield mode** | Tech-spec-writer detects whether a story already has a BMad-written `## Business Context`. If yes → enrichment mode (preserves it, appends tech). If no → greenfield (writes both layers). | [.claude/agents/kiat-tech-spec-writer.md](.claude/agents/kiat-tech-spec-writer.md) |
+| **7 Enforcement Layers** | Kiat's core design (verdicts, time budgets, specialist skills, audit lines, context budgets, pre-coding gates, SubagentStop hooks) | [README.md](README.md#️-enforcement-model-how-we-make-agents-actually-follow-rules) |
 | **3-way verdict** | APPROVED / NEEDS_DISCUSSION / BLOCKED (Layer 1) | [.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md) Phase 4 |
 | **45-min fix budget** | Wall-clock retry budget (Layer 2) | [.claude/agents/kiat-team-lead.md](.claude/agents/kiat-team-lead.md) Retry Budget |
 | **Audit lines** | Mandatory traces of skill invocations (Layer 4) | agent definitions |
@@ -190,7 +208,7 @@ Each phase emits a JSONL event → `delivery/metrics/events.jsonl` → `report.p
 | **Pre-coding gates** | Spec validation + test patterns (Layer 6) | [.claude/skills/kiat-validate-spec/SKILL.md](.claude/skills/kiat-validate-spec/SKILL.md), [.claude/skills/kiat-test-patterns-check/SKILL.md](.claude/skills/kiat-test-patterns-check/SKILL.md) |
 | **Failure pattern (FP-NNN)** | Reactive incident registry | [.claude/specs/failure-patterns.md](.claude/specs/failure-patterns.md) |
 | **Metrics event** | JSONL log entry at phase transitions | [.claude/specs/metrics-events.md](.claude/specs/metrics-events.md) |
-| **Project Memory** | Cross-story coherence (emergent patterns, shared components, architectural decisions) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |
+| **Project Memory** | Cross-story technical coherence (emergent patterns, shared components, architectural decisions — project-owned, not BMad's territory) | [delivery/specs/project-memory.md](delivery/specs/project-memory.md) |
 
 ---
 

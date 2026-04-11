@@ -13,7 +13,7 @@ The first thing to verify is that the code delivers what the spec asked for. A b
 - **Every acceptance criterion is met** — cross-reference the spec's criteria against the diff.
 - **The UI matches the Figma reference** — layout, spacing, colors, typography. Divergence should be either intentional (and explained in the handoff) or flagged.
 - **The component calls the correct backend endpoints** with the correct request shape. A wrong endpoint or a missing field silently breaks the feature even when the UI looks right.
-- **User flows match the spec** — happy path and failure path both match what BMAD described.
+- **User flows match the spec** — happy path and failure path both match what the story spec describes.
 - **Empty, loading, and error states are all handled.** If the spec mentioned them, check they're implemented; if it didn't, check the coder at least made a reasonable choice and flag the spec gap back to `kiat-validate-spec`.
 
 ## 2. Accessibility (WCAG AA)

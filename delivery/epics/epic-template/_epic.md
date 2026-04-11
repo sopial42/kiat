@@ -35,6 +35,15 @@
 - [What we assume and that could turn out to be wrong]
 - [Dependencies on external stakeholders, regulations, or timing]
 
+### Linked business knowledge
+
+_Point at the evergreen docs in `delivery/business/` that frame this epic. Link only the sections that actually matter for this epic — don't list the whole folder._
+
+- Glossary terms involved: [`../../business/glossary.md`](../../business/glossary.md)
+- Business rules at play: [`../../business/business-rules.md`](../../business/business-rules.md)
+- User journey(s) touched: [`../../business/user-journeys.md`](../../business/user-journeys.md)
+- Domain model entities: [`../../business/domain-model.md`](../../business/domain-model.md)
+
 ---
 
 ## Stories

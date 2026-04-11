@@ -386,10 +386,10 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
         for verdict in ("CLEAR", "NEEDS_CLARIFICATION", "BLOCKED"):
             count = spec_verdicts.get(verdict, 0)
             lines.append(f"- **{verdict}:** {count}")
-        lines.append(f"- **Total clarification rounds requested from BMAD:** {clarification_total}")
+        lines.append(f"- **Total clarification rounds (tech-spec-writer + BMad):** {clarification_total}")
         if n_total and spec_verdicts.get("CLEAR", 0) < n_total * 0.7:
             lines.append("")
-            lines.append("> ⚠️ CLEAR rate below 70% — consider tightening BMAD spec-writing guidance.")
+            lines.append("> ⚠️ CLEAR rate below 70% — investigate which layer is letting ambiguities through (Business Context / BMad vs technical sections / tech-spec-writer) and tighten that author's clarification loop.")
         lines.append("")
 
     # ---------- Pre-flight overflow ----------
@@ -404,7 +404,7 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
             lines.append(f"  - `{s.story_id}` — estimates: {ests}")
     if n_total and len(overflow_stories) / n_total > 0.2:
         lines.append("")
-        lines.append("> ⚠️ Overflow rate > 20% — BMAD may be writing stories too large, OR budget is too tight.")
+        lines.append("> ⚠️ Overflow rate > 20% — the tech-spec-writer may be producing stories too large (ask it to split more aggressively) OR budget is too tight.")
     lines.append("")
 
     # ---------- Verdict distribution ----------
@@ -640,7 +640,7 @@ def _validate_rollup(
                 f"L{lineno}: {name} `reason` {reason!r} is not in the valid set "
                 f"({', '.join(sorted(valid_reasons))})"
             )
-        valid_targets = {"bmad", "user", "designer"}
+        valid_targets = {"tech-spec-writer", "bmad", "user", "designer"}
         target = evt.get("escalated_to")
         if target is not None and target not in valid_targets:
             issues.append(

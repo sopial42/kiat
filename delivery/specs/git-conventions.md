@@ -79,7 +79,7 @@ Fixes #42
 
 ## PR Discipline
 
-- **One PR per story.** A story that requires 2 PRs means the story is too large — split it with BMAD at Phase 0.
+- **One PR per story.** A story that requires 2 PRs means the story is too large — ask `kiat-tech-spec-writer` to split it at Phase 0.
 - **PR description references the story spec.** Include `Story: delivery/epics/epic-X/story-NN-slug.md`.
 - **PR body explains the WHY.** The commit body already covers the WHAT. The PR description adds context: what decision led here, what alternatives were considered.
 - **No merging with red CI.** See [testing.md](testing.md) "CI Gate" section.

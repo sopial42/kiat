@@ -36,9 +36,13 @@ These are the only rules that live in ambient context because they're about *how
 
 ## How to Work in a Kiat Project (By Role)
 
-### If you are the Tech Spec Writer (entry point for new work)
+### If you are BMad (upstream product agent — external to Kiat)
 
-Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You translate informal user requests into structured story files in `delivery/epics/epic-X/story-NN.md`, decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and hand off to Team Lead. **You are the default entry point** for any user request that becomes a story — never let coders start without going through you first, except when an existing story file is being re-executed.
+BMad is not a Kiat agent; it's any Claude session acting as the product/métier voice. Kiat provides two folder-level contracts that govern exactly what BMad is allowed to write where: [`delivery/business/README.md`](delivery/business/README.md) and [`delivery/epics/README.md`](delivery/epics/README.md). Read both of those before writing anything. In short: BMad has 4 input modes (Explore / Capture / Plan / Review); Capture writes evergreen domain facts into `delivery/business/`; Plan writes the `## Business Context` section (and **only** that section) of an epic or a story inside `delivery/epics/`. BMad **never** writes into `delivery/specs/`, `.claude/`, or the technical sections of a story file — those are the tech-spec-writer's and the coders' territory. **Propose before writing**, respect the per-folder sizing discipline, and link to existing `delivery/business/` entries instead of duplicating them.
+
+### If you are the Tech Spec Writer (Kiat-side entry point for new work)
+
+Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You translate informal user requests — or a BMad-written `## Business Context` — into structured story files in `delivery/epics/epic-X/story-NN.md`. You operate in two modes: **enrichment** (the story file already has a `## Business Context` written by BMad, you preserve it intact and append only the technical sections below) or **greenfield** (no prior Business Context, you write both layers yourself from the user's informal request). You decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and hand off to Team Lead. **You are the default Kiat-side entry point** for any user request that becomes a story — never let coders start without going through you first, except when an existing story file is already complete and being re-executed.
 
 ### If you are Team Lead (orchestrator)
 
@@ -75,9 +79,11 @@ When you need project-specific information, go directly to the right file under 
 | Git branches, commits, PR discipline | [`delivery/specs/git-conventions.md`](delivery/specs/git-conventions.md) |
 | Environment vars, production guards, deployment | [`delivery/specs/deployment.md`](delivery/specs/deployment.md) |
 | Common dev commands (`make dev`, `npm run`, etc.) | [`delivery/README.md`](delivery/README.md) |
+| Business layer folder contract + BMad writing protocol (Capture / Plan / Explore / Review modes) | [`delivery/business/README.md`](delivery/business/README.md) |
 | Business / domain documentation (glossary, personas, rules, domain model, user journeys) | [`delivery/business/`](delivery/business/) |
-| Epic and story technical specs (written by kiat-tech-spec-writer) | `delivery/epics/epic-X/story-NN.md` |
-| Epic / story templates | [`delivery/epics/epic-template/`](delivery/epics/epic-template/) |
+| Two-layer story model + BMad Plan-mode protocol + tech-spec-writer handoff | [`delivery/epics/README.md`](delivery/epics/README.md) |
+| Epic and story files (two layers: `## Business Context` by BMad + technical sections by tech-spec-writer) | `delivery/epics/epic-X/story-NN.md` |
+| Epic / story templates (both layers pre-scaffolded) | [`delivery/epics/epic-template/`](delivery/epics/epic-template/) |
 
 ---
 
@@ -87,7 +93,7 @@ Framework machinery — **not project-specific**, do not edit per project:
 
 | What you need | Where to look |
 |---|---|
-| 6 enforcement layers, monitoring philosophy, vision | [`README.md`](README.md) |
+| 7 enforcement layers, monitoring philosophy, vision | [`README.md`](README.md) |
 | Navigation hub | [`INDEX.md`](INDEX.md) |
 | Agent definitions (6 kiat-* agents) | [`.claude/agents/`](.claude/agents/) |
 | Skill definitions (6 kiat-* skills) | [`.claude/skills/`](.claude/skills/) |
