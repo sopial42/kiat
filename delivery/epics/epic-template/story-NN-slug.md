@@ -10,6 +10,40 @@
 
 ---
 
+## Business Context
+
+> Section written by BMad (or by the user before the tech-spec-writer runs).
+> The tech-spec-writer NEVER modifies, reformats, or moves this section — it
+> only adds and enriches the technical sections below.
+>
+> Write this section in the project's business language. For French-domain
+> projects (French users, French regulations, French-speaking stakeholders),
+> writing in French preserves nuances that translation would flatten. The
+> tech-spec-writer reads this section regardless of its language and writes
+> the technical sections below in English (the framework default, aligned
+> with code and API conventions).
+
+### User story
+
+As a [persona], I want [goal], so that [value].
+
+### Acceptance criteria (user-facing)
+
+- [ ] [User-facing criterion: what the user can do, see, or experience]
+- [ ] ...
+
+### Personas & domain links
+
+- Persona: [link to `delivery/business/personas.md#<persona>`]
+- Domain term: [link to `delivery/business/glossary.md#<term>`]
+- Business rule: [link to `delivery/business/business-rules.md#<rule>`]
+
+### Business rationale
+
+[1-3 sentences: why this need exists, what pain it solves, why now.]
+
+---
+
 ## Skills
 
 > Populated by `kiat-tech-spec-writer` when it writes the story.
@@ -38,13 +72,19 @@ Only list skills the story genuinely needs. When in doubt, leave it out — the 
 
 ---
 
-## Acceptance Criteria
+## Acceptance Criteria (technical)
 
-- [ ] Criterion 1 (testable, specific)
+> Written by the tech-spec-writer. These are **testable at the technical
+> boundary** (HTTP contract, DB state, assertion on a specific UI element)
+> — not user-facing language. If the user-facing criteria in `## Business
+> Context` translate 1:1 into technical checks, this section can simply
+> say `See Business Context acceptance criteria.` and skip the list.
+
+- [ ] Criterion 1 (testable at the HTTP / DB / UI assertion level)
 - [ ] Criterion 2
 - [ ] Criterion 3
 
-[Example: "User can upload a photo ≤20MB and see it displayed in the UI within 3 seconds"]
+[Example: "`POST /api/photos` with a ≤20MB multipart upload returns `201 Created` and the photo URL resolves with a `200 OK` HEAD request within 3 seconds."]
 
 ---
 

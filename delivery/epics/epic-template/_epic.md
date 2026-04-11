@@ -12,6 +12,31 @@
 
 ---
 
+## Business Context
+
+> Section written by BMad (or by the user). The tech-spec-writer NEVER
+> modifies this section.
+>
+> Write in the project's business language (French for French-domain
+> projects, English by default). The tech-spec-writer reads it regardless
+> of language.
+
+### Outcome attendu / Expected outcome
+
+[What user-side or business-side change is this epic trying to produce? Describe the outcome in user terms, not technical terms.]
+
+### Personas impactés / Personas affected
+
+- [Persona 1 — link to `delivery/business/personas.md#<persona>`]
+- [Persona 2 — link to `delivery/business/personas.md#<persona>`]
+
+### Hypothèses & risques métier / Business hypotheses & risks
+
+- [What we assume and that could turn out to be wrong]
+- [Dependencies on external stakeholders, regulations, or timing]
+
+---
+
 ## Stories
 
 - **Story 01**: [Brief title]

@@ -45,3 +45,34 @@ Keep each file under ~5k tokens (~20 KB). If a file grows past that, split it by
 This directory is for **business knowledge that exists independently of any story** — things like "a patient can only be enrolled in one active care plan at a time, because French healthcare regulations require a single responsible provider." It is project-owned and business-level.
 
 If you're not sure where a fact belongs: if removing the project and rebuilding it from scratch would still leave the fact valid, it's business (here). If the fact only exists because of how the code was written, it's project memory (specs/project-memory.md).
+
+## Relationship with `delivery/epics/`
+
+BMad writes the **business layer** of each epic and story directly into `delivery/epics/epic-X/`, specifically in the `## Business Context` section at the top of each `story-NN.md` file (and a parallel section in `_epic.md`). The `kiat-tech-spec-writer` agent then reads that Business Context and adds the technical layers below it, without modifying the Business Context itself.
+
+The docs in this directory (`delivery/business/`) serve as the **stable reference** that the Business Context of each story can link to: instead of duplicating a persona description, a glossary term, or a business rule inside the story, BMad writes `[<persona>](../../business/personas.md#<anchor>)` and points at the evergreen version here. One source of truth per concept; the story file is the composition point.
+
+In short:
+- `delivery/business/*.md` — evergreen, slowly-evolving domain knowledge (referenced by many stories)
+- `delivery/epics/epic-X/story-NN.md` → `## Business Context` — the business layer specific to one story, which points at the evergreen files above for shared concepts
+
+## Language convention
+
+The content of `delivery/business/` reflects the **project's business language**, which is a project-level choice. For French-domain projects (French users, French-speaking stakeholders, French-specific regulations like RGPD, CPAM, or medical compliance), writing this content in French preserves nuances that English translation would flatten. For international projects, English is the natural default.
+
+The `kiat-tech-spec-writer` agent reads these files regardless of language. When it writes the technical sections of a story (everything below `## Business Context`), it uses **English** — aligned with the code, API payloads, commit messages, and the rest of the framework. This means a story file can legitimately be **bilingual**: French Business Context at the top, English technical sections below.
+
+To bridge the two languages cleanly, `glossary.md` should include a **code identifier** for each French domain term that maps to how it's named in the codebase:
+
+```markdown
+## Dossier patient
+
+**Définition (FR)** : document consolidé regroupant toutes les informations
+médicales d'un patient, avec un statut de confidentialité renforcé par la loi.
+
+**Code identifier (EN)** : `patient_file` / `PatientFile` / `/api/patient-files`
+
+**Règles associées** : voir `business-rules.md#confidentialite-patient`
+```
+
+This lets the tech-spec-writer read the French definition for understanding, then use the English code identifier in the technical sections without losing the link.
