@@ -117,9 +117,11 @@ or
 Test-patterns check: BLOCKED — Block <X> drift at <file>:<line>: <detail>
 ```
 
-#### Step 6 — Emit the verdict
+#### Step 6 — Emit the verdict (machine-parseable) and the Review Log block (paste-ready)
 
-First line of your output is machine-parseable. Team Lead parses it deterministically:
+Your output has **two parts** that Team Lead consumes differently:
+
+**Part A — First line: the verdict** (Team Lead parses this deterministically with a string match):
 
 ```
 VERDICT: APPROVED
@@ -133,7 +135,35 @@ or
 VERDICT: BLOCKED
 ```
 
-Then the full review body per the `kiat-review-backend` skill template, including the Clerk-auth, skills-declaration, and test-patterns audit lines.
+**Part B — A `REVIEW_LOG_BLOCK` that Team Lead pastes verbatim into the story's `## Review Log`.** This is new contract: you emit the block pre-formatted to the schema in [`delivery/epics/README.md#review-log`](../../../delivery/epics/README.md#review-log), so Team Lead only needs to append it, not rewrite it. Emit it immediately after the first line, wrapped in explicit markers so Team Lead can extract it:
+
+```
+REVIEW_LOG_BLOCK_BEGIN
+
+**Backend reviewer verdict**: <same as line 1 — APPROVED | NEEDS_DISCUSSION | BLOCKED>
+
+**Audit lines from the reviewer**:
+- Clerk-auth skill: <the exact audit line you emitted in Step 3>
+- Skills-declaration check: <the exact audit line you emitted in Step 4>
+- Test-patterns check: <the exact audit line you emitted in Step 5>
+
+**Issues raised** (<N>):
+1. [<category> — <file:line>] <one-line description of the issue>
+2. ...
+
+REVIEW_LOG_BLOCK_END
+```
+
+Rules for the block:
+- **Verdict line at the top of the block** must match Part A (line 1) exactly.
+- **Audit lines** are the three audit lines you already emit in Steps 3, 4, 5. Don't rephrase them — paste them into the block character-for-character so Team Lead's `## Review Log` is a faithful transcript of your review.
+- **Issues raised** is the concrete, fixable issue list for `BLOCKED` / the discussion items for `NEEDS_DISCUSSION` / `_(none)_` for `APPROVED`. Keep each issue to one line (category, file:line, short description). The long-form body of your review stays outside the block — Team Lead does not paste it into the story.
+- **No arbitration in this block.** The arbitration column is Team Lead's job — you emit the raw issue list, Team Lead decides ACCEPT / REJECT / SEND_BACK per issue when it writes the final cycle entry. Do not pre-fill arbitration fields.
+- **Do not emit both a block and the old long-form body without a block** — the block is now mandatory. If you have nothing to say (`APPROVED`, 0 issues), emit the block with `**Issues raised** (0): _(none)_` and that's it.
+
+**Part C — The full review body** (per the `kiat-review-backend` skill template), placed **after** `REVIEW_LOG_BLOCK_END`. This stays for Team Lead's in-memory analysis and any developer reading the agent return value, but it is NOT pasted into the story file. Keep using the skill's long-form template unchanged.
+
+**Why this split**: Team Lead needs two things from you — a verdict to branch on (Part A) and a paste-ready block to persist (Part B). Forcing you to pre-format the block makes the append protocol idempotent and prevents Team Lead from silently paraphrasing your review under deadline pressure.
 
 ---
 
