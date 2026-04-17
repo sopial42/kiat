@@ -72,7 +72,8 @@ Beyond that, read on-demand from `delivery/specs/`:
 - Security-sensitive work → [`security-checklist.md`](../../delivery/specs/security-checklist.md)
 - Service composition → [`service-communication.md`](../../delivery/specs/service-communication.md)
 - Auth work → [`clerk-patterns.md`](../../delivery/specs/clerk-patterns.md)
-- Tests in scope → [`testing.md`](../../delivery/specs/testing.md)
+- Tests in scope → [`testing.md`](../../delivery/specs/testing.md) (strategy hub) + [`testing-pitfalls-backend.md`](../../delivery/specs/testing-pitfalls-backend.md) (Venom YAML pitfalls, Go unit patterns — **load this when writing tests**)
+- External API mocking in E2E → [`smocker-patterns.md`](../../delivery/specs/smocker-patterns.md) (when the story touches a third-party upstream)
 
 **Do not read conventions you don't need.** Context budget is finite. If you're writing a pure migration, you don't need `api-conventions.md`.
 

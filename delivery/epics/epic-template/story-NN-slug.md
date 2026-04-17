@@ -45,6 +45,25 @@ _Link only the entries that actually matter for this specific story. Don't list 
 
 [1-3 sentences: why this need exists, what pain it solves, why now.]
 
+### Mockups
+
+> If the story touches UI, link the Figma frames here. The live Figma URL is
+> the single source of truth — do NOT check in exported PNGs (they go stale
+> silently). The frontend coder will read the frame via the URL; Claude can
+> WebFetch a Figma URL to inspect the design if the tool is available.
+>
+> If no mockups exist yet, write `No mockups — implementer uses the existing
+> design system`. If they'll be added later, link the Figma project root and
+> note which frames are pending.
+>
+> If a client wants to archive snapshots for audit / compliance reasons,
+> create `delivery/business/mockups/story-NN/` with the exports — `delivery/
+> business/` is the right parent for client-archival assets since mockups
+> are project-specific, not framework-level.
+
+- [Screen A](https://figma.com/file/XXXX/...?node-id=YYYY)
+- [Screen B — empty state](https://figma.com/file/XXXX/...?node-id=ZZZZ)
+
 ---
 
 ## Skills
@@ -226,7 +245,6 @@ frontend/e2e/feature.spec.ts
 
 [Any additional context?]
 
-- Design reference: [Link to Figma]
 - Related story: [Story N](./story-NN-other.md)
 - Known constraints: [e.g., "Must work offline"]
 - Future enhancement: [e.g., "Batch upload (story 5)"]

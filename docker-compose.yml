@@ -1,0 +1,63 @@
+# Kiat docker-compose — local dev infrastructure
+#
+# Services brought up by `make dev`, `make dev-test`, and `make test-e2e`.
+# Backend and frontend are NOT containerized here; they run natively on the
+# host for fast iteration. docker-compose provides only stateful/slow-to-install
+# dependencies.
+#
+# Production deployments do NOT use this file. Infra lives in `infra/` (future).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: kiat_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kiat}
+      POSTGRES_USER: ${POSTGRES_USER:-kiat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kiat_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - kiat_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kiat} -d ${POSTGRES_DB:-kiat}"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: kiat_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-kiat_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-kiat_minio_dev}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"       # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # Web UI
+    volumes:
+      - kiat_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Smocker — out-of-process mock HTTP server for external APIs during E2E.
+  # Only used when `make test-e2e` is running; backend base URLs for externals
+  # point to this when ENV=e2e. See delivery/specs/smocker-patterns.md.
+  smocker:
+    image: thiht/smocker:0.18
+    container_name: kiat_smocker
+    ports:
+      - "${SMOCKER_PORT:-8100}:8080"     # Mock-serving HTTP (backend calls this)
+      - "${SMOCKER_ADMIN_PORT:-8101}:8081" # Admin API (Playwright seeds this)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/version"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+volumes:
+  kiat_postgres_data:
+  kiat_minio_data:

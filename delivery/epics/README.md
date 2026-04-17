@@ -100,6 +100,19 @@ The **user-facing acceptance criteria** that BMad writes are different from the 
 
 Two different heading levels on purpose: the user-facing list is a sub-section of `## Business Context` (BMad's only sandbox), while the technical list is a peer of `## Backend`, `## Frontend`, etc. A story that drops the `(user-facing)` / `(technical)` suffix, or merges the two lists into one, is a two-layer boundary violation — stop and fix the structure before proceeding.
 
+### Mockups — how UI designs flow into stories
+
+Stories that touch UI carry a `### Mockups` sub-section under `## Business Context`, holding **Figma URLs** — never checked-in PNG/SVG exports.
+
+**Why URLs only:**
+- **Source of truth stays live.** A Figma frame updated by the designer remains in sync; a PNG checked in three weeks ago rots silently.
+- **Repo stays lean.** Design assets can weigh dozens of MB; git is not an art server.
+- **Tech-spec-writer and frontend coder read the URL.** Claude can WebFetch a public Figma URL (or the designer shares a password-protected link via a dev-only channel); the coder doesn't need a local copy.
+
+**If a client absolutely needs archived snapshots** (audit trail, contractual deliverable), those exports go under `delivery/business/mockups/story-NN/` — not in `delivery/epics/`, not in `delivery/specs/`. Client-archival assets belong with client-archival knowledge in `delivery/business/` (which is markdown-only by default, but a binary sub-folder is acceptable when the contract demands it). The story file still carries the Figma URL in `### Mockups`; the archive is parallel, not a replacement.
+
+**What the template says:** see [`epic-template/story-NN-slug.md`](epic-template/story-NN-slug.md#mockups) for the canonical `### Mockups` block. Stories with no UI change write `No mockups — implementer uses the existing design system`.
+
 ### Rules BMad respects when writing here
 
 1. **Propose before writing.** Before creating or modifying any file under `delivery/epics/`, BMad announces the exact path (`epic-NN-slug/_epic.md` or `epic-NN-slug/story-NN-slug.md`) and what it intends to put in the Business Context. It waits for green light. Say `direct` in your message to skip the green light for that specific write.
@@ -109,11 +122,11 @@ Two different heading levels on purpose: the user-facing list is a sub-section o
 5. **No speculative epic creation.** BMad never invents a new epic number unilaterally. It proposes `Epic NN: <name>` with a rationale and waits for the user's explicit go-ahead before creating the directory.
 6. **Language.** The `## Business Context` section is written in the **project's business language** (see the Language convention section in [`../business/README.md`](../business/README.md#language-convention)). Technical sections below remain in English, aligned with the code.
 
-### Handoff to the tech-spec-writer
+### Handoff to Team Lead (which orchestrates the tech-spec-writer)
 
-Once BMad has written a story's `## Business Context` and the user is ready to turn it into code, the user invokes `kiat-tech-spec-writer` on the story file. The tech-spec-writer runs in **enrichment mode**: it detects the pre-existing `## Business Context`, preserves it intact, reads any `../business/` docs linked from it, and appends the technical sections below.
+Once BMad has written a story's `## Business Context` and the user is ready to turn it into code, the user invokes **Team Lead** (`kiat-team-lead`) on the story file. Team Lead detects that the technical sections are missing and enters **Phase -1**, where it spawns `kiat-tech-spec-writer` as a sub-agent. The writer runs in **enrichment mode**: it preserves the pre-existing `## Business Context` intact, reads any `../business/` docs linked from it, and appends the technical sections below.
 
-See [`../../.claude/agents/kiat-tech-spec-writer.md`](../../.claude/agents/kiat-tech-spec-writer.md) for the enrichment-mode protocol on the tech-spec-writer side.
+The user never invokes `kiat-tech-spec-writer` directly — Team Lead is the single entry point for all technical work. See [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) for Phase -1 and [`../../.claude/agents/kiat-tech-spec-writer.md`](../../.claude/agents/kiat-tech-spec-writer.md) for the enrichment-mode protocol on the writer side.
 
 ---
 

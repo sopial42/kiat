@@ -68,7 +68,7 @@ Beyond that, read on-demand from `delivery/specs/`:
 - Always: the story spec + [`frontend-architecture.md`](../../delivery/specs/frontend-architecture.md) + [`design-system.md`](../../delivery/specs/design-system.md)
 - Auth work → [`clerk-patterns.md`](../../delivery/specs/clerk-patterns.md)
 - Security-sensitive work → [`security-checklist.md`](../../delivery/specs/security-checklist.md)
-- Playwright tests → [`testing.md`](../../delivery/specs/testing.md)
+- Playwright tests → [`testing.md`](../../delivery/specs/testing.md) (strategy hub) + [`testing-playwright.md`](../../delivery/specs/testing-playwright.md) (canonical patterns: global.setup JWT swap, real-backend specs, fixtures) + [`testing-pitfalls-frontend.md`](../../delivery/specs/testing-pitfalls-frontend.md) (Playwright footguns, Clerk quirks, WCAG — **load these when writing tests**)
 
 **Do not read conventions you don't need.** Context budget is finite.
 

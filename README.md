@@ -1,6 +1,38 @@
 # 🚀 Kiat — Starter Kit Agent-First SaaS
 
-> **The vision**: You describe your product idea in natural language. **BMad** captures the evergreen business knowledge and writes the `## Business Context` of each story (the *what* and the *why*). **`kiat-tech-spec-writer`** enriches the same story with the technical layer (the *how*). **`kiat-team-lead`** runs the pipeline: parallel coder and reviewer agents ship the code, SubagentStop hooks enforce the protocol. Done.
+> **The vision**: You describe your product idea in natural language. **BMad** captures the evergreen business knowledge and writes the `## Business Context` of each story (the *what* and the *why*). You then hand the story to **`kiat-team-lead`** — the single technical entry point — which orchestrates `kiat-tech-spec-writer` (technical enrichment), parallel coder and reviewer agents, test/review gates, and prod validation. SubagentStop hooks enforce the protocol. Done.
+
+---
+
+## 👥 Who runs what (read this first)
+
+Kiat is a **two-persona collaborative workspace**:
+
+### If you're the **client / product owner** (business side)
+
+You articulate *what you want* and *why it matters*. You interact with Kiat through **BMad** — an upstream product agent that captures your domain knowledge and structures your stories.
+
+- **Commands to run** (in a Claude Code session at this repo): anything that invokes a `bmad-*` skill
+  - `bmad-product-brief` / `bmad-create-prd` — shape the product
+  - `bmad-brainstorming` / `bmad-market-research` / `bmad-domain-research` — exploration
+  - `bmad-create-epics-and-stories` / `bmad-create-story` — structure the backlog
+  - `bmad-correct-course` — mid-sprint course correction
+- **Where your writing lives**: [`delivery/business/`](delivery/business/README.md) (glossary, personas, rules, domain model, journeys) + the `## Business Context` section of each story in [`delivery/epics/`](delivery/epics/README.md)
+- **Never touch**: `delivery/specs/`, `.claude/`, the technical sections of any story file
+
+### If you're the **tech lead** (technical side)
+
+You turn business intent into working code. You interact with Kiat through **`kiat-team-lead`** — the single entry point for every technical request.
+
+- **Commands to run**:
+  - Informal request (`"add feature X"`, `"fix bug Y"`) — Team Lead enters Phase -1 and spawns `kiat-tech-spec-writer` automatically
+  - Existing story (`delivery/epics/epic-NN/story-NN.md`) with both layers populated — Team Lead skips Phase -1 and runs Phase 0a onwards
+- **How to invoke**: launch Claude Code with `claude --agent kiat-team-lead`, or set `"agent": "kiat-team-lead"` as the default in `.claude/settings.json`
+- **Never invoke directly**: `kiat-tech-spec-writer`, `kiat-backend-coder`, `kiat-frontend-coder`, or reviewers — always route through Team Lead
+
+### Why two personas and one repo
+
+Each client engagement = one fork of kiat. The client writes their domain via BMad; the tech lead runs the technical pipeline. The same repo carries both layers, with hard folder-level contracts keeping each author in their lane (see `delivery/business/README.md` and `delivery/epics/README.md`).
 
 This is a **generic, reusable starter kit** for building SaaS with:
 - **Go + Gin + Bun ORM** backend (Clean Architecture)

@@ -20,3 +20,24 @@ __pycache__/
 *-report.md
 doc-audit.md
 health-report.md
+
+# Env secrets (use .env.example as template)
+.env
+.env.local
+.env.*.local
+
+# Playwright artifacts
+frontend/playwright/.clerk/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.next/
+frontend/node_modules/
+
+# Backend build artifacts
+backend/bin/
+backend/tmp/
+
+# Test coverage
+coverage/
+*.out
+*.cover
