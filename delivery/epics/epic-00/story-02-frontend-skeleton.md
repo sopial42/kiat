@@ -23,7 +23,7 @@ As a **Tech Lead**, I want a fully-wired Next.js frontend with Clerk signin/sign
 - [ ] Visiting `/` when unauthenticated redirects to `/sign-in` (middleware-enforced, not hook-based)
 - [ ] After Clerk sign-up, I land on `/items` and can create an item via a form
 - [ ] My items are listed; User B's items are NOT visible in my session
-- [ ] Switching to `make dev-test` boots the same UI with test-auth bypass (no Clerk), authenticating as a hardcoded test UUID
+- [ ] Switching to `make dev-offline` boots the same UI with test-auth bypass (no Clerk), authenticating as a hardcoded test UUID
 
 ### Personas & domain links
 

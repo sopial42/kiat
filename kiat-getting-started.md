@@ -108,7 +108,7 @@ make infra-down         # Stops them ✓
 
 # What fails now (on purpose — will work after Phase C / EPIC 00):
 make dev                # No backend binary yet
-make dev-test           # Same
+make dev-offline           # Same
 make test-back          # No go.mod yet → "go: no module found"
 make test-venom         # Backend isn't running, no venom suite yet
 make test-e2e-mocked    # No frontend, no Playwright config wired yet
@@ -147,7 +147,7 @@ Team Lead will:
 
 Repeat for `story-02` (frontend), `story-03` (E2E harness), `story-04` (CI pipeline).
 
-**Expected outcome after all 4 stories pass:** `make ci-local` is green, `make dev-test` runs a working app in your browser, and you can sign in / CRUD items / log out.
+**Expected outcome after all 4 stories pass:** `make ci-local` is green, `make dev-offline` runs a working app in your browser, and you can sign in / CRUD items / log out.
 
 ### 5.1. Limits — what Team Lead can't do in this phase
 

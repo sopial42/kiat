@@ -22,14 +22,14 @@ The backend talks to external APIs (payment provider, identity provider, third-p
 |---|---|---|
 | Go unit tests (`make test-back`) | ❌ No (pure `go test ./...`) | **In-process fake** injected in `_test.go` — NOT Smocker |
 | Venom HTTP suite (`make test-venom`) | ✅ Yes | **Smocker** |
-| `make dev-test` (offline dev loop) | ✅ Yes | **Smocker** |
+| `make dev-offline` (offline dev loop) | ✅ Yes | **Smocker** |
 | Playwright E2E (`make test-e2e`) | ✅ Yes | **Smocker** |
 
 **The boundary that matters**: the moment a real `go run` or `./backend/bin/api` process is up and making real HTTP calls, external URLs point at Smocker. Before that boundary (pure unit tests), the standard Go test-double pattern applies and Smocker is not involved.
 
 **Why one pattern instead of two** (previous drafts of this doc proposed a parallel in-process fixture client; the unified approach won for these reasons):
 
-- **Consistency**: devs learn Smocker once, apply it across dev-test / Venom / Playwright. No cognitive switch at layer boundaries.
+- **Consistency**: devs learn Smocker once, apply it across dev-offline / Venom / Playwright. No cognitive switch at layer boundaries.
 - **Realism**: Smocker receives actual HTTP from the production-shape binary — every header, timeout, retry, and error-handling path is exercised. A parallel in-process client short-circuits all of that.
 - **Debuggability**: Smocker's admin UI (`http://localhost:8101`) shows every request received, matched scenario, and mismatch. Far better than grepping Go logs.
 - **Hot iteration on error scenarios**: simulating a 503, a timeout, a malformed JSON response is trivial in YAML — no recompile needed.
@@ -46,7 +46,7 @@ The backend talks to external APIs (payment provider, identity provider, third-p
 - `frontend/e2e/real-backend/` specs (Playwright E2E)
 - `frontend/e2e/` mocked specs where the flow requires the backend to actually reach its external dependency
 - `backend/tests/venom/**/*.venom.yml` suites (Venom HTTP)
-- `make dev-test` local iteration (offline, deterministic)
+- `make dev-offline` local iteration (offline, deterministic)
 
 **Do NOT use Smocker when**:
 - Writing Go unit tests (`*_test.go` colocated files) — use a Go fake (`FakeXxxClient` struct in `_test.go`) injected into the usecase. Smocker can't run under `go test ./...` because the test runner doesn't know about docker-compose. See [`testing-pitfalls-backend.md:GS01`](testing-pitfalls-backend.md).
@@ -77,7 +77,7 @@ services:
 
 Brought up by:
 - `make infra-up-test` — starts `postgres minio smocker` together
-- Referenced by `make dev-test`, `make test-venom`, `make test-e2e` as a dependency
+- Referenced by `make dev-offline`, `make test-venom`, `make test-e2e` as a dependency
 
 **Key ports:**
 - `8100` — mock-serving HTTP. Backend `EXTERNAL_*_BASE_URL` env vars point here in test modes.
@@ -109,7 +109,7 @@ func NewClient() *Client {
 # Production value
 EXTERNAL_A_BASE_URL=https://api.external-a.example
 
-# In make dev-test / test-venom / test-e2e, the Makefile overrides to:
+# In make dev-offline / test-venom / test-e2e, the Makefile overrides to:
 #   EXTERNAL_A_BASE_URL=http://localhost:8100/external-a
 # (see Makefile targets for the authoritative list)
 ```
@@ -180,7 +180,7 @@ for yaml in "${SCENARIOS_DIR}"/*.yml; do
 done
 ```
 
-Already shipped at `scripts/smocker-seed.sh`. Called from `make dev-test`, `make test-venom`, `make test-e2e`.
+Already shipped at `scripts/smocker-seed.sh`. Called from `make dev-offline`, `make test-venom`, `make test-e2e`.
 
 ### Option B: per-spec seeding (advanced, for error-scenario specs)
 

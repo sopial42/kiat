@@ -53,9 +53,9 @@ delivery/
 | Command | What it does |
 |---|---|
 | `make dev` | Backend + frontend with real Clerk and real external upstreams (internet required). |
-| `make dev-test` | Backend + frontend with test-auth bypass and Smocker for externals (offline-capable). |
+| `make dev-offline` | Backend + frontend with test-auth bypass and Smocker for externals (offline-capable). |
 | `make infra-up` | Start `postgres` + `minio` (for `make dev`). |
-| `make infra-up-test` | Start `postgres` + `minio` + `smocker` (for `dev-test`, `test-venom`, `test-e2e`). |
+| `make infra-up-test` | Start `postgres` + `minio` + `smocker` (for `dev-offline`, `test-venom`, `test-e2e`). |
 | `make infra-down` | Stop all containers (data volumes preserved). |
 | `make infra-destroy` | Stop containers AND wipe data volumes (⚠️ destructive). |
 

@@ -47,7 +47,7 @@ Agents (coders, reviewers, tech-spec-writer) load these files per their own rout
 | [`testing-pitfalls-backend.md`](testing-pitfalls-backend.md) | Venom YAML pitfalls (VP01-VP08) and Go test rules (GS01-GS03); decisions TD01-TD07 |
 | [`testing-playwright.md`](testing-playwright.md) | Canonical Playwright patterns — global.setup JWT swap, real-backend specs, fixtures structure |
 | [`testing-pitfalls-frontend.md`](testing-pitfalls-frontend.md) | Playwright + Clerk footguns (PP01-PP15, PC01-PC07, UA01-UA03) |
-| [`smocker-patterns.md`](smocker-patterns.md) | Universal external-API mocking via Smocker (dev-test / Venom / E2E). Go unit tests use in-process fakes. |
+| [`smocker-patterns.md`](smocker-patterns.md) | Universal external-API mocking via Smocker (dev-offline / Venom / E2E). Go unit tests use in-process fakes. |
 
 ### Operational
 

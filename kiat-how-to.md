@@ -172,7 +172,7 @@ Team Lead enters Phase -1, spawns tech-spec-writer (who adds technical sections 
 
 ### Beat 4 — Local validation + merge
 
-Tech lead runs `make dev` or `make dev-test`, pokes the feature, runs `make ci-local` end-to-end, pushes. CI on GitHub verifies the same gate. Merge.
+Tech lead runs `make dev` or `make dev-offline`, pokes the feature, runs `make ci-local` end-to-end, pushes. CI on GitHub verifies the same gate. Merge.
 
 ### What crosses the boundary
 

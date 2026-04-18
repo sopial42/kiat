@@ -348,7 +348,7 @@ export async function restoreUserA(_browser: Browser): Promise<void> {
 
 ## 8. Test-auth mode (local only, not CI)
 
-When running `make dev-test`:
+When running `make dev-offline`:
 
 - `NEXT_PUBLIC_ENABLE_TEST_AUTH=true` on the frontend
 - `ENABLE_TEST_AUTH=true` on the backend

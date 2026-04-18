@@ -113,7 +113,7 @@ After each story that discovers a surprising backend test failure, add an entry.
 
 ### TD06: Upstream sources go through Smocker in every non-prod mode
 
-**Decision:** External upstream sources (third-party APIs the backend consumes) are mocked by **Smocker** in `make dev-test`, `make test-venom`, and `make test-e2e`. The backend binary is unchanged — it's the production-shape artifact; only the `<SOURCE>_BASE_URL` env var is overridden to point at `http://localhost:8100/<slug>` in test modes. `make dev` is the only mode that hits the real APIs. See [`smocker-patterns.md`](smocker-patterns.md) for the full pattern.
+**Decision:** External upstream sources (third-party APIs the backend consumes) are mocked by **Smocker** in `make dev-offline`, `make test-venom`, and `make test-e2e`. The backend binary is unchanged — it's the production-shape artifact; only the `<SOURCE>_BASE_URL` env var is overridden to point at `http://localhost:8100/<slug>` in test modes. `make dev` is the only mode that hits the real APIs. See [`smocker-patterns.md`](smocker-patterns.md) for the full pattern.
 
 **Rationale:**
 - Offline-deterministic Venom runs (no rate limits, no flaky upstream, no 429).
@@ -121,7 +121,7 @@ After each story that discovers a surprising backend test failure, add an entry.
 - A shape drift upstream surfaces the next time a scenario is refreshed (see TD07). Error scenarios (503, timeout, malformed JSON) are trivial to inject via Smocker YAML.
 - **Production guard in `cmd/api/main.go`**: `log.Fatal` if any `EXTERNAL_*_BASE_URL` contains `smocker`, `localhost:8100`, or `127.0.0.1:8100` when `ENV=production`.
 
-**One pattern, not two.** Earlier drafts proposed a parallel in-process `FixtureClient` for Venom alongside Smocker for Playwright. That was simplified to Smocker-everywhere. See [`smocker-patterns.md`](smocker-patterns.md) section 1 for the full rationale — summary: one mental model across dev-test/Venom/Playwright, better debuggability via Smocker admin UI, no drift between two mock sources, fewer production guards to maintain.
+**One pattern, not two.** Earlier drafts proposed a parallel in-process `FixtureClient` for Venom alongside Smocker for Playwright. That was simplified to Smocker-everywhere. See [`smocker-patterns.md`](smocker-patterns.md) section 1 for the full rationale — summary: one mental model across dev-offline/Venom/Playwright, better debuggability via Smocker admin UI, no drift between two mock sources, fewer production guards to maintain.
 
 **Not applicable to Go unit tests** (see GS01): `go test ./...` doesn't run docker-compose, so colocated `_test.go` files inject a Go fake (a `struct` implementing the client interface) directly into the usecase. That pattern is orthogonal to Smocker and doesn't go through any env var.
 

@@ -65,7 +65,7 @@ Run the full pipeline on delivery/epics/epic-00/story-01-backend-skeleton.md
 
 Repeat for `story-02` (frontend), `story-03` (Playwright harness), `story-04` (CI workflow). Team Lead spawns `kiat-tech-spec-writer` at Phase -1 for each story (technical sections are empty — they get filled), then backend and/or frontend coders in parallel, then reviewers, test gates, 45-min fix budget, rollup event.
 
-**After all 4 stories pass**: `make ci-local` green, `make dev-test` boots a working app (sign-in / items CRUD / sign-out), `.github/workflows/ci.yml` exists. This is the "EPIC 00 done" baseline — the agents just proved they work in your environment.
+**After all 4 stories pass**: `make ci-local` green, `make dev-offline` boots a working app (sign-in / items CRUD / sign-out), `.github/workflows/ci.yml` exists. This is the "EPIC 00 done" baseline — the agents just proved they work in your environment.
 
 ### Phase D — Run Team Lead on EPIC 01
 
@@ -75,16 +75,25 @@ Run the full pipeline on delivery/epics/epic-01/story-01-edit-display-name.md
 
 EPIC 01 is a **learning walkthrough** — a pre-written business story (navbar + edit your display name) that exercises the full BMad-to-production loop without requiring you to do any BMad work yet. After it passes, you've seen the pipeline produce a cross-layer feature from a complete spec. Delete the EPIC 01 folder if you don't want the demo feature, or keep it as reference.
 
-### Four runtime modes (after Phase C ships the code)
+### Runtime modes (after Phase C ships the code)
 
-Two axes vary: auth + external API source.
+Two families: **dev loops** (you iterate in a browser) and **test suites** (automated, CI-equivalent). Two axes vary: auth + external API source.
 
-| Mode | Auth | External APIs |
-|---|---|---|
-| `make dev` | Real Clerk | Real upstreams |
-| `make dev-test` | Test-auth bypass | Smocker |
-| `make test-venom` | Test-auth bypass | Smocker |
-| `make test-e2e` | Real Clerk | Smocker |
+**Dev loops** — you in a browser, iterating on UI or API:
+
+| Mode | Auth | External APIs | When to use |
+|---|---|---|---|
+| `make dev` | Real Clerk | Real upstreams | Preview with real credentials before shipping |
+| `make dev-offline` | Test-auth bypass | Smocker | Fast iteration without internet / Clerk round-trip |
+
+**Test suites** — automated, no browser, one-shot runs:
+
+| Mode | Auth | External APIs | What it runs |
+|---|---|---|---|
+| `make test-back` | — | In-process Go fakes | Go unit tests (colocated `*_test.go`) |
+| `make test-venom` | Test-auth bypass | Smocker | Backend HTTP contract suite (Venom YAML) |
+| `make test-e2e-mocked` | Real Clerk | `page.route()` mocks | Playwright, frontend isolated |
+| `make test-e2e` | Real Clerk | Smocker | Playwright, full stack (CI-equivalent) |
 
 ---
 

@@ -21,7 +21,7 @@ After this epic, any new Kiat-based engagement starts with:
 - Users can sign up, log in, log out via Clerk
 - Users can CRUD a generic "item" resource (placeholder for any domain entity the client will introduce)
 - Tests run green locally and in CI (unit, integration, E2E)
-- External API mocking infrastructure (Smocker) is wired for future upstreams — same mock pattern used by Venom, dev-test, and Playwright
+- External API mocking infrastructure (Smocker) is wired for future upstreams — same mock pattern used by Venom, dev-offline, and Playwright
 - Every production guard is in place: `log.Fatal` at startup if `ENV=production` AND (test-auth enabled, or DATABASE_URL points at localhost, or any EXTERNAL_*_BASE_URL points at Smocker)
 
 ### Impacted personas
@@ -61,7 +61,7 @@ Deliberately excluded to keep the bootstrap minimal:
 ## Definition of DONE for EPIC 00
 
 - [ ] `make dev` boots backend + frontend; user can sign up via Clerk, CRUD an item, see RLS prevent User B from reading User A's items
-- [ ] `make dev-test` boots the stack in test-auth bypass mode offline (no internet needed beyond Docker pulls)
+- [ ] `make dev-offline` boots the stack in test-auth bypass mode offline (no internet needed beyond Docker pulls)
 - [ ] `make test-back` green (Go colocated tests)
 - [ ] `make test-venom` green (Venom black-box HTTP suite)
 - [ ] `make test-e2e` green (full docker-compose + Smocker + Playwright real-backend)

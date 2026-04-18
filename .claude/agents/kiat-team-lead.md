@@ -567,7 +567,7 @@ Cycle counting fails in practice — teams hit "cycle 3" over trivial fixes and 
 When a story has both layers, launch both coders in parallel — do NOT serialize.
 
 - Backend coder builds API + migrations
-- Frontend coder builds UI + hooks simultaneously, using `page.route` mocks or a local test-auth dev server (`make dev-test`) for isolated iteration. Note this is about LOCAL dev workflow — it says nothing about the mode CI uses for E2E. Always verify the CI auth mode against `Makefile` + `.github/workflows/*.yml` when drafting ACs that name specific auth headers (see Phase -1 prompt hygiene).
+- Frontend coder builds UI + hooks simultaneously, using `page.route` mocks or a local test-auth dev server (`make dev-offline`) for isolated iteration. Note this is about LOCAL dev workflow — it says nothing about the mode CI uses for E2E. Always verify the CI auth mode against `Makefile` + `.github/workflows/*.yml` when drafting ACs that name specific auth headers (see Phase -1 prompt hygiene).
 - On integration handoff, the frontend coder swaps mocks for the real API and reruns E2E
 - If integration tests fail, coders collaborate (usually a data-shape mismatch at the layer boundary)
 

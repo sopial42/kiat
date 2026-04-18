@@ -17,13 +17,13 @@ Kiat-based projects typically have two development modes: real external services
 - Real MinIO / S3 (local)
 - Use for: Playwright E2E, production-like testing, manual QA
 
-### Mode 2 — Test bypass (`make dev-test`)
+### Mode 2 — Test bypass (`make dev-offline`)
 
 - Test auth bypass (`ENABLE_TEST_AUTH=true` + `X-Test-User-Id` header)
 - Fast, offline-capable
 - Use for: Venom backend tests, rapid local iteration, unit-level work
 
-**Rule:** use `make dev` when testing anything user-facing. Use `make dev-test` only for backend isolation.
+**Rule:** use `make dev` when testing anything user-facing. Use `make dev-offline` only for backend isolation.
 
 ---
 

@@ -1,6 +1,6 @@
 # Kiat docker-compose — local dev infrastructure
 #
-# Services brought up by `make dev`, `make dev-test`, and `make test-e2e`.
+# Services brought up by `make dev`, `make dev-offline`, and `make test-e2e`.
 # Backend and frontend are NOT containerized here; they run natively on the
 # host for fast iteration. docker-compose provides only stateful/slow-to-install
 # dependencies.

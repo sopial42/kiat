@@ -167,7 +167,7 @@ Every new Playwright spec covering an authenticated endpoint MUST include at lea
 | Mode | Trigger | CI? | Auth transport |
 |---|---|---|---|
 | `make dev` / production | `NEXT_PUBLIC_ENABLE_TEST_AUTH=false` | **YES** (real-Clerk with storageState signin) | `Authorization: Bearer <JWT>` |
-| `make dev-test` | `NEXT_PUBLIC_ENABLE_TEST_AUTH=true` | NO (local dev only) | `X-Test-User-Id: <uuid>` |
+| `make dev-offline` | `NEXT_PUBLIC_ENABLE_TEST_AUTH=true` | NO (local dev only) | `X-Test-User-Id: <uuid>` |
 
 An AC that says "test asserts `X-Test-User-Id`" is asserting the non-CI branch, which means CI will either fail the assertion or — worse — the coder rewrites the test silently and the AC text drifts from reality. The correct framing for a story that targets CI coverage is:
 

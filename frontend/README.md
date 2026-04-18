@@ -49,7 +49,7 @@ Two modes, selected at build time by `NEXT_PUBLIC_ENABLE_TEST_AUTH`:
 | Mode | `NEXT_PUBLIC_ENABLE_TEST_AUTH` | Provider | Transport | When used |
 |---|---|---|---|---|
 | Real Clerk | `false` | `<ClerkProvider>` | `Authorization: Bearer <JWT>` | `make dev`, production, CI Playwright |
-| Test-auth | `true` | `<TestAuthProvider>` | `X-Test-User-Id: <uuid>` | `make dev-test` (local iteration only) |
+| Test-auth | `true` | `<TestAuthProvider>` | `X-Test-User-Id: <uuid>` | `make dev-offline` (local iteration only) |
 
 **Hook selection is done at module level**, not in render — avoids conditional hook calls (see [`testing-pitfalls-frontend.md:UA02`](../delivery/specs/testing-pitfalls-frontend.md) and the pattern in `use-auth.ts`):
 

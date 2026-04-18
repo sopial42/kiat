@@ -5,24 +5,27 @@
 # variable. Do not invent dev/test commands outside this file — if a command
 # is missing, add it here and document it in delivery/README.md.
 #
-# Four modes. Two axes vary (auth + external API source):
+# Two families of targets: DEV LOOPS (you in a browser, iterating) and
+# TEST SUITES (automated, CI-equivalent). Two axes vary across them: auth
+# (real Clerk vs test-auth bypass) and external APIs (real vs Smocker).
 #
-#   make dev       — real Clerk, real external upstreams
-#                    (requires Clerk keys + upstream credentials)
-#   make dev-test  — test-auth bypass, Smocker for externals
-#                    (offline-capable, fast iteration without real upstreams)
-#   make test-venom — test-auth bypass, Smocker for externals
-#                    (same stack as dev-test; Venom runs YAML suite against it)
-#   make test-e2e  — real Clerk, Smocker for externals
-#                    (CI-equivalent; Playwright runs against this stack)
+#   DEV LOOPS — you iterate in a browser
+#     make dev           — real Clerk + real upstreams (pre-prod preview)
+#     make dev-offline   — test-auth + Smocker (fast iteration, no internet)
 #
-# Smocker is the universal external-API mock pattern across dev-test, Venom,
+#   TEST SUITES — automated, no browser, one-shot
+#     make test-back         — Go unit tests, in-process fakes, no containers
+#     make test-venom        — Backend HTTP contract, test-auth + Smocker
+#     make test-e2e-mocked   — Playwright with page.route() mocks (frontend-only)
+#     make test-e2e          — Playwright full stack, real Clerk + Smocker (CI)
+#
+# Smocker is the universal external-API mock pattern across dev-offline, Venom,
 # and E2E. See delivery/specs/smocker-patterns.md for the why. Production
 # mode (ENV=production) is the only mode that hits real upstreams.
 #
 # See delivery/specs/deployment.md for the production env var matrix.
 
-.PHONY: help dev dev-test infra-up infra-down test-back test-venom test-e2e test-e2e-mocked ci-local clean
+.PHONY: help dev dev-offline infra-up infra-down test-back test-venom test-e2e test-e2e-mocked ci-local clean
 
 # Load .env if present (gitignored; copy from .env.example)
 ifneq (,$(wildcard .env))
@@ -43,7 +46,7 @@ infra-up: ## Start postgres + minio (needed for `make dev` — real upstreams, n
 	@until docker compose exec -T postgres pg_isready -U $${POSTGRES_USER:-kiat} >/dev/null 2>&1; do sleep 0.5; done
 	@echo "postgres ready."
 
-infra-up-test: ## Start postgres + minio + smocker (needed for dev-test, test-venom, test-e2e)
+infra-up-test: ## Start postgres + minio + smocker (needed for dev-offline, test-venom, test-e2e)
 	docker compose up -d postgres minio smocker
 	@echo "Waiting for postgres..."
 	@until docker compose exec -T postgres pg_isready -U $${POSTGRES_USER:-kiat} >/dev/null 2>&1; do sleep 0.5; done
@@ -66,8 +69,8 @@ dev: infra-up ## Run backend + frontend with REAL Clerk and REAL external upstre
 	@echo "  - backend on :8080 with ENABLE_TEST_AUTH=false and all EXTERNAL_*_BASE_URL pointing at real APIs"
 	@echo "  - frontend on :3000 with NEXT_PUBLIC_ENABLE_TEST_AUTH=false"
 
-dev-test: infra-up-test ## Run backend + frontend with test-auth bypass + Smocker for externals (offline-capable)
-	@echo "TODO(EPIC-00): wire dev-test targets"
+dev-offline: infra-up-test ## Run backend + frontend with test-auth bypass + Smocker for externals (offline-capable)
+	@echo "TODO(EPIC-00): wire dev-offline targets"
 	@echo "Expected:"
 	@echo "  - backend on :8080 with ENABLE_TEST_AUTH=true and all EXTERNAL_*_BASE_URL overridden to http://localhost:8100/<slug>"
 	@echo "  - frontend on :3000 with NEXT_PUBLIC_ENABLE_TEST_AUTH=true"
