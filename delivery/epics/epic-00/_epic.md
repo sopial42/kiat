@@ -17,8 +17,8 @@ After this epic, any new Kiat-based engagement starts with:
 - Users can sign up, log in, log out via Clerk
 - Users can CRUD a generic "item" resource (placeholder for any domain entity the client will introduce)
 - Tests run green locally and in CI (unit, integration, E2E)
-- External API mocking infrastructure (Smocker) is wired for future upstreams
-- Every production guard is in place (no leaked test-auth, no leaked fixtures, no localhost DB in prod)
+- External API mocking infrastructure (Smocker) is wired for future upstreams — same mock pattern used by Venom, dev-test, and Playwright
+- Every production guard is in place: `log.Fatal` at startup if `ENV=production` AND (test-auth enabled, or DATABASE_URL points at localhost, or any EXTERNAL_*_BASE_URL points at Smocker)
 
 ### Impacted personas
 

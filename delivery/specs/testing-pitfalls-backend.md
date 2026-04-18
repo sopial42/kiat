@@ -5,7 +5,7 @@ Living registry of pitfalls, best practices, and technical decisions for backend
 > **Relationship to other docs:**
 > - [`testing.md`](testing.md) — Test pyramid structure, infra requirements, CI gate.
 > - [`testing-playwright.md`](testing-playwright.md) — Playwright pitfalls (loaded by frontend agents).
-> - [`smocker-patterns.md`](smocker-patterns.md) — External API mocking via Smocker for E2E (complements the Venom-level fixtures pattern in TD06 below).
+> - [`smocker-patterns.md`](smocker-patterns.md) — The universal external-API mock pattern used by Venom AND Playwright. Go unit tests use in-process fakes (GS01) — NOT Smocker.
 > - [`backend-conventions.md`](backend-conventions.md) — Project structure, naming, error codes.
 
 ---
@@ -111,17 +111,19 @@ After each story that discovers a surprising backend test failure, add an entry.
 
 **Decision:** Venom YAML tests (in `backend/tests/venom/`) verify the HTTP contract against a running backend (status codes, response shapes, headers, auth, DB state). Go service tests (colocated `_test.go`) verify handlers, usecases, and fetchers with httptest + fakes — no running server, no DB. Complementary layers, not overlap.
 
-### TD06: Upstream sources run in fixture mode for Venom
+### TD06: Upstream sources go through Smocker in every non-prod mode
 
-**Decision:** External upstream sources (third-party APIs the backend consumes) expose an in-process fixture client activated by a `<SOURCE>_USE_FIXTURES=true` env flag. `make dev-test` enables them all; `make dev` hits the real APIs. Fixtures live alongside the client, under `backend/external/sources/<slug>/testdata/*.json`, one file per entity id. Each fixture is a **real capture** of the upstream response, not a hand-crafted mock — so whatever the prod API promises, the Venom suite sees.
+**Decision:** External upstream sources (third-party APIs the backend consumes) are mocked by **Smocker** in `make dev-test`, `make test-venom`, and `make test-e2e`. The backend binary is unchanged — it's the production-shape artifact; only the `<SOURCE>_BASE_URL` env var is overridden to point at `http://localhost:8100/<slug>` in test modes. `make dev` is the only mode that hits the real APIs. See [`smocker-patterns.md`](smocker-patterns.md) for the full pattern.
 
 **Rationale:**
 - Offline-deterministic Venom runs (no rate limits, no flaky upstream, no 429).
-- Same response shape as prod — nothing is skipped in the mapper/handler paths.
-- A shape drift upstream surfaces the next time the fixture is refreshed (see TD07).
-- **Production guard in `cmd/api/main.go`**: `log.Fatal` if any `<SOURCE>_USE_FIXTURES=true` when `ENV=production`.
+- The production binary is what gets tested — every header, timeout, retry, and error-handling path is exercised against a real HTTP round-trip. No parallel in-process client to maintain.
+- A shape drift upstream surfaces the next time a scenario is refreshed (see TD07). Error scenarios (503, timeout, malformed JSON) are trivial to inject via Smocker YAML.
+- **Production guard in `cmd/api/main.go`**: `log.Fatal` if any `EXTERNAL_*_BASE_URL` contains `smocker`, `localhost:8100`, or `127.0.0.1:8100` when `ENV=production`.
 
-**Distinction with Smocker** (see [`smocker-patterns.md`](smocker-patterns.md)): fixtures are an **in-process** pattern for Venom determinism. Smocker is an **out-of-process** pattern for Playwright E2E where the frontend hits the real backend and the backend hits Smocker for externals. Both patterns coexist; they serve different test layers.
+**One pattern, not two.** Earlier drafts proposed a parallel in-process `FixtureClient` for Venom alongside Smocker for Playwright. That was simplified to Smocker-everywhere. See [`smocker-patterns.md`](smocker-patterns.md) section 1 for the full rationale — summary: one mental model across dev-test/Venom/Playwright, better debuggability via Smocker admin UI, no drift between two mock sources, fewer production guards to maintain.
+
+**Not applicable to Go unit tests** (see GS01): `go test ./...` doesn't run docker-compose, so colocated `_test.go` files inject a Go fake (a `struct` implementing the client interface) directly into the usecase. That pattern is orthogonal to Smocker and doesn't go through any env var.
 
 ### TD07: Venom tests assert every field the envelope exposes for a given contract
 
@@ -131,12 +133,19 @@ After each story that discovers a surprising backend test failure, add an entry.
 - **One call, many assertions.** Avoids N round-trips for N fields (slow), avoids per-field boilerplate, and when the envelope drifts the failure report lists every divergent field in one pass.
 - `ShouldNotBeEmpty` passes even when the mapper is silently wrong — strict equality catches it.
 - `ShouldBeNil` + a comment is a documented gap, readable as a living spec. When a follow-up story wires the source, the assertion flips to `ShouldEqual <value>`.
-- Group the assertions in the YAML with header comments per sub-object (`# -- identity ---`, `# -- metadata ---`, `# -- computed ---`) for readability. One fat happy-path testcase + separate testcases only for branches that need a different fixture.
+- Group the assertions in the YAML with header comments per sub-object (`# -- identity ---`, `# -- metadata ---`, `# -- computed ---`) for readability. One fat happy-path testcase + separate testcases only for branches that need a different Smocker scenario.
 
-**Fixture refresh workflow** (when upstream shape or values drift):
+**Scenario refresh workflow** (when upstream shape or values drift):
 ```bash
-curl -s "<upstream>/<endpoint>?..." -o backend/external/sources/<slug>/testdata/<primary_id>.json
-# diff the capture, update the corresponding *.venom.yml assertions, commit both together.
+# 1. Capture from the real upstream
+curl -s "https://<upstream>/<endpoint>?..." | jq '.' > /tmp/capture.json
+
+# 2. Sanitize (strip secrets, anonymize identifiers), then edit the
+#    matching Smocker scenario under frontend/e2e/fixtures/smocker/<source>.*.yml
+#    to reflect the new shape / values.
+
+# 3. Update the corresponding *.venom.yml assertions to match the new values.
+# 4. Commit scenario + venom asserts together.
 ```
 
 **Canonical template** — every envelope-wide Venom suite MUST follow this skeleton:
@@ -147,7 +156,7 @@ vars:
   base_url: "{{.venom.var.base_url}}"
   db_dsn: "{{.venom.var.db_dsn}}"
   user_id: "<UUID unique per file — see TD03>"
-  # <fixture reference — primary_id + path to testdata JSON>
+  # <Smocker scenario reference — primary_id + path to YAML scenario>
   primary_id: "<id>"
 
 # ---------------------------------------------------------------------------
@@ -192,11 +201,11 @@ testcases:
 **Rules that MUST hold** (reviewer checklist, verbatim — these are the non-negotiable invariants behind TD07):
 
 1. **Exactly one `type: http` step** per happy-path testcase. No per-field HTTP calls.
-2. **Strict equality** (`ShouldEqual`, `ShouldHaveLength`, `ShouldBeNil`) — never `ShouldNotBeEmpty` / `ShouldNotBeNil` on fields where the fixture gives us a known value.
-3. **Captured values**, not invented ones. Pull them from `backend/external/sources/<slug>/testdata/<primary_id>.json` — the fixture is the source of truth for assertions.
+2. **Strict equality** (`ShouldEqual`, `ShouldHaveLength`, `ShouldBeNil`) — never `ShouldNotBeEmpty` / `ShouldNotBeNil` on fields where the Smocker scenario gives us a known value.
+3. **Captured values**, not invented ones. Pull them from the Smocker scenario response body under `frontend/e2e/fixtures/smocker/<source>.*.yml` — the scenario is the source of truth for assertions.
 4. **Null fields are asserted as `ShouldBeNil`**, never omitted. Each `ShouldBeNil` carries an inline comment naming the reason (source gap, disabled fetcher, follow-up story).
 5. **Section comments** (`# -- <name> (source <X>) ---`) group assertions by sub-object.
-6. **One fixture, one happy-path testcase.** Additional testcases only for scenarios that need a different fixture (e.g. "entity with empty collection", "entity with flag set"). Those scenarios reuse the exact same structure.
+6. **One scenario, one happy-path testcase.** Additional testcases only for variants that need a different Smocker scenario (e.g. "entity with empty collection", "entity with flag set"). Those testcases reuse the exact same structure.
 
 ---
 

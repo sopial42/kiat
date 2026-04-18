@@ -57,7 +57,7 @@ No mockups — backend-only story, no UI.
 > - [ ] `POST /api/items` with valid JWT returns 201 and persists `{id, title, user_id, created_at, updated_at}`
 > - [ ] `GET /api/items` returns only the authenticated user's items
 > - [ ] RLS policy verified via `SET LOCAL request.jwt.claim.sub = '<other-uuid>'` in a Venom testcase returns zero rows for another user's data
-> - [ ] `init()` in `cmd/api/main.go` calls `log.Fatal` when `ENV=production` AND any of `ENABLE_TEST_AUTH=true`, `*_USE_FIXTURES=true`, or `DATABASE_URL` contains `localhost`
+> - [ ] `init()` in `cmd/api/main.go` calls `log.Fatal` when `ENV=production` AND any of `ENABLE_TEST_AUTH=true`, `DATABASE_URL` containing `localhost`/`127.0.0.1`, or any `EXTERNAL_*_BASE_URL` containing `smocker`/`localhost:8100`/`127.0.0.1:8100`
 > - [ ] `backend/tests/venom/items/items.venom.yml` covers: happy POST, happy GET, 401 without JWT, 400 on validation error, RLS isolation
 
 ---

@@ -2,7 +2,7 @@
 
 **Epic**: [Epic 00 — Bootstrap](./_epic.md)
 
-**Objective**: ship the canonical Playwright harness — `global.setup.ts` with JWT swap, `e2e/real-backend/` directory with at least one real-backend spec, centralised mock fixtures with CORS exposure headers, and Smocker scenario seeding. After this story, any future story involving UI can add specs by copy-pasting the canonical structure.
+**Objective**: ship the canonical Playwright harness — `global.setup.ts` with JWT swap, `e2e/real-backend/` directory with at least one real-backend spec, centralised `page.route()` response builders with CORS exposure headers, and Smocker scenario seeding for backend-to-external mocks. After this story, any future story involving UI can add specs by copy-pasting the canonical structure.
 
 **T-Shirt Size**: M
 
@@ -49,8 +49,9 @@ No mockups — test harness, no UI.
 >
 > - [ ] `frontend/e2e/global.setup.ts` signs in User A, swaps the Testing Token for a `playwright-ci` template JWT, writes `playwright/.clerk/user-a.json`
 > - [ ] `frontend/e2e/real-backend/items-real.spec.ts` creates an item through the UI, verifies it via SQL helper (not `page.request`), verifies the `Authorization: Bearer <jwt>` header shape via `route.request().headers()` inside a `page.route` assertion
-> - [ ] `frontend/e2e/fixtures/mock-responses.ts` centralises route fulfilment helpers, with `Access-Control-Expose-Headers` baked in for any custom header
-> - [ ] `scripts/smocker-seed.sh` seeds the Smocker admin API before Playwright starts
+> - [ ] `frontend/e2e/fixtures/mock-responses.ts` centralises `page.route()` response-builder helpers, with `Access-Control-Expose-Headers` baked in for any custom header — this mocks at the browser layer for frontend-only tests
+> - [ ] `frontend/e2e/fixtures/smocker/*.yml` holds the shared Smocker scenarios consumed by both Venom and Playwright — mocks at the backend-to-external layer
+> - [ ] `scripts/smocker-seed.sh` seeds the Smocker admin API before Playwright starts (already shipped as a prerequisite)
 > - [ ] No `waitForTimeout` anywhere (PP01); all waits are `waitForResponse` or `expect.poll`
 
 ---

@@ -1,51 +1,59 @@
-# Smocker — External API Mocking for E2E
+# Smocker — The Universal External-API Mock
 
-Canonical pattern for mocking **external third-party APIs** during end-to-end tests in this stack. Smocker stands between the backend and real upstreams during `make test-e2e`, giving deterministic, offline-capable E2E runs while preserving the full frontend-backend wiring.
+Canonical pattern for mocking **external third-party APIs** in every Kiat test and dev mode that involves a running backend binary. Smocker stands between the backend and real upstreams, giving deterministic, offline-capable runs while preserving the full HTTP wiring.
 
 Loaded by coders/reviewers whenever a story touches the integration boundary between the backend and an external HTTP dependency (any new upstream, any new fetcher, any change to existing external calls).
 
 > **Related docs:**
-> - [`testing-pitfalls-backend.md`](testing-pitfalls-backend.md) — TD06 (Venom fixture mode), the complement to Smocker
+> - [`testing-pitfalls-backend.md`](testing-pitfalls-backend.md) — Venom pitfalls VP01-VP08 / GS01-GS03 and decisions TD01-TD07 (all of which assume Smocker as the external mock)
 > - [`testing-playwright.md`](testing-playwright.md) — Playwright global.setup integration
 > - [`testing.md`](testing.md) — Test pyramid, CI orchestration
 > - [`deployment.md`](deployment.md) — Env var conventions, production guards
 
 ---
 
-## 1. Why Smocker (and why not just fixtures)
+## 1. Philosophy — one mock pattern for external HTTP
 
-The backend talks to external APIs (payment provider, identity provider, third-party data source, etc.). During E2E, we cannot:
+The backend talks to external APIs (payment provider, identity provider, third-party data source, etc.). In every dev/test mode that runs a real backend binary, those upstream URLs must point somewhere we control — otherwise we hit rate limits, credential walls, and flaky infrastructure.
 
-- **Hit the real upstream** — rate limits, flakiness, credentials, possible state mutation on the other end
-- **Mock at the frontend layer** (`page.route`) — the request never reaches the backend, so we don't exercise the real wiring (see PP15)
+**Kiat uses exactly one pattern for this: Smocker.**
 
-**Two patterns, two layers, both needed:**
-
-| Pattern | Layer | Use case |
+| Test layer | Backend running? | External API mocking |
 |---|---|---|
-| **Fixtures** (TD06) | Inside the backend process | Venom tests — backend swaps `HTTPClient` for a `FixtureClient` that reads testdata JSON |
-| **Smocker** (this doc) | Out of process, via docker-compose | E2E tests — backend makes real HTTP calls to Smocker, which returns pre-seeded responses |
+| Go unit tests (`make test-back`) | ❌ No (pure `go test ./...`) | **In-process fake** injected in `_test.go` — NOT Smocker |
+| Venom HTTP suite (`make test-venom`) | ✅ Yes | **Smocker** |
+| `make dev-test` (offline dev loop) | ✅ Yes | **Smocker** |
+| Playwright E2E (`make test-e2e`) | ✅ Yes | **Smocker** |
 
-Both patterns coexist because Playwright runs the real backend binary (single `cmd/api/main.go`) — fixtures require code changes inside the binary, Smocker just swaps URLs.
+**The boundary that matters**: the moment a real `go run` or `./backend/bin/api` process is up and making real HTTP calls, external URLs point at Smocker. Before that boundary (pure unit tests), the standard Go test-double pattern applies and Smocker is not involved.
 
-**Why fixtures aren't enough on their own:** Playwright E2E exercises the frontend-backend boundary. If the backend is running as a production-shape binary hitting real upstream URLs, the test cannot mock those upstreams without either (a) a different binary for tests (defeats the purpose) or (b) an HTTP-level mock server. Smocker is (b).
+**Why one pattern instead of two** (previous drafts of this doc proposed a parallel in-process fixture client; the unified approach won for these reasons):
 
-**Why Smocker isn't enough on its own:** Venom runs many test cases per suite, each making HTTP calls to the backend. Having Smocker in the loop adds container overhead, network latency, and a second source of test failure. Fixtures embedded in the Go test process are faster and more stable for that layer.
+- **Consistency**: devs learn Smocker once, apply it across dev-test / Venom / Playwright. No cognitive switch at layer boundaries.
+- **Realism**: Smocker receives actual HTTP from the production-shape binary — every header, timeout, retry, and error-handling path is exercised. A parallel in-process client short-circuits all of that.
+- **Debuggability**: Smocker's admin UI (`http://localhost:8101`) shows every request received, matched scenario, and mismatch. Far better than grepping Go logs.
+- **Hot iteration on error scenarios**: simulating a 503, a timeout, a malformed JSON response is trivial in YAML — no recompile needed.
+- **Onboarding a new upstream**: one `.env` line + one YAML scenario file. No new Go package, no `*_USE_FIXTURES` env var, no production guard.
+- **No drift between mocks**: a dual pattern meant keeping two sources of truth (Go `testdata/*.json` + Smocker YAML) in sync. Forgetting either produced silent divergence. Unified = single source.
+
+**The trade-off we accepted**: `make test-venom` now requires the Smocker container. Startup is one-time per session (~2s), scenario seeding is <100ms per file. The real-HTTP traversal cost per testcase is negligible (localhost, <10ms). Net: a few seconds slower than the old fixture pattern, in exchange for one mental model across the stack.
 
 ---
 
-## 2. When to use Smocker
+## 2. When to use Smocker (and when NOT to)
 
-**Use Smocker when:**
-- Writing an E2E spec in `frontend/e2e/real-backend/` that exercises a flow hitting an external API
-- The story introduces a new external HTTP dependency
-- You need to assert the backend's behavior on specific upstream responses (429, 500, malformed JSON, etc.)
+**Use Smocker** whenever a running backend process calls an external HTTP API in any of:
+- `frontend/e2e/real-backend/` specs (Playwright E2E)
+- `frontend/e2e/` mocked specs where the flow requires the backend to actually reach its external dependency
+- `backend/tests/venom/**/*.venom.yml` suites (Venom HTTP)
+- `make dev-test` local iteration (offline, deterministic)
 
-**Do NOT use Smocker when:**
-- Writing Venom tests — use TD06 fixtures instead
-- Writing Go unit tests — use httptest + `FixtureClient` fake
-- Writing mocked Playwright specs (`e2e/<name>.spec.ts`) — use `page.route()`
-- The external call is inside the Playwright test process itself (e.g., Playwright calling Clerk Backend API directly) — use `@clerk/backend` helpers
+**Do NOT use Smocker when**:
+- Writing Go unit tests (`*_test.go` colocated files) — use a Go fake (`FakeXxxClient` struct in `_test.go`) injected into the usecase. Smocker can't run under `go test ./...` because the test runner doesn't know about docker-compose. See [`testing-pitfalls-backend.md:GS01`](testing-pitfalls-backend.md).
+- Writing `frontend/e2e/` mocked specs that only need to intercept the **frontend's** call to `/api/*`. Those use `page.route()` at the browser layer. Smocker sits one layer deeper (backend ↔ external), not browser ↔ backend.
+- Mocking calls made by the Playwright test process itself (e.g., the test calling Clerk's backend API for JWT swap). Those use `@clerk/backend` helpers directly.
+
+The rule of thumb: **"real backend running AND real HTTP leaving the binary → Smocker."** Everything else, different tool.
 
 ---
 
@@ -55,19 +63,11 @@ Smocker runs as a service in `docker-compose.yml`:
 
 ```yaml
 services:
-  postgres:
-    image: postgres:17
-    # ...
-
-  minio:
-    image: minio/minio
-    # ...
-
   smocker:
     image: thiht/smocker:0.18
     ports:
       - "8100:8080"      # Mock server — backend calls this
-      - "8101:8081"      # Admin API — Playwright seeds this
+      - "8101:8081"      # Admin API — seeding, inspection
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/version"]
       interval: 2s
@@ -75,15 +75,19 @@ services:
       retries: 10
 ```
 
+Brought up by:
+- `make infra-up-e2e` — starts `postgres minio smocker` together
+- Referenced by `make dev-test`, `make test-venom`, `make test-e2e` as a dependency
+
 **Key ports:**
-- `8100` — the mock-serving HTTP endpoint. Backend config points here.
-- `8101` — the admin API. Playwright's global.setup POSTs scenarios here.
+- `8100` — mock-serving HTTP. Backend `EXTERNAL_*_BASE_URL` env vars point here in test modes.
+- `8101` — admin API. Seeding scripts POST scenarios here. UI accessible in a browser for debugging.
 
 ---
 
-## 4. Backend configuration (env var swap)
+## 4. Backend configuration — one env var per upstream
 
-Every external HTTP client reads its base URL from env:
+Every external HTTP client reads its base URL from an env var:
 
 ```go
 // backend/external/sources/external_a/client.go
@@ -94,7 +98,7 @@ type Client struct {
 
 func NewClient() *Client {
     return &Client{
-        baseURL: os.Getenv("EXTERNAL_A_BASE_URL"), // https://api.external-a.com in prod, http://smocker:8080/external-a in E2E
+        baseURL: os.Getenv("EXTERNAL_A_BASE_URL"),
         http:    &http.Client{Timeout: 10 * time.Second},
     }
 }
@@ -102,42 +106,21 @@ func NewClient() *Client {
 
 **`.env.example`:**
 ```bash
-# Production
-EXTERNAL_A_BASE_URL=https://api.external-a.com
-EXTERNAL_B_BASE_URL=https://other-upstream.example
+# Production value
+EXTERNAL_A_BASE_URL=https://api.external-a.example
 
-# E2E (overridden by Makefile target)
-# EXTERNAL_A_BASE_URL=http://localhost:8100/external-a
-# EXTERNAL_B_BASE_URL=http://localhost:8100/external-b
+# In make dev-test / test-venom / test-e2e, the Makefile overrides to:
+#   EXTERNAL_A_BASE_URL=http://localhost:8100/external-a
+# (see Makefile targets for the authoritative list)
 ```
 
-**Makefile target that enables E2E:**
-
-```makefile
-test-e2e:
-	docker compose up -d postgres minio smocker
-	# Wait for smocker admin API
-	./scripts/wait-for.sh http://localhost:8101/version
-	# Seed scenarios
-	./scripts/smocker-seed.sh
-	# Start backend with Smocker-routed URLs
-	EXTERNAL_A_BASE_URL=http://localhost:8100/external-a \
-	EXTERNAL_B_BASE_URL=http://localhost:8100/external-b \
-	ENABLE_TEST_AUTH=false \
-	./backend/bin/api &
-	# Start frontend
-	cd frontend && npm run build && npm start &
-	# Run Playwright
-	cd frontend && npx playwright test
-```
-
-**Path prefix convention:** use `http://smocker:8100/<source-slug>` so each upstream has its own namespace on the Smocker side. Simplifies debugging and scenario isolation.
+**Path prefix convention**: `http://localhost:8100/<source-slug>`. Each upstream gets its own namespace on the Smocker side — simplifies debugging and scenario isolation. The Makefile targets apply this convention automatically; sources only need to declare the production URL in `.env.example`.
 
 ---
 
-## 5. Mock scenarios — YAML format
+## 5. Scenarios — YAML format
 
-Smocker scenarios are YAML files describing request/response pairs:
+Scenario files live under `frontend/e2e/fixtures/smocker/`, one file per upstream per scenario:
 
 ```yaml
 # frontend/e2e/fixtures/smocker/external_a.happy.yml
@@ -170,60 +153,46 @@ Smocker scenarios are YAML files describing request/response pairs:
     body: '{"error": "not_found"}'
 ```
 
+**Why these scenarios live under `frontend/e2e/fixtures/smocker/` even though they're used by Venom too**: single seed path, single refresh workflow, single team mental model. A sibling location like `backend/tests/fixtures/smocker/` would create two seed scripts and two divergent sets. The path is historical (E2E came first); conceptually, read it as `shared/fixtures/smocker/`.
+
 **Conventions:**
-- One file per upstream per scenario: `<source>.happy.yml`, `<source>.errors.yml`, `<source>.ratelimit.yml`
-- Keep path prefix consistent with the Smocker-routed URL (see section 4)
-- Commit realistic payload shapes — capture from the real upstream via `curl` when possible, not hand-crafted
-- Fields not exercised by the test can be elided (Smocker doesn't enforce schema); assert only what your backend consumes
+- One file per upstream per scenario: `<source>.happy.yml`, `<source>.errors.yml`, `<source>.ratelimit.yml`, `<source>.malformed.yml`
+- Prefix the path with the source slug (matches the `BASE_URL` routing convention, section 4)
+- **Realistic shapes only** — capture from the real upstream via `curl`, strip secrets, commit. Hand-crafted payloads drift from production and hide parsing bugs.
+- Elide fields your backend doesn't consume (Smocker doesn't enforce schema; keep YAML readable).
 
 ---
 
-## 6. Seeding Smocker from Playwright or Makefile
+## 6. Seeding Smocker
 
-### Option A: shell script (simple)
+### Option A: shell script (simple, the default)
 
 ```bash
-# scripts/smocker-seed.sh
-#!/usr/bin/env bash
-set -euo pipefail
-
+# scripts/smocker-seed.sh — runs before every test target that uses Smocker
 SMOCKER_ADMIN="${SMOCKER_ADMIN:-http://localhost:8101}"
 SCENARIOS_DIR="${1:-frontend/e2e/fixtures/smocker}"
 
-# Reset
 curl -sSf -X POST "${SMOCKER_ADMIN}/reset" >/dev/null
-
-# Load each YAML
 for yaml in "${SCENARIOS_DIR}"/*.yml; do
-  echo "Seeding ${yaml}..."
   curl -sSf -X POST "${SMOCKER_ADMIN}/mocks" \
     -H "Content-Type: application/x-yaml" \
     --data-binary "@${yaml}" >/dev/null
 done
-
-echo "Smocker seeded from ${SCENARIOS_DIR}"
 ```
 
-Called from the `test-e2e` Makefile target before starting the backend.
+Already shipped at `scripts/smocker-seed.sh`. Called from `make dev-test`, `make test-venom`, `make test-e2e`.
 
-### Option B: per-spec seeding from Playwright (advanced)
+### Option B: per-spec seeding (advanced, for error-scenario specs)
 
-For specs that need different upstream responses, seed inside the spec:
+For a Playwright spec that needs a specific failure injected:
 
 ```typescript
-// e2e/real-backend/external-a-errors.spec.ts
-import { test, expect } from '@playwright/test';
-
-const SMOCKER_ADMIN = 'http://localhost:8101';
-
 test.beforeEach(async ({ request }) => {
-  // Reset scenarios before each test
-  await request.post(`${SMOCKER_ADMIN}/reset`);
+  await request.post('http://localhost:8101/reset');
 });
 
 test('UI shows graceful error when external source returns 500', async ({ page, request }) => {
-  // Seed a 500 response scenario
-  await request.post(`${SMOCKER_ADMIN}/mocks`, {
+  await request.post('http://localhost:8101/mocks', {
     headers: { 'Content-Type': 'application/x-yaml' },
     data: `
 - request:
@@ -234,86 +203,85 @@ test('UI shows graceful error when external source returns 500', async ({ page, 
     body: '{"error":"upstream_down"}'
     `,
   });
-
-  await page.goto('/search');
-  await page.getByLabel(/^Query$/).fill('test');
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
-
-  await expect(page.getByRole('alert')).toContainText(/temporarily unavailable/i);
+  // ... exercise the flow, assert the UI reaction ...
 });
 ```
 
-**Tradeoff:** per-spec seeding keeps test state local (easier to reason about), but adds boilerplate and coupling to Smocker's admin API. Start with Option A (shell seed), escalate to Option B when a spec needs a specific failure scenario.
+Start with Option A; escalate to Option B only when a spec needs a scenario the shared seed doesn't provide.
 
 ---
 
 ## 7. Production guard (MANDATORY)
 
-The same safety pattern as `ENABLE_TEST_AUTH` and `*_USE_FIXTURES` — crash loud on misconfiguration:
+`backend/cmd/api/main.go` `init()` MUST `log.Fatal` at startup when `ENV=production` and any of these hold:
+
+- `ENABLE_TEST_AUTH=true`
+- Any `EXTERNAL_*_BASE_URL` contains `smocker` or `localhost:8100` or `127.0.0.1:8100`
+- `DATABASE_URL` contains `localhost` or `127.0.0.1`
+
+Example:
 
 ```go
-// backend/cmd/api/main.go — init()
 func init() {
     env := os.Getenv("ENV")
     if env != "production" {
         return
     }
 
-    // Detect any smocker-routed URL leaking into prod
+    if os.Getenv("ENABLE_TEST_AUTH") == "true" {
+        log.Fatal("FATAL: ENABLE_TEST_AUTH must be false in production")
+    }
+
     for _, pair := range os.Environ() {
         parts := strings.SplitN(pair, "=", 2)
-        key, val := parts[0], parts[1]
-        if !strings.HasSuffix(key, "_BASE_URL") {
+        if len(parts) != 2 {
             continue
         }
-        if strings.Contains(val, "smocker") || strings.Contains(val, "localhost:8100") {
-            log.Fatalf("FATAL: %s=%q looks like a Smocker URL in production", key, val)
+        key, val := parts[0], parts[1]
+
+        if strings.HasSuffix(key, "_BASE_URL") {
+            if strings.Contains(val, "smocker") ||
+               strings.Contains(val, "localhost:8100") ||
+               strings.Contains(val, "127.0.0.1:8100") {
+                log.Fatalf("FATAL: %s=%q points at Smocker in production", key, val)
+            }
         }
+    }
+
+    if du := os.Getenv("DATABASE_URL"); strings.Contains(du, "localhost") || strings.Contains(du, "127.0.0.1") {
+        log.Fatal("FATAL: DATABASE_URL points at localhost in production")
     }
 }
 ```
 
-**Also extend the existing production guards** (document in `deployment.md`):
-
-```go
-// Same init, check DB and auth flags
-if env == "production" {
-    if os.Getenv("ENABLE_TEST_AUTH") == "true" {
-        log.Fatal("ENABLE_TEST_AUTH must be false in production")
-    }
-    if strings.Contains(os.Getenv("DATABASE_URL"), "localhost") {
-        log.Fatal("DATABASE_URL points at localhost in production — likely misconfig")
-    }
-    // All *_USE_FIXTURES must be unset/false
-    for _, pair := range os.Environ() {
-        parts := strings.SplitN(pair, "=", 2)
-        if strings.HasSuffix(parts[0], "_USE_FIXTURES") && parts[1] == "true" {
-            log.Fatalf("FATAL: %s=true in production", parts[0])
-        }
-    }
-}
-```
-
-**Philosophy:** crash early at binary start-up is always cheaper than serving a single wrong response. Every time a new test-mode env var is introduced, it MUST be paired with a production guard in this same `init()` block.
+**Philosophy:** crash early at binary start-up is always cheaper than serving a single wrong response. Every new test-mode env var MUST be paired with a production guard in this same `init()` block, in the same commit.
 
 ---
 
 ## 8. Recording real responses (bootstrapping new scenarios)
 
-When adding a new external source, capture a real response first, then strip/anonymize, then commit:
+When adding a new external source, capture a real response first, then sanitize, then shape into YAML:
 
 ```bash
-# Capture
+# 1. Capture
 curl -s \
   -H "Authorization: Bearer $EXTERNAL_A_TOKEN" \
-  "https://api.external-a.com/v1/search?id=real-entity-123" \
+  "https://api.external-a.example/v1/search?id=real-entity-123" \
   | jq '.' > /tmp/capture.json
 
-# Inspect, remove secrets, replace identifying data with test-friendly values
-# Then shape into the Smocker YAML format above
+# 2. Inspect — remove secrets, replace identifying data with test-friendly values
+
+# 3. Shape into the Smocker YAML format (section 5) under
+#    frontend/e2e/fixtures/smocker/external_a.happy.yml
+
+# 4. Commit both the backend client code AND the scenario file in the same PR.
 ```
 
-This keeps scenarios realistic (the backend's response parsing is exercised against real shapes) without risking credential leaks.
+**Refresh workflow** (when upstream shape or values drift):
+- Re-run step 1 against a known entity
+- Diff `jq` output against the existing scenario's response body
+- Update the YAML scenario to match; update any Venom assertions that reference field values that changed
+- Commit together
 
 ---
 
@@ -323,25 +291,26 @@ This keeps scenarios realistic (the backend's response parsing is exercised agai
 |---|---|---|
 | Backend 502/connection refused on external call | Smocker container not up | `docker compose ps smocker`; `docker compose logs smocker` |
 | Smocker returns 404 for every request | Scenarios not seeded | Re-run `scripts/smocker-seed.sh`; check `curl http://localhost:8101/mocks` |
-| Backend hits real upstream in E2E | `EXTERNAL_*_BASE_URL` not overridden | Check `make test-e2e` target exports all `_BASE_URL` vars |
-| Test passes locally, fails in CI | Scenario YAML not in image / workflow | Ensure `.github/workflows/ci.yml` runs the same seed script |
-| Production crash at startup `FATAL: X_BASE_URL looks like a Smocker URL` | Env var leak from staging to prod | GOOD — the guard fired. Fix the deploy config. |
+| Backend hits real upstream in a test mode | `EXTERNAL_*_BASE_URL` not overridden | Check the Makefile target — every test recipe MUST override every `_BASE_URL` to `http://localhost:8100/<slug>` |
+| Test passes locally, fails in CI | Scenario YAML not committed | Ensure `frontend/e2e/fixtures/smocker/*.yml` is tracked, not gitignored |
+| Production crash at startup `FATAL: X_BASE_URL points at Smocker` | Env var leak from staging to prod | GOOD — the guard fired. Fix the deploy config. |
 | Smocker admin API slow | Scenario list too large | `curl -X POST /reset` between specs; avoid accumulating |
-| Can't write scenario for a dynamic ID | Path with variables | Use Smocker's path matchers (`path: /external-a/v1/entity/{id}`) |
+| Can't match a path with a dynamic ID | Path with variables | Use Smocker's path matchers (`path: /external-a/v1/entity/{id}`) |
+| Go unit test wants to exercise external call | Unit tests don't use Smocker | Inject a `FakeXxxClient` in the usecase test — see GS01 |
 
 ---
 
 ## 10. What Smocker is NOT
 
-- **Not a replacement for Venom fixtures** — different test layer, different tradeoffs (see section 1)
-- **Not a test framework** — it's a mock HTTP server; the test framework is Playwright
-- **Not production-facing** — guarded out of prod via section 7; never deploy Smocker to anything user-facing
-- **Not a contract tester** — if you need to verify the backend handles upstream schema drift, use contract tests (pact, etc.); Smocker just replays what you told it to
+- **Not used in Go unit tests** — `go test ./...` runs without any container. Use in-process fakes there.
+- **Not a contract tester** — if you need to verify the backend handles upstream schema drift, use a contract testing tool (pact, etc.); Smocker replays what you told it to.
+- **Not production-facing** — guarded out of prod via section 7; never deploy Smocker to anything user-facing.
+- **Not a replacement for Playwright** — Smocker mocks external APIs seen BY the backend. Frontend ↔ backend wiring is still tested by Playwright end-to-end.
 
 ---
 
 See also:
-- [testing-pitfalls-backend.md](testing-pitfalls-backend.md) — TD06 fixtures pattern for Venom
-- [testing-playwright.md](testing-playwright.md) — Playwright real-backend spec structure
+- [testing-pitfalls-backend.md](testing-pitfalls-backend.md) — Venom pitfalls and TD06 (why Smocker over in-process fixtures)
+- [testing-playwright.md](testing-playwright.md) — Playwright real-backend spec structure and Smocker seeding from tests
 - [deployment.md](deployment.md) — Production guards and env var conventions
 - [backend-conventions.md](backend-conventions.md) — External client package structure

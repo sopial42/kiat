@@ -33,11 +33,10 @@ backend/
 │       └── router/
 │           └── router.go
 ├── external/
-│   └── sources/                           # third-party API clients + fixtures (TD06)
+│   └── sources/                           # third-party API HTTP clients
 │       └── <source-slug>/
-│           ├── client.go
-│           ├── fixture.go                 # FixtureClient parallel to real client
-│           └── testdata/                  # real captures, per primary_id
+│           ├── client.go                  # production client, reads EXTERNAL_<SLUG>_BASE_URL
+│           └── client_test.go             # colocated unit tests, inject a FakeHTTPClient (GS01)
 ├── migrations/                            # SQL migrations (RLS policies included)
 ├── tests/
 │   └── venom/                             # Venom YAML black-box HTTP tests
@@ -60,23 +59,21 @@ See [`delivery/specs/architecture-clean.md`](../delivery/specs/architecture-clea
 At binary startup, `init()` MUST `log.Fatal` on any of these misconfigurations when `ENV=production`:
 
 - `ENABLE_TEST_AUTH=true`
-- Any `<SOURCE>_USE_FIXTURES=true`
-- Any `<SOURCE>_BASE_URL` containing `smocker` or `localhost:8100`
-- `DATABASE_URL` containing `localhost`
+- Any `EXTERNAL_*_BASE_URL` containing `smocker`, `localhost:8100`, or `127.0.0.1:8100` (Smocker leaked into prod)
+- `DATABASE_URL` containing `localhost` or `127.0.0.1`
 
-This is non-negotiable. Every new test-mode env var MUST ship with its matching guard in the same commit.
+This is non-negotiable. Every new test-mode env var MUST ship with its matching guard in the same commit. See [`../delivery/specs/smocker-patterns.md`](../delivery/specs/smocker-patterns.md) section 7 for the canonical guard implementation.
 
 ## Testing
 
-Three test layers live here (see [`../delivery/specs/testing.md`](../delivery/specs/testing.md)):
+Two backend test layers live here (see [`../delivery/specs/testing.md`](../delivery/specs/testing.md)):
 
-| Layer | Tool | Runner | Location |
-|---|---|---|---|
-| Unit + handler | Go `testing` + `httptest` | `make test-back` (`go test ./...`) | colocated `*_test.go` (TD04) |
-| Black-box HTTP | Venom YAML | `make test-venom` | `backend/tests/venom/` |
-| External upstream determinism | Fixture client | activated by `<SOURCE>_USE_FIXTURES=true` | `backend/external/sources/<slug>/testdata/` |
+| Layer | Tool | Runner | Location | External API mocking |
+|---|---|---|---|---|
+| Unit + handler | Go `testing` + `httptest` | `make test-back` (`go test ./...`) | colocated `*_test.go` (TD04) | In-process fakes (GS01) — `FakeHTTPClient` struct injected in test |
+| Black-box HTTP | Venom YAML | `make test-venom` | `backend/tests/venom/` | Smocker (TD06) — real HTTP, out-of-process, shared scenarios with E2E |
 
-Venom runs in test-auth mode (`ENABLE_TEST_AUTH=true`, UUID-only user IDs — see [`testing-pitfalls-backend.md:VP04`](../delivery/specs/testing-pitfalls-backend.md)).
+Venom runs in test-auth mode (`ENABLE_TEST_AUTH=true`, UUID-only user IDs — see [`testing-pitfalls-backend.md:VP04`](../delivery/specs/testing-pitfalls-backend.md)), with every `EXTERNAL_*_BASE_URL` routed to Smocker (`http://localhost:8100/<slug>`). See [`../delivery/specs/smocker-patterns.md`](../delivery/specs/smocker-patterns.md) for the full pattern.
 
 ## Where this code comes from
 
