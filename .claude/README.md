@@ -13,7 +13,7 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 ├── README.md                      # This file (framework doc index)
 ├── settings.json                  # Permissions allowlist + SubagentStop hook wiring (Layer 7)
 ├── agents/                        # 6 kiat-* agent system prompts
-│   ├── kiat-tech-spec-writer.md   # Default entry point: informal request → structured story
+│   ├── kiat-tech-spec-writer.md   # Sub-agent of Team Lead (spawned at Phase -1 for informal requests)
 │   ├── kiat-team-lead.md          # Pipeline orchestrator
 │   ├── kiat-backend-coder.md
 │   ├── kiat-frontend-coder.md

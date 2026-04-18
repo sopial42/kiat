@@ -3,7 +3,7 @@
 How this project defines and uses visual tokens (colors, spacing, typography, radius). **The values shipped in this file are neutral defaults** — they exist so EPIC 00 renders something usable, not to impose a visual direction.
 
 > **Principle: Scaffold teaches patterns, not aesthetics.**
-> EPIC 00 is design-neutral by construction. Values here stay at Tailwind v4 defaults (slate grayscale, semantic colors from `tailwindcss/colors`) until your first visual reference arrives. **When a Figma URL or screenshot lands in a story's `## Mockups` section, customize the values in this file in the same commit as the feature implementation.** Don't bulk-customize upfront.
+> EPIC 00 is design-neutral by construction. Values here stay at Tailwind v4 defaults (slate grayscale, semantic colors from `tailwindcss/colors`) until your first visual reference arrives. **When a Figma URL or screenshot lands in a story's `### Mockups` section, customize the values in this file in the same commit as the feature implementation.** Don't bulk-customize upfront.
 
 ---
 

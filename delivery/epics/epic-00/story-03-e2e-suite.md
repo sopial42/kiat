@@ -31,7 +31,7 @@ As a **Tech Lead**, I want a Playwright harness that catches prod regressions (m
 
 ### Business rationale
 
-Playwright discipline is the **most expensive thing to fix later**. Story-03 ships the canonical structure once so every subsequent story is a copy-paste rather than a reinvention. Directly addresses the robinhood learnings logged in [`testing-pitfalls-frontend.md`](../../specs/testing-pitfalls-frontend.md) (PP12, PP14, PP15, PC06, PC07).
+Playwright discipline is the **most expensive thing to fix later**. Story-03 ships the canonical structure once so every subsequent story is a copy-paste rather than a reinvention. Directly addresses the Playwright + Clerk footguns logged in [`testing-pitfalls-frontend.md`](../../specs/testing-pitfalls-frontend.md) (PP12, PP14, PP15, PC06, PC07).
 
 ### Mockups
 

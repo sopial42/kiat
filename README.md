@@ -80,7 +80,7 @@ A walkthrough story already exists at [`delivery/epics/epic-01/story-01-edit-dis
 
 ## Linking a visual reference to a story
 
-Stories that involve UI carry a `## Mockups` section under `## Business Context`. The rule is tight:
+Stories that involve UI carry a `### Mockups` sub-section under `## Business Context`. The rule is tight:
 
 **If a visual reference exists (a live Figma URL OR static screenshots), it's the binding reference.** Tech-spec-writer does NOT restate visual decisions in the spec — it links. Frontend-coder matches pixel-close. Deviations (rendering constraints, accessibility, existing primitives) are discussed, never decided unilaterally.
 
@@ -89,7 +89,7 @@ Two valid shapes, pick one per story:
 ### Shape A — Live Figma URL (preferred when the designer maintains it actively)
 
 ```markdown
-## Mockups
+### Mockups
 
 - [Navbar — collapsed](https://figma.com/file/XXX/...?node-id=1)
 - [Navbar — user menu open](https://figma.com/file/XXX/...?node-id=2)
@@ -101,7 +101,7 @@ URLs only. **Never check in PNG/SVG exports alongside a live Figma** — they go
 ### Shape B — Static screenshots (when there's no active Figma, or the client doesn't use Figma)
 
 ```markdown
-## Mockups
+### Mockups
 
 - ![Navbar — collapsed](../../business/mockups/story-01/navbar-collapsed.png)
 - ![User menu — open](../../business/mockups/story-01/user-menu-open.png)

@@ -17,7 +17,7 @@ Project-level rules for branching, commits, and history management.
 | `chore/` | Tooling, CI, dependencies |
 
 **Examples:**
-- `feature/story-27-patient-bulk-import`
+- `feature/story-27-item-bulk-import`
 - `fix/story-42-null-guard-in-handler`
 - `refactor/story-51-extract-auth-middleware`
 
@@ -42,17 +42,17 @@ Fixes #<issue-number>   (if applicable)
 **Types** (same set as branch types): `feat`, `fix`, `refactor`, `docs`, `chore`.
 
 **Subject rules:**
-- Imperative mood ("add hypothesis photo upload", not "added hypothesis photo upload")
+- Imperative mood ("add item photo upload", not "added item photo upload")
 - Under 72 characters
 - No trailing period
 - Lowercase (except proper nouns)
 
 **Example:**
 ```
-feat: add hypothesis photo upload
+feat: add item photo upload
 
-- Created migration for hypothesis_photos table with RLS policy
-- Added POST /hypotheses/:id/photos with S3 upload
+- Created migration for item_photos table with RLS policy
+- Added POST /items/:id/photos with S3 upload
 - Added client-side compression (max 2MB per photo)
 - Added E2E test covering full upload lifecycle
 

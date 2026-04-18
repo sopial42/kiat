@@ -125,7 +125,7 @@ wc -c delivery/epics/epic-*/story-01.md \
 ### Step 1 — Identify the overflow culprit
 Show the breakdown:
 ```
-Story: story-27-patient-bulk-import
+Story: story-27-item-bulk-import
 Target: Backend-Coder (budget: 25k)
 Estimated: 34k tokens
 
@@ -133,10 +133,10 @@ Breakdown:
 - CLAUDE.md:                    ~3k
 - architecture-clean.md:        ~5k
 - testing.md:                   ~4k
-- story-27-patient-bulk-import: ~11k ← SPEC IS OVERSIZED
+- story-27-item-bulk-import:    ~11k ← SPEC IS OVERSIZED
 - api-conventions.md:           ~3k
 - database-conventions.md:      ~2k
-- Existing patient code refs:   ~6k ← TOO MANY REFS
+- Existing item code refs:      ~6k ← TOO MANY REFS
 Total:                          ~34k (BUDGET: 25k, OVER BY 9k)
 ```
 
@@ -154,7 +154,7 @@ When the spec itself is the overflow culprit, Team Lead escalates **before** lau
 
 ```
 To kiat-tech-spec-writer:
-Story story-27-patient-bulk-import exceeds the Backend-Coder context budget
+Story story-27-item-bulk-import exceeds the Backend-Coder context budget
 (34k estimated vs 25k hard limit). The spec is ~11k tokens.
 
 Request: split this story into smaller sub-stories with distinct acceptance

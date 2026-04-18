@@ -46,31 +46,35 @@ delivery/
 
 ## Common Commands
 
+> **Canonical command set lives in the repo-root [`Makefile`](../Makefile).** If a command is missing here, check the Makefile first — this table is a read-only summary.
+
 ### Local Development
 
 | Command | What it does |
 |---|---|
-| `make dev` | Real Clerk auth (internet required). Use for Playwright E2E and manual QA. |
-| `make dev-test` | Test auth bypass (offline-capable). Use for Venom tests and rapid iteration. |
-| `make stop` | Stop all dev processes. |
-| `make wipe` | Full cleanup (containers, volumes, state). |
+| `make dev` | Backend + frontend with real Clerk and real external upstreams (internet required). |
+| `make dev-test` | Backend + frontend with test-auth bypass and Smocker for externals (offline-capable). |
+| `make infra-up` | Start `postgres` + `minio` (for `make dev`). |
+| `make infra-up-test` | Start `postgres` + `minio` + `smocker` (for `dev-test`, `test-venom`, `test-e2e`). |
+| `make infra-down` | Stop all containers (data volumes preserved). |
+| `make infra-destroy` | Stop containers AND wipe data volumes (⚠️ destructive). |
 
-### Backend
-
-| Command | What it does |
-|---|---|
-| `make test-back` | Run all Venom tests. |
-| `go test ./backend/...` | Run a specific subset of Go tests. |
-| `grep trace_id logs/` | Find a request in structured logs by trace ID. |
-
-### Frontend
+### Tests
 
 | Command | What it does |
 |---|---|
-| `npm run test:e2e` | Run Playwright E2E tests locally. |
-| `npm run build` | Check for TypeScript / build errors (prerequisite for CI). |
-| `npm run dev` | Local dev (real Clerk). |
-| `npm run dev-test` | Local dev (test auth bypass). |
+| `make test-back` | Go colocated unit + handler tests (`go test ./...`) — no containers, in-process fakes. |
+| `make test-venom` | Venom YAML black-box HTTP suite against the backend in test-auth mode + Smocker. |
+| `make test-e2e-mocked` | Playwright mocked specs only (fast, `page.route` only, no backend needed). |
+| `make test-e2e` | Full Playwright suite against real backend + real Clerk + Smocker (CI-equivalent). |
+| `make ci-local` | Run `test-back` + `test-venom` + `test-e2e` back-to-back (the full CI gate locally). |
+
+### Frontend (npm)
+
+| Command | What it does |
+|---|---|
+| `npm run build` (in `frontend/`) | Check for TypeScript / build errors. |
+| `npx playwright test` (in `frontend/`) | Invoke Playwright directly (Makefile wrappers are preferred). |
 
 ### Kiat framework
 
@@ -115,36 +119,10 @@ The user invokes `kiat-tech-spec-writer` on the story file. The writer detects t
 ### 5. Review Phase
 
 **After coding:**
-- Backend-Reviewer reviews backend code → writes `story-NN-slug.review-back.md`
-- Frontend-Reviewer reviews frontend code → writes `story-NN-slug.review-front.md`
+- `kiat-backend-reviewer` and `kiat-frontend-reviewer` each emit a machine-parseable first line (`VERDICT: APPROVED | NEEDS_DISCUSSION | BLOCKED`) plus a `REVIEW_LOG_BLOCK` (audit lines + issue list) wrapped between `REVIEW_LOG_BLOCK_BEGIN` / `REVIEW_LOG_BLOCK_END` markers.
+- Team Lead pastes the block verbatim as a new `### Cycle N` entry under the story's `## Review Log` section — append-only, one sub-block per reviewer per cycle. Team Lead then appends its own arbitration line per issue (ACCEPT / REJECT / SEND_BACK) and a `**Cycle outcome**:` summary.
 
-**Review file format:**
-```markdown
-# Review: Story NN - [Slug]
-
-**Reviewer**: [name]
-**Date**: [date]
-**Status**: ✅ Approved / ❌ Changes Requested
-
-## Summary
-[Brief overview of what was reviewed]
-
-## Findings
-
-### Blockers (must fix)
-- [ ] Issue 1
-- [ ] Issue 2
-
-### Majors (should fix)
-- [ ] Issue 3
-
-### Minors (nice to have)
-- [ ] Issue 4
-
----
-
-[Detailed feedback]
-```
+**No side-car review files.** The review history lives inline in the story file, inside `## Review Log`. See the full schema in [`epics/README.md#review-log`](epics/README.md#review-log).
 
 ### 6. Merge Phase
 
@@ -164,12 +142,10 @@ The user invokes `kiat-tech-spec-writer` on the story file. The writer detects t
 ### Story Naming
 - `story-NN-slug.md` (NN = 01, 02, 03... within epic)
 - Story title in slug form
-- Examples: `story-01-patient-form.md`, `story-03-e2e-tests.md`
+- Examples: `story-01-item-form.md`, `story-03-e2e-tests.md`
 
-### Review Naming
-- `story-NN-slug.review-front.md` (frontend review)
-- `story-NN-slug.review-back.md` (backend review)
-- One per story per domain (if both frontend and backend changed)
+### Review artifacts
+Reviews live inline in the story file under `## Review Log` (append-only, one cycle block per reviewer run). No separate `.review-*.md` side-car files — the schema is in [`epics/README.md#review-log`](epics/README.md#review-log).
 
 ### Dates
 - ISO 8601 format: `2026-04-09`
@@ -215,81 +191,19 @@ After code review, human verifies review is thorough:
 
 ---
 
-## Example: Complete Story
+## Example: canonical story template
 
-### Epic 25: Hypothesis Photos
+The shipped canonical example is [`delivery/epics/epic-template/story-NN-slug.md`](epics/epic-template/story-NN-slug.md) — both layers pre-scaffolded (Business Context by BMad, technical sections by the tech-spec-writer), plus pre-seeded `## Review Log` and `## Prod Validation` sections Team Lead appends to.
 
-**`_epic.md`:**
-```markdown
-# Epic 25: Hypothesis Photos
-
-**Objective**: Allow users to photograph hypothesis areas for visual reference.
-
-**Scope**: 
-- IN: Capture, compress, upload, display in lightbox
-- OUT: Batch upload, AI tagging
-
-**Timeline**: 2 weeks
-**Team**: 1 backend, 1 frontend
-**T-Shirt Size**: M
-```
-
-**`story-01-photo-upload.md`:**
-```markdown
-# Story 01: Photo Upload & Compression
-
-### Acceptance Criteria
-- [ ] User can click "Upload Photo" button
-- [ ] File picker opens (image files only, max 20MB)
-- [ ] Image compressed to 1280px max width
-- [ ] Progress shown during upload
-- [ ] Success: photo appears in UI
-- [ ] Error: clear error message shown
-
-### Technical Spec
-
-#### Database
-- Migration: Create `hypothesis_photos` table
-  - photo_id UUID
-  - hypothesis_id UUID (FK)
-  - file_url VARCHAR (S3 URL)
-  - file_size INT
-  - created_at TIMESTAMPTZ
-  - user_id UUID (for RLS)
-
-#### API
-- POST /hypotheses/:id/photos (multipart/form-data)
-  - Request: file (image)
-  - Response 201: { photo_id, file_url }
-  - Error 400: "File too large (max 20MB)"
-  - Error 413: Payload Too Large
-
-#### Frontend
-- Component: PhotoUploadButton
-- Hook: usePhotoUpload (compression, S3 upload)
-- UI: File picker, progress bar, error display
-
-#### E2E Tests
-- Upload 5MB JPEG → stored ✅
-- Upload 25MB file → error 413 ✅
-- Network error → retry ✅
-
----
-```
-
-**After code:**
-- `story-01-photo-upload.review-back.md` (backend review)
-- `story-01-photo-upload.review-front.md` (frontend review)
-
----
+A fully-written walkthrough story lives at [`delivery/epics/epic-01/story-01-edit-display-name.md`](epics/epic-01/story-01-edit-display-name.md) — a business-neutral "editable display name + navbar" feature that exercises the whole pipeline (backend migration + API, frontend navbar + modal, E2E tests, reviewer gates).
 
 ## Tips
 
-1. **Write specs BEFORE coding** — Agents need clarity
-2. **Be specific** — "Add photo upload" vs "Create POST /hypotheses/:id/photos with compression"
-3. **Include edge cases** — Network fail, double-click, offline, file type mismatch
-4. **Link to conventions** — Don't re-explain REST design, link to `specs/api-conventions.md`
-5. **Use checklists** — Reviewers can verify completeness systematically
+1. **Write specs BEFORE coding.** Agents need clarity; Team Lead gates every story on `SPEC_VERDICT: CLEAR` from `kiat-validate-spec`.
+2. **Be specific.** "Add photo upload" is vague; "`POST /items/:id/photos` with multipart/form-data, max 20MB, compressed to 1280px" is actionable.
+3. **Include edge cases.** Network fail, double-click, offline, file-type mismatch, concurrency.
+4. **Link to conventions.** Don't re-explain REST design — link to [`specs/api-conventions.md`](specs/api-conventions.md).
+5. **Use checklists.** Reviewers verify completeness systematically against the story's acceptance criteria.
 
 ---
 

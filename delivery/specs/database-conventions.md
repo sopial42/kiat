@@ -13,8 +13,8 @@ Standards for writing idempotent migrations and Row-Level Security policies.
 ```
 migrations/
 ├── 001_create_users.sql
-├── 002_create_orders.sql
-├── 003_add_hypothesis_photos.sql
+├── 002_create_items.sql
+├── 003_add_item_tags.sql
 └── 004_add_rls_policies.sql
 ```
 
@@ -104,7 +104,7 @@ CREATE TABLE orders (
 - `ON DELETE RESTRICT` — Prevent delete if child records exist
 - `ON DELETE SET NULL` — Set child's foreign key to NULL (column must be nullable)
 
-**Use CASCADE when**: Logical ownership (order belongs to user, hypothesis belongs to care_plan)
+**Use CASCADE when**: Logical ownership (an item belongs to a user, a tag belongs to an item)
 
 ---
 
@@ -137,39 +137,39 @@ CREATE POLICY user_own_delete ON users
 
 **Pattern**: `WHERE user_id = auth.uid()` (user can only access their own records)
 
-### RLS for Related Data (Care Plans)
+### RLS for Related Data (user-owned rows)
 
 ```sql
-CREATE TABLE care_plans (
+CREATE TABLE items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     ...
 );
 
-ALTER TABLE care_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY care_plan_user_isolation ON care_plans
+CREATE POLICY item_user_isolation ON items
     USING (user_id = auth.uid());
 ```
 
-### RLS for Nested Data (Hypotheses)
+### RLS for Nested Data (child rows inheriting parent's scope)
 
 ```sql
-CREATE TABLE hypotheses (
+CREATE TABLE item_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    care_plan_id UUID NOT NULL REFERENCES care_plans(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    label VARCHAR(64) NOT NULL,
     ...
 );
 
-ALTER TABLE hypotheses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE item_tags ENABLE ROW LEVEL SECURITY;
 
--- User can only access hypotheses in their care_plans
-CREATE POLICY hypothesis_user_isolation ON hypotheses
+-- User can only access tags on items they own
+CREATE POLICY item_tag_user_isolation ON item_tags
     USING (
-        care_plan_id IN (
-            SELECT id FROM care_plans WHERE user_id = auth.uid()
+        item_id IN (
+            SELECT id FROM items WHERE user_id = auth.uid()
         )
     );
 ```
@@ -180,8 +180,8 @@ Migrations run as `service_role` (superuser), which **bypasses RLS**.
 
 ```sql
 GRANT ALL ON users TO service_role;
-GRANT ALL ON care_plans TO service_role;
-GRANT ALL ON hypotheses TO service_role;
+GRANT ALL ON items TO service_role;
+GRANT ALL ON item_tags TO service_role;
 ```
 
 This allows migrations to INSERT/UPDATE/DELETE data during seeding.
@@ -238,41 +238,41 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY users_own ON users USING (id = auth.uid());
 ```
 
-### Related Data (Care Plans)
+### Related Data (user-owned rows)
 
 ```sql
-CREATE TABLE IF NOT EXISTS care_plans (
+CREATE TABLE IF NOT EXISTS items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_care_plans_user ON care_plans(user_id);
-ALTER TABLE care_plans ENABLE ROW LEVEL SECURITY;
-CREATE POLICY care_plans_user_isolation ON care_plans
+CREATE INDEX IF NOT EXISTS idx_items_user ON items(user_id);
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY items_user_isolation ON items
     USING (user_id = auth.uid());
 ```
 
-### Nested Data (Hypotheses)
+### Nested Data (child rows inheriting parent's scope)
 
 ```sql
-CREATE TABLE IF NOT EXISTS hypotheses (
+CREATE TABLE IF NOT EXISTS item_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    care_plan_id UUID NOT NULL REFERENCES care_plans(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+    item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    label VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_hypotheses_care_plan ON hypotheses(care_plan_id);
-ALTER TABLE hypotheses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY hypotheses_user_isolation ON hypotheses
+CREATE INDEX IF NOT EXISTS idx_item_tags_item ON item_tags(item_id);
+ALTER TABLE item_tags ENABLE ROW LEVEL SECURITY;
+CREATE POLICY item_tags_user_isolation ON item_tags
     USING (
-        care_plan_id IN (
-            SELECT id FROM care_plans WHERE user_id = auth.uid()
+        item_id IN (
+            SELECT id FROM items WHERE user_id = auth.uid()
         )
     );
 ```
@@ -283,16 +283,16 @@ CREATE POLICY hypotheses_user_isolation ON hypotheses
 
 ### Tables
 - Plural, lowercase, snake_case
-- `users`, `care_plans`, `hypotheses`
+- `users`, `items`, `item_tags`
 
 ### Columns
 - Lowercase, snake_case
-- Foreign keys: `{table}_id` (e.g., `user_id`, `care_plan_id`)
+- Foreign keys: `{table}_id` (e.g., `user_id`, `item_id`)
 - Timestamps: `created_at`, `updated_at`
 - Status: `status` (not `user_status`)
 
 ### Indexes
-- `idx_{table}_{column}` (e.g., `idx_users_email`, `idx_care_plans_user`)
+- `idx_{table}_{column}` (e.g., `idx_users_email`, `idx_items_user`)
 
 ### Constraints
 - `{table}_{column}_{type}` (e.g., `users_email_unique`, `orders_user_fk`)
@@ -325,7 +325,7 @@ created_at TIMESTAMPTZ NOT NULL DEFAULT now()  -- ← Explicit timezone
 
 ```sql
 -- WRONG
-CREATE TABLE care_plans (
+CREATE TABLE items (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     ...
@@ -333,13 +333,13 @@ CREATE TABLE care_plans (
 );
 
 -- GOOD
-CREATE TABLE care_plans (
+CREATE TABLE items (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     ...
 );
-ALTER TABLE care_plans ENABLE ROW LEVEL SECURITY;
-CREATE POLICY care_plan_isolation ON care_plans
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY items_isolation ON items
     USING (user_id = auth.uid());
 ```
 

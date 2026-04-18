@@ -54,7 +54,7 @@ The reviewer greps for that block. **Skipping this step is a protocol violation*
 
 Read `delivery/epics/epic-X/story-NN.md` end to end. Extract: acceptance criteria, component tree, user flows, edge cases, E2E scenarios. Ask Team Lead for clarification in chat if anything is unclear — do NOT guess.
 
-**Visual reference — CRITICAL step.** Check the story's `## Mockups` section under `## Business Context`. Three outcomes:
+**Visual reference — CRITICAL step.** Check the story's `### Mockups` sub-section under `## Business Context`. Three outcomes:
 
 1. **Figma URL(s) present** → try WebFetch on the URL. If Claude can render the Figma frame (public frames / the Figma API returns content), use it as the **binding visual reference** — match pixel-close, color-close, layout-close. If the Figma is private and WebFetch fails, flag to Team Lead that you need either a shared screenshot or a public preview link; do NOT code visual decisions from a spec alone.
 2. **Static screenshot path(s) present** (e.g. `../../business/mockups/story-NN/navbar.png`) → Read the image directly. Claude is multimodal. These screenshots ARE the source of truth when no live Figma exists; match them precisely.

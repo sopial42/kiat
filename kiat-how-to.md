@@ -158,7 +158,7 @@ Client or product owner opens a Claude Code session at the repo root. They artic
 
 ### Beat 2 — Story planning (BMad session, Plan mode)
 
-Same or different BMad session. Mode: Plan. Creates a new story file at `delivery/epics/epic-NN/story-NN-slug.md` and writes **only** the `## Business Context` section — user story, personas impacted, user-facing acceptance criteria, business rationale, `## Mockups` (visual reference, see section 5 below).
+Same or different BMad session. Mode: Plan. Creates a new story file at `delivery/epics/epic-NN/story-NN-slug.md` and writes **only** the `## Business Context` section — user story, personas impacted, user-facing acceptance criteria, business rationale, `### Mockups` (visual reference, see section 5 below).
 
 ### Beat 3 — Technical execution (Team Lead session)
 
@@ -193,7 +193,7 @@ Tech lead runs `make dev` or `make dev-test`, pokes the feature, runs `make ci-l
 **Shape A — Live Figma URL** (use when the designer actively maintains Figma)
 
 ```markdown
-## Mockups
+### Mockups
 
 - [Navbar — collapsed](https://figma.com/file/XXX/...?node-id=1)
 - [Edit profile modal](https://figma.com/file/XXX/...?node-id=2)
@@ -204,7 +204,7 @@ The Figma is the live source. Never checkin PNG/SVG exports alongside — they'l
 **Shape B — Static screenshots** (use when there's no active Figma, or the client doesn't use Figma)
 
 ```markdown
-## Mockups
+### Mockups
 
 - ![Navbar — collapsed](../../business/mockups/story-NN/navbar.png)
 - ![Edit profile modal](../../business/mockups/story-NN/modal.png)
@@ -216,14 +216,14 @@ Files under `delivery/business/mockups/story-NN/` (the only place binary design 
 
 ### How the frontend-coder uses it
 
-1. Step 1 of the coder's workflow: read the story's `## Mockups` section.
+1. Step 1 of the coder's workflow: read the story's `### Mockups` sub-section under `## Business Context`.
 2. If a Figma URL is present, WebFetch it (Claude can see Figma public frames) or — if private — the coder flags that it needs Figma access and the tech lead shares an exported screenshot for the story.
 3. If screenshots are present, the coder Reads them directly (Claude is multimodal).
 4. If `No mockups`, the coder uses Shadcn primitives with default Tailwind, introduces no visual decision of its own.
 
 ### How the frontend-reviewer enforces it
 
-When `## Mockups` contains references, the reviewer runs the app locally (or reads a Playwright trace screenshot), compares to the visual reference, and flags divergence as `BLOCKED` unless the implementation notes document the trade-off (e.g., "mockup shows a shadow we can't achieve with Tailwind defaults without custom config — using `shadow-md` approximation").
+When `### Mockups` contains references, the reviewer runs the app locally (or reads a Playwright trace screenshot), compares to the visual reference, and flags divergence as `BLOCKED` unless the implementation notes document the trade-off (e.g., "mockup shows a shadow we can't achieve with Tailwind defaults without custom config — using `shadow-md` approximation").
 
 ---
 

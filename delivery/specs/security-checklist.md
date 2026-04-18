@@ -78,8 +78,8 @@ assert.Equal(t, 0, len(plans))  // ← Should be empty
 
 **Policy structure**:
 ```sql
-ALTER TABLE care_plans ENABLE ROW LEVEL SECURITY;
-CREATE POLICY care_plan_isolation ON care_plans
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY items_isolation ON items
     USING (user_id = auth.uid());
 ```
 
@@ -93,7 +93,7 @@ CREATE POLICY care_plan_isolation ON care_plans
 **Example**:
 ```go
 // Limit to 10 requests per minute per user
-if isRateLimited(userID, "create_care_plan") {
+if isRateLimited(userID, "create_item") {
     return c.JSON(http.StatusTooManyRequests, ErrorResponse{
         Code: "RATE_LIMITED",
         Message: "too many requests, try again later",

@@ -84,11 +84,11 @@ _Point at the evergreen docs in `delivery/business/` that frame this epic. Link 
 
 ### Naming conventions (epic-local)
 
-_(populate as needed — e.g., "all hypothesis endpoints use `hypothesis_id` path param, not `id`")_
+_(populate as needed — e.g., "all item endpoints use `item_id` path param, not `id`")_
 
 ### Shared components introduced by this epic
 
-_(populate as components are created — e.g., "story 02 introduced `<HypothesisCard>` at `frontend/src/features/hypotheses/HypothesisCard.tsx` — reuse in story 03+ instead of recreating")_
+_(populate as components are created — e.g., "story 02 introduced `<ItemCard>` at `frontend/src/features/items/ItemCard.tsx` — reuse in story 03+ instead of recreating")_
 
 ### API contracts baseline for this epic
 
@@ -96,7 +96,7 @@ _(populate as the first backend story lands — e.g., "response envelope for thi
 
 ### Epic-specific gotchas
 
-_(populate as stories discover surprises — e.g., "the S3 bucket policy requires `x-amz-meta-patient-id` header on every upload — missed at story 02, fixed in review")_
+_(populate as stories discover surprises — e.g., "the S3 bucket policy requires `x-amz-meta-item-id` header on every upload — missed at story 02, fixed in review")_
 
 ---
 

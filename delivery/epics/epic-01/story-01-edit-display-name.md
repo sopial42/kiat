@@ -45,14 +45,16 @@ First "real" feature on the EPIC 00 scaffold. Demonstrates the two-persona workf
 **This is exactly where your visual reference would go** when you adapt or replace this story. Two valid shapes (see `kiat-how-to.md` section 5):
 
 ```markdown
-## Mockups
+### Mockups
 
-### Option A — Live Figma URL
+<!-- Pick ONE shape — live Figma OR static screenshots. Never both. -->
+
+#### Option A — Live Figma URL
 - [Navbar — signed-in state](https://figma.com/file/XXX/...?node-id=1)
 - [User menu — open](https://figma.com/file/XXX/...?node-id=2)
 - [Edit profile modal](https://figma.com/file/XXX/...?node-id=3)
 
-### Option B — Static screenshots
+#### Option B — Static screenshots
 - ![Navbar](../../business/mockups/story-01/navbar.png)
 - ![User menu](../../business/mockups/story-01/user-menu.png)
 - ![Edit modal](../../business/mockups/story-01/edit-modal.png)

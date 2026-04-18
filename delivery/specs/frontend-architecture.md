@@ -180,28 +180,28 @@ export function CarePlanList() {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
-export function CreatePatientButton() {
+export function CreateItemButton() {
   const queryClient = useQueryClient();
-  
+
   const { mutate, isPending, error } = useMutation({
-    mutationFn: (data) => api.createPatient(data),
+    mutationFn: (data) => api.createItem(data),
     onSuccess: () => {
       // Invalidate cached data to refetch
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
-      // Or: queryClient.refetchQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      // Or: queryClient.refetchQueries({ queryKey: ['items'] });
     },
     onError: (err) => {
       // Handle error (show toast, etc.)
-      console.error('Failed to create patient:', err);
+      console.error('Failed to create item:', err);
     },
   });
 
   return (
-    <Button 
-      onClick={() => mutate({ name: 'Alice', email: 'alice@example.com' })}
+    <Button
+      onClick={() => mutate({ title: 'First item' })}
       disabled={isPending}
     >
-      {isPending ? 'Creating...' : 'Create Patient'}
+      {isPending ? 'Creating...' : 'Create Item'}
     </Button>
   );
 }
@@ -382,22 +382,25 @@ All tokens in `frontend/src/globals.css`:
   }
 }
 
+/* Neutral Tailwind v4 defaults — see delivery/specs/design-system.md for the
+   protocol. Replace with your brand palette when the first visual reference
+   arrives, in the same commit as the feature that needs it. */
 @theme {
-  --color-primary: #273d54;
-  --color-primary-light: #52acd9;
-  --color-success: #10b981;
-  
+  --color-primary:       #334155;  /* slate-700 */
+  --color-primary-light: #64748b;  /* slate-500 */
+  --color-success:       #10b981;  /* emerald-500 */
+
   --spacing-md: 1rem;
-  --radius-md: 16px;
+  --radius-lg: 1rem;  /* 16px — see design-system.md radius scale */
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-[16px] shadow-md p-6;
+    @apply bg-white rounded-lg shadow-md p-6;
   }
-  
+
   .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-[16px] hover:bg-primary-light;
+    @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light;
   }
 }
 ```

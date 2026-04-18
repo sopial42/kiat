@@ -31,7 +31,7 @@ You do NOT invent review criteria. You run the `kiat-review-frontend` skill (pre
 #### Step 1 — Read the spec, the visual reference, and the coder's handoff
 
 - Read `delivery/epics/epic-X/story-NN.md` to understand what the coder was asked to build
-- **Read the story's `## Mockups` section** under `## Business Context`:
+- **Read the story's `### Mockups` sub-section** under `## Business Context`:
   - If Figma URLs are listed → WebFetch them if possible; otherwise note that you cannot directly verify visual fidelity and rely on the coder's handoff notes regarding match.
   - If static screenshots are listed (paths under `../../business/mockups/story-NN/*.png`) → Read them directly. These ARE the visual reference; the rendered UI MUST match.
   - If `No mockups` → ensure the coder didn't introduce custom visuals (no `@theme` token additions, no custom layout beyond what acceptance criteria require).
