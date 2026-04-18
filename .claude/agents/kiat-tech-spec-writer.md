@@ -151,9 +151,11 @@ When the spec will contain any AC that names a specific HTTP auth header (`X-Tes
 3. Identify which value of the test-auth toggle (`ENABLE_TEST_AUTH` or equivalent) is used by the Playwright job.
 4. Assert the header that mode produces, NOT the header the prompt assumes.
 
-For the current project the answer is unambiguous: `Makefile:205-208` + `.github/workflows/ci.yml:238` both set `ENABLE_TEST_AUTH=false` for the E2E job → CI runs real-Clerk → ACs for Playwright polling assertions should name `Authorization: Bearer`, NOT `X-Test-User-Id`. If a future config change inverts this, the rule still holds — re-verify at spec time, don't rely on this hard-coded example.
+**Do NOT hard-code a line-number assumption in this framework prompt.** The `Makefile` and CI workflow evolve; any specific citation baked in here would go stale. At spec time, Read the relevant files, find the `ENABLE_TEST_AUTH` assignment in the Playwright job, and cite the *file:line you just verified* in the spec body — not a number carried over from an earlier session.
 
-Cite the verified source in the spec body (e.g., in a "CI context" subsection or inline in the AC itself) so the coder and reviewer can trace the reasoning back to the Makefile/workflow.
+Typical outcome on a well-configured stack: CI runs in real-Clerk mode (`ENABLE_TEST_AUTH=false`) → ACs for Playwright polling assertions name `Authorization: Bearer`, NOT `X-Test-User-Id`. Projects can legitimately invert this choice; the rule "assert the branch CI actually runs, verified now, not from memory" holds regardless.
+
+Cite the verified source in the spec body (e.g., in a "CI context" subsection or inline in the AC itself) with the file path and the current line number, so the coder and reviewer can trace the reasoning back.
 
 ### 3. Identify ambiguities and ask the user
 

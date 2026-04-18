@@ -1,5 +1,7 @@
 # Story 03: Playwright E2E suite (JWT swap, real-backend, Smocker scenarios)
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic 00 — Bootstrap](./_epic.md)
 
 **Objective**: ship the canonical Playwright harness — `global.setup.ts` with JWT swap, `e2e/real-backend/` directory with at least one real-backend spec, centralised `page.route()` response builders with CORS exposure headers, and Smocker scenario seeding for backend-to-external mocks. After this story, any future story involving UI can add specs by copy-pasting the canonical structure.
@@ -73,4 +75,12 @@ The test IS the deliverable. Reviewer checks:
 
 ---
 
-**Status**: 🟡 To be implemented.
+## Review Log
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+_(not yet validated)_

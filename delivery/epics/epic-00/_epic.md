@@ -1,6 +1,8 @@
 # Epic 00: Bootstrap — stack fonctionnel prêt à recevoir des stories métier
 
-**Status**: 🟡 In Progress (framework/specs/structure done; code to be implemented story-by-story)
+**Status**: 📝 Drafted
+
+> Framework, specs, and skeletons are shipped (`aa7e245` and onward). Code is not yet implemented — each story flips to 🚧 In Progress when Team Lead picks it up, and this epic auto-aggregates to 🚧 when any child is in progress. See [`../README.md#status-lifecycle`](../README.md#status-lifecycle).
 
 **Outcome**: a fresh fork of kiat can run `make dev` end-to-end on day 1 — auth Clerk fonctionnelle, 1 CRUD générique (items) persisté en Postgres sous RLS, suite Playwright verte, CI GitHub Actions verte au premier push. Une fois EPIC 00 done, la stack ne doit plus jamais être retouchée pour des raisons d'infra — toutes les stories suivantes ajoutent uniquement du métier.
 

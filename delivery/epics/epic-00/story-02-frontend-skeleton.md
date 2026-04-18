@@ -1,5 +1,7 @@
 # Story 02: Frontend skeleton + Clerk wiring + items CRUD UI
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic 00 — Bootstrap](./_epic.md)
 
 **Objective**: stand up the Next.js App Router frontend with Clerk auth (real mode + test-auth bypass branch), wire a minimal UI for creating and listing items, enforce the middleware at `src/middleware.ts`, and respect all hooks / RSC / design system conventions from day 1.
@@ -83,4 +85,12 @@ This is a deliberate choice, not an oversight: the scaffold is design-neutral by
 
 ---
 
-**Status**: 🟡 To be implemented.
+## Review Log
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+_(not yet validated)_

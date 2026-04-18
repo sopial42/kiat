@@ -1,5 +1,7 @@
 # Story NN: [Title]
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic X](../_epic.md)
 
 **Objective**: [What does this story deliver? 1-2 sentences]
@@ -7,6 +9,8 @@
 **T-Shirt Size**: S / M / L
 
 **Scope**: backend-only | frontend-only | both | infra
+
+> The `**Status**:` line above is the single source of truth for this story's state. Values and transitions defined in [`../README.md#status-lifecycle`](../README.md#status-lifecycle). Team Lead flips it automatically as phases run.
 
 ---
 
@@ -47,22 +51,27 @@ _Link only the entries that actually matter for this specific story. Don't list 
 
 ### Mockups
 
-> If the story touches UI, link the Figma frames here. The live Figma URL is
-> the single source of truth — do NOT check in exported PNGs (they go stale
-> silently). The frontend coder will read the frame via the URL; Claude can
-> WebFetch a Figma URL to inspect the design if the tool is available.
->
-> If no mockups exist yet, write `No mockups — implementer uses the existing
-> design system`. If they'll be added later, link the Figma project root and
-> note which frames are pending.
->
-> If a client wants to archive snapshots for audit / compliance reasons,
-> create `delivery/business/mockups/story-NN/` with the exports — `delivery/
-> business/` is the right parent for client-archival assets since mockups
-> are project-specific, not framework-level.
+> Two valid shapes, pick one per story (never mix). Full rules:
+> [`../README.md#mockups--how-ui-designs-flow-into-stories`](../README.md#mockups--how-ui-designs-flow-into-stories)
+> and [`../../../kiat-how-to.md#5-visual-references--figma-urls-or-static-screenshots`](../../../kiat-how-to.md).
 
+**Shape A — Live Figma URL** (use when the designer actively maintains Figma):
+
+```
 - [Screen A](https://figma.com/file/XXXX/...?node-id=YYYY)
 - [Screen B — empty state](https://figma.com/file/XXXX/...?node-id=ZZZZ)
+```
+
+**Shape B — Static screenshots** (use when there's no active Figma, or the client doesn't use Figma):
+
+```
+- ![Screen A](../../business/mockups/story-NN/screen-a.png)
+- ![Screen B — empty state](../../business/mockups/story-NN/screen-b-empty.png)
+```
+
+**No UI in this story**: write `No mockups — implementer uses the existing design system`.
+
+Delete the two unused shapes above and keep only the one that applies. The frontend-coder reads whatever is present (WebFetch for Figma URLs, Read for PNGs since Claude is multimodal) and matches pixel-close.
 
 ---
 
@@ -262,4 +271,20 @@ frontend/e2e/feature.spec.ts
 
 ---
 
-**Status**: 🟡 In Progress / 🟢 Done / 🔴 Blocked
+## Review Log
+
+> Append-only. Team Lead writes one cycle block per review round, following the
+> schema in [`../README.md#review-log`](../README.md#review-log). Keep the
+> `<!-- REVIEW_LOG_BLOCK_BEGIN -->` / `<!-- REVIEW_LOG_BLOCK_END -->` markers intact —
+> they are contract markers that tooling and Team Lead use to locate cycles.
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+> Filled by Team Lead at Phase 7 for production-affecting stories. Protocol in
+> [`../../../.claude/agents/kiat-team-lead.md`](../../../.claude/agents/kiat-team-lead.md) Phase 7.
+
+_(not yet validated)_

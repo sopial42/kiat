@@ -114,8 +114,10 @@ The categories where this rule is load-bearing:
 
 **Audit line** (always emit before spawning the writer):
 ```
-Prompt hygiene: verified N factual claims against sources (Makefile:205-208, ci.yml:238, ...), M claims delegated to writer for verification, 0 claims asserted from memory
+Prompt hygiene: verified N factual claims against sources (<file>:<line>, <file>:<line>, ...), M claims delegated to writer for verification, 0 claims asserted from memory
 ```
+
+The `<file>:<line>` placeholders in the example above are literal — replace them with the actual files and lines you Read during verification (e.g., `Makefile:42`, `.github/workflows/ci.yml:17`). Do NOT copy a line-number example from this prompt as if it were a verified value.
 
 If N+M = 0 (prompt makes no factual claims), emit:
 ```

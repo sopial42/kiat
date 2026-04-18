@@ -1,5 +1,7 @@
 # Story 04: CI pipeline (GitHub Actions, test gates, deploy placeholder)
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic 00 — Bootstrap](./_epic.md)
 
 **Objective**: `.github/workflows/ci.yml` that runs the full test gate (`make ci-local`) on every push / PR, caches Go modules and npm, and is green on the first push after clone.
@@ -71,4 +73,12 @@ The pipeline IS the deliverable. Reviewer pushes a deliberate breaking commit (e
 
 ---
 
-**Status**: 🟡 To be implemented.
+## Review Log
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+_(not yet validated)_

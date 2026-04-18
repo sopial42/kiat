@@ -1,5 +1,7 @@
 # Story 01: Add editable display name with navbar
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic 01 — User profile](./_epic.md)
 
 **Objective**: add a `display_name` column on the `users` table, expose a `PATCH /api/users/me` endpoint to update it, and surface it in a new navbar with an "Edit profile" modal. Cross-layer story showcasing Team Lead's parallel backend + frontend coder launch.
@@ -150,4 +152,16 @@ When you add one of these, the frontend-coder will match it pixel-close. The tec
 
 ---
 
-**Status**: 🟡 To be implemented. Launch Team Lead on this file to see the full pipeline (writer → backend + frontend coders in parallel → reviewers → verdict) produce working code.
+## Review Log
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+_(not yet validated)_
+
+---
+
+> Launch Team Lead on this file to see the full pipeline (writer → backend + frontend coders in parallel → reviewers → verdict) produce working code. Status flips to 🚧 In Progress at Phase 0b, then ✅ Done at Phase 6 (and Phase 7 if prod-affecting).

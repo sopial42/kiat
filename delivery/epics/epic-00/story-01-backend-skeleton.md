@@ -1,5 +1,7 @@
 # Story 01: Backend skeleton + auth middleware + items CRUD + RLS
 
+**Status**: 📝 Drafted
+
 **Epic**: [Epic 00 — Bootstrap](./_epic.md)
 
 **Objective**: stand up the Go backend with Clean Architecture 4 layers, wire Clerk JWT + test-auth middleware with the mandatory production guards, and ship a generic `items` CRUD resource under row-level security.
@@ -102,4 +104,12 @@ No mockups — backend-only story, no UI.
 
 ---
 
-**Status**: 🟡 To be implemented — Team Lead will orchestrate tech-spec-writer + backend-coder + backend-reviewer when you invoke it on this file.
+## Review Log
+
+_(no cycles run yet)_
+
+---
+
+## Prod Validation
+
+_(not yet validated)_

@@ -76,7 +76,7 @@ services:
 ```
 
 Brought up by:
-- `make infra-up-e2e` — starts `postgres minio smocker` together
+- `make infra-up-test` — starts `postgres minio smocker` together
 - Referenced by `make dev-test`, `make test-venom`, `make test-e2e` as a dependency
 
 **Key ports:**

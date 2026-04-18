@@ -102,16 +102,43 @@ Two different heading levels on purpose: the user-facing list is a sub-section o
 
 ### Mockups — how UI designs flow into stories
 
-Stories that touch UI carry a `### Mockups` sub-section under `## Business Context`, holding **Figma URLs** — never checked-in PNG/SVG exports.
+Stories that touch UI carry a `### Mockups` sub-section under `## Business Context`. **Two valid shapes, one per story, never mixed.**
 
-**Why URLs only:**
-- **Source of truth stays live.** A Figma frame updated by the designer remains in sync; a PNG checked in three weeks ago rots silently.
-- **Repo stays lean.** Design assets can weigh dozens of MB; git is not an art server.
-- **Tech-spec-writer and frontend coder read the URL.** Claude can WebFetch a public Figma URL (or the designer shares a password-protected link via a dev-only channel); the coder doesn't need a local copy.
+#### Shape A — Live Figma URL (preferred when the designer actively maintains Figma)
 
-**If a client absolutely needs archived snapshots** (audit trail, contractual deliverable), those exports go under `delivery/business/mockups/story-NN/` — not in `delivery/epics/`, not in `delivery/specs/`. Client-archival assets belong with client-archival knowledge in `delivery/business/` (which is markdown-only by default, but a binary sub-folder is acceptable when the contract demands it). The story file still carries the Figma URL in `### Mockups`; the archive is parallel, not a replacement.
+```markdown
+### Mockups
 
-**What the template says:** see [`epic-template/story-NN-slug.md`](epic-template/story-NN-slug.md#mockups) for the canonical `### Mockups` block. Stories with no UI change write `No mockups — implementer uses the existing design system`.
+- [Navbar — signed-in state](https://figma.com/file/XXX/...?node-id=1)
+- [User menu — open](https://figma.com/file/XXX/...?node-id=2)
+- [Edit profile modal](https://figma.com/file/XXX/...?node-id=3)
+```
+
+The live Figma is the source of truth — never check in PNG/SVG exports alongside a live Figma (they go stale silently when the designer updates the frames).
+
+#### Shape B — Static screenshots (when there's no active Figma, or the client doesn't use Figma)
+
+```markdown
+### Mockups
+
+- ![Navbar](../../business/mockups/story-NN/navbar.png)
+- ![User menu](../../business/mockups/story-NN/user-menu.png)
+- ![Edit profile modal](../../business/mockups/story-NN/edit-modal.png)
+```
+
+Files live under `delivery/business/mockups/story-NN/` — the only place binary design assets belong in this repo. When screenshots ARE the reference, they can't go stale because they ARE the source of truth.
+
+#### When no visual reference exists
+
+Write `No mockups — implementer uses the existing design system`. The frontend-coder will use Shadcn primitives with default Tailwind and not invent a visual direction.
+
+#### Why these rules
+
+- **Source of truth stays in one place.** Mixing a live Figma with a checked-in PNG drifts the first time the designer updates.
+- **Tech-spec-writer does NOT restate visual decisions** in the technical sections — it links. The frontend-coder fills the gap by reading the reference (WebFetch for Figma URLs, Read for screenshots — Claude is multimodal).
+- **The rule applies identically to both shapes**: whichever one carries the reference, it IS binding. Deviations during implementation are discussed in the review, never decided unilaterally.
+
+**What the template says:** see [`epic-template/story-NN-slug.md`](epic-template/story-NN-slug.md) for the canonical `### Mockups` block. The repo-root doc [`../../kiat-how-to.md`](../../kiat-how-to.md) section 5 has the human-oriented overview.
 
 ### Rules BMad respects when writing here
 
@@ -127,6 +154,130 @@ Stories that touch UI carry a `### Mockups` sub-section under `## Business Conte
 Once BMad has written a story's `## Business Context` and the user is ready to turn it into code, the user invokes **Team Lead** (`kiat-team-lead`) on the story file. Team Lead detects that the technical sections are missing and enters **Phase -1**, where it spawns `kiat-tech-spec-writer` as a sub-agent. The writer runs in **enrichment mode**: it preserves the pre-existing `## Business Context` intact, reads any `../business/` docs linked from it, and appends the technical sections below.
 
 The user never invokes `kiat-tech-spec-writer` directly — Team Lead is the single entry point for all technical work. See [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) for Phase -1 and [`../../.claude/agents/kiat-tech-spec-writer.md`](../../.claude/agents/kiat-tech-spec-writer.md) for the enrichment-mode protocol on the writer side.
+
+---
+
+## Status lifecycle
+
+Every `_epic.md` and `story-NN-slug.md` carries a `**Status**:` line at the **top** of the file (right after the `# Title` heading), using one of these five values:
+
+| Emoji | Status | Meaning | Who sets it |
+|---|---|---|---|
+| 📥 | `Backlog` | Known work, not planned for the current cycle | BMad (when placing a story in a future epic without a schedule) |
+| 📝 | `Drafted` | File exists with `## Business Context` populated; technical sections are empty or stubbed | BMad on creation, or tech-spec-writer during Phase -1 enrichment |
+| 🚧 | `In Progress` | Technical sections complete, Team Lead has started or is running the pipeline | Team Lead at Phase 0b transition |
+| ✅ | `Done` | Reviewers both APPROVED, rollup event written, (if applicable) Phase 7 prod validation passed | Team Lead at Phase 6 completion |
+| 🛑 | `Blocked` | Pipeline escalated — spec gap, security finding, fix budget exhausted, prod validation failed | Team Lead on escalation |
+
+**Format in the file** (first line after the title):
+
+```markdown
+# Story 01: Add editable display name with navbar
+
+**Status**: 📝 Drafted
+```
+
+**Transitions** (agents MUST respect these — no skipping states):
+
+```
+📥 Backlog  → 📝 Drafted        (BMad or writer adds content)
+📝 Drafted  → 🚧 In Progress    (Team Lead starts Phase 0b)
+🚧 In Progress → ✅ Done         (Phase 6 rollup success + Phase 7 if applicable)
+🚧 In Progress → 🛑 Blocked     (any escalation)
+🛑 Blocked → 🚧 In Progress     (unblock — human resumed the pipeline)
+✅ Done → (terminal; no further edits except retrospective notes)
+```
+
+**Epic-level aggregation rule**: an `_epic.md` carries its own `**Status**:`. Rule of thumb for Team Lead to update it:
+- All child stories `✅ Done` → epic `✅ Done`
+- Any child `🛑 Blocked` → epic `🛑 Blocked`
+- Otherwise → epic `🚧 In Progress`
+- All children `📥 Backlog` or file is fresh → epic `📝 Drafted`
+
+**Footer placeholders** (`**Status**: 🟡 In Progress / 🟢 Done / 🔴 Blocked` at the bottom of old-style templates) are deprecated. The top-of-file line is the single source of truth; no duplicate footer.
+
+---
+
+## Review Log
+
+Every story that goes through the pipeline accumulates a `## Review Log` section **at the bottom of the file** (below `## Testing Plan` / `## Implementation Notes for Coder`, above the final `---` if any). Team Lead appends one **cycle block** per review round. Append-only — never rewrite history.
+
+### Template pre-scaffold
+
+Every story file ships with this section pre-created:
+
+```markdown
+## Review Log
+
+_(no cycles run yet)_
+```
+
+On the first cycle, Team Lead replaces `_(no cycles run yet)_` with the first cycle block. On subsequent cycles, Team Lead appends a new block below the previous one.
+
+### Cycle block schema
+
+Each block follows this exact shape (reviewers emit it wrapped in markers, Team Lead appends verbatim):
+
+```markdown
+<!-- REVIEW_LOG_BLOCK_BEGIN -->
+### Cycle <N> — <ISO-8601 UTC timestamp>
+
+**Reviewer**: `kiat-backend-reviewer` | `kiat-frontend-reviewer`
+**Verdict**: `APPROVED` | `NEEDS_DISCUSSION` | `BLOCKED`
+
+**Audit lines**:
+- Skill invocations: `kiat-review-backend` / `kiat-review-frontend` PASSED
+- Clerk-auth skill: <verbatim audit line emitted by reviewer>
+- TEST_PATTERNS: <PASSED | DRIFT — file:line>
+
+**Issues raised** (empty if APPROVED):
+- [CATEGORY] file:line — <one-line summary>
+- ...
+
+**Arbitration** (only on NEEDS_DISCUSSION):
+- Team Lead decision: <override with rationale | escalated to writer / user / designer>
+
+**Cycle outcome**:
+- Files changed in fix: <list> (empty if APPROVED or escalated)
+- Fix budget consumed this cycle: <minutes>
+- Cumulative fix budget: <total minutes> / 45
+<!-- REVIEW_LOG_BLOCK_END -->
+```
+
+The `<!-- REVIEW_LOG_BLOCK_BEGIN -->` and `<!-- REVIEW_LOG_BLOCK_END -->` HTML comments are **contract markers** — they let Team Lead and tooling extract individual cycles without ambiguity. Do not remove them.
+
+### Who writes what
+
+| Field | Source |
+|---|---|
+| Reviewer, Verdict, Audit lines, Issues raised | Reviewer emits the block at the end of its review output |
+| Arbitration | Team Lead fills this field when handling a `NEEDS_DISCUSSION` |
+| Cycle outcome | Team Lead fills after the fix cycle (or marks "APPROVED — no fix needed") |
+
+The reviewer's full review body (prose explanation of each issue) lives **above** the block in the Team Lead response log, not in the story file. The `## Review Log` section keeps only the structured block per cycle — prose stays in the conversation.
+
+### Idempotent append
+
+On every cycle, Team Lead:
+1. Locates `## Review Log` in the story file
+2. If it still contains the `_(no cycles run yet)_` placeholder → replace with the new cycle block
+3. Otherwise → append the new cycle block after the last `<!-- REVIEW_LOG_BLOCK_END -->`
+
+Never rewrite previous cycles. Corrections go in a new cycle block with a note; history is append-only.
+
+---
+
+## Prod Validation (Phase 7 artifact)
+
+Production-affecting stories carry a `## Prod Validation` section **below `## Review Log`**. Template scaffolds it as:
+
+```markdown
+## Prod Validation
+
+_(not yet validated)_
+```
+
+Team Lead replaces this placeholder after executing Phase 7, per the protocol in [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) Phase 7.
 
 ---
 

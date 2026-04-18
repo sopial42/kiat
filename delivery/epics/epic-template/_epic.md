@@ -1,5 +1,9 @@
 # Epic [NN]: [Title]
 
+**Status**: 📝 Drafted
+
+> Epic-level status aggregates from child stories — see [`../README.md#status-lifecycle`](../README.md#status-lifecycle). Team Lead flips this automatically as stories progress.
+
 **Objective**: [1-2 sentences. What problem does this epic solve?]
 
 **Scope**: [What's IN this epic? What's OUT for future epics?]

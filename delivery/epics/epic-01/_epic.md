@@ -1,6 +1,8 @@
 # Epic 01: User profile — navbar and editable display name
 
-**Status**: 🟡 Ready to implement (story-01 shipped as a starter example)
+**Status**: 📝 Drafted
+
+> Story-01 is shipped as a learning example, ready for Team Lead to execute. See [`../README.md#status-lifecycle`](../README.md#status-lifecycle) for transitions.
 
 **Outcome**: after this epic, a signed-in user has a navbar with their display name and can edit it from a modal. This is the **first "real" feature** on top of the EPIC 00 infrastructure — a starter demonstration of how Kiat's pipeline builds features end-to-end (backend + frontend + tests in parallel), with explicit guidance on bringing your own visual reference.
 
