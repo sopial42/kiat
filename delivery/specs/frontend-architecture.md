@@ -36,8 +36,8 @@ frontend/
 │   │   │   ├── input.tsx
 │   │   │   └── ...
 │   │   └── features/             # Feature-specific components
-│   │       ├── PatientForm.tsx
-│   │       └── CarePlanCard.tsx
+│   │       ├── ItemForm.tsx
+│   │       └── ItemCard.tsx
 │   ├── hooks/                    # Custom hooks
 │   │   ├── useQuery.ts           # Data fetching (wrapped)
 │   │   ├── useMutation.ts        # Mutations (wrapped)
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1>{data.title}</h1>
-      <PatientForm initialData={data} />  {/* ← Client component for interaction */}
+      <ItemForm initialData={data} />  {/* ← Client component for interaction */}
     </div>
   );
 }
@@ -98,14 +98,14 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 
-interface PatientFormProps {
-  initialData?: PatientData;
+interface ItemFormProps {
+  initialData?: ItemData;
 }
 
-export function PatientForm({ initialData }: PatientFormProps) {
+export function ItemForm({ initialData }: ItemFormProps) {
   const [name, setName] = useState(initialData?.name || '');
   const { mutate, isPending } = useMutation({
-    mutationFn: (data) => api.createPatient(data),
+    mutationFn: (data) => api.createItem(data),
     onSuccess: () => {
       // Refresh, navigate, etc.
     },
@@ -148,10 +148,10 @@ async function Page() {
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
-export function CarePlanList() {
-  const { data: carePlans, isLoading, error } = useQuery({
-    queryKey: ['carePlans'],  // Cache key
-    queryFn: () => api.getCarePlans(),
+export function ItemList() {
+  const { data: items, isLoading, error } = useQuery({
+    queryKey: ['items'],  // Cache key
+    queryFn: () => api.getItems(),
   });
 
   if (isLoading) return <Skeleton />;
@@ -159,8 +159,8 @@ export function CarePlanList() {
 
   return (
     <div>
-      {carePlans?.map((plan) => (
-        <CarePlanCard key={plan.id} plan={plan} />
+      {items?.map((item) => (
+        <ItemCard key={item.id} item={item} />
       ))}
     </div>
   );
@@ -257,10 +257,10 @@ export function useAutoSave<T>({
 }
 
 // Usage
-export function PatientForm({ initialData }) {
+export function ItemForm({ initialData }) {
   const { data, saveStatus, handleChange } = useAutoSave({
     initialData,
-    onSave: (data) => api.updatePatient(data),
+    onSave: (data) => api.updateItem(data),
     enabled: true,  // ← Must be stable (not `!isLoading`)
   });
 
@@ -326,7 +326,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-export function PatientForm() {
+export function ItemForm() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -337,7 +337,7 @@ export function PatientForm() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await api.createPatient(data);
+      await api.createItem(data);
       // Success handling
     } catch (error) {
       form.setError('root', { message: 'Failed to create' });

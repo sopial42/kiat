@@ -110,7 +110,7 @@ This matches the Kiat audit-line pattern used elsewhere in the framework. Skippi
 
 ## When to skip even though the story is visual
 
-- **The story uses an existing pattern.** If the spec says "reuse PatientCard" or "follow the dashboard layout", project consistency beats fresh generic advice. Query `project-memory.md` and existing code instead.
+- **The story uses an existing pattern.** If the spec says "reuse `ItemCard`" or "follow the existing dashboard layout", project consistency beats fresh generic advice. Query `project-memory.md` and existing code instead.
 - **A designer has provided explicit direction.** Figma files, brand colors, or a hand-off document — follow them. Querying this skill would produce conflicting recommendations.
 - **The story is tiny.** Label changes, copy edits, small padding tweaks. The query overhead isn't worth it.
 - **Adding this skill pushes the coder's context budget over the 25k limit.** Budget is a hard constraint; a missed UX recommendation is a soft quality issue. Budget wins.

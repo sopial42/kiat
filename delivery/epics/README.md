@@ -89,7 +89,7 @@ As [persona], I want [goal], so that [value].
 [1–3 sentences: why this need exists, what user pain it relieves, why now.]
 ```
 
-The **user-facing acceptance criteria** that BMad writes are different from the **technical acceptance criteria** that the tech-spec-writer may add lower in the file. The user-facing ones are observable by the user ("I can see my patients sorted by risk"); the technical ones are implementation-bound ("`GET /patients?sort=risk` returns 200 with pagination headers").
+The **user-facing acceptance criteria** that BMad writes are different from the **technical acceptance criteria** that the tech-spec-writer may add lower in the file. The user-facing ones are observable by the user ("I can see my items sorted by priority"); the technical ones are implementation-bound ("`GET /items?sort=priority` returns 200 with pagination headers").
 
 **Exact section headers (do not rename):**
 

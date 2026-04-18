@@ -64,9 +64,9 @@ clerkSecret := "sk_test_abc123..."  // ❌ Hardcoded
 **Test case**:
 ```go
 // User B should NOT see User A's data
-seedCarePlan(db, userAID, ...)
-plans := getCarePlans(db, userBID)  // Query as User B
-assert.Equal(t, 0, len(plans))  // ← Should be empty
+seedItem(db, userAID, ...)
+items := getItems(db, userBID)  // Query as User B
+assert.Equal(t, 0, len(items))  // ← Should be empty
 ```
 
 ### Row-Level Security (RLS) (OWASP A01)

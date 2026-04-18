@@ -10,7 +10,7 @@ Anything that didn't exist before — a new page, a new component, a new section
 
 **Examples:**
 - Adding a settings page that didn't exist
-- Creating a patient search component with filters and results
+- Creating a new search component with filters and results
 - Designing an empty state for a list that could now be empty
 - Building a first-time-user onboarding flow
 
@@ -48,7 +48,7 @@ When `delivery/specs/design-system.md` gives you the colors and spacing but does
 
 ### The story uses an existing pattern
 
-If the spec says "reuse PatientCard" or "follow the same layout as the existing dashboard", consistency with what's already there matters more than fresh recommendations. Query `delivery/specs/project-memory.md` and existing code instead.
+If the spec says "reuse `ItemCard`" or "follow the same layout as the existing dashboard", consistency with what's already there matters more than fresh recommendations. Query `delivery/specs/project-memory.md` and existing code instead.
 
 **Examples to skip:**
 - Adding another card to an existing card grid

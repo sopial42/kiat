@@ -17,7 +17,7 @@ Optional flags (check `search.py --help` for the full list):
 
 ## Example 1: Designing a new form with validation
 
-**Scenario**: Story 03 introduces a patient registration form with 8 fields, client-side validation, and inline errors.
+**Scenario**: Story 03 introduces a signup form with 8 fields, client-side validation, and inline errors.
 
 ```bash
 # Form design patterns

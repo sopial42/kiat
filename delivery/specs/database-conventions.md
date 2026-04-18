@@ -361,12 +361,12 @@ In tests, verify User B cannot read User A's data:
 
 ```go
 // Seed User A's data
-seedCarePlan(db, userAID)
+seedItem(db, userAID)
 
 // Attempt to read as User B
-plans, err := getCarePlans(db, userBID)
+items, err := getItems(db, userBID)
 assert.NoError(t, err)
-assert.Equal(t, 0, len(plans))  // ← User B sees nothing
+assert.Equal(t, 0, len(items))  // ← User B sees nothing
 ```
 
 ---

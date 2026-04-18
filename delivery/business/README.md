@@ -10,7 +10,7 @@ Suggested files (create them as the project grows — don't pre-create empty stu
 
 | File | What it contains | When to create |
 |---|---|---|
-| `glossary.md` | Domain terms with precise definitions (what is a "patient", a "care plan", a "hypothesis"?) | As soon as the team uses any term that's ambiguous outside context |
+| `glossary.md` | Domain terms with precise definitions (terms that are ambiguous outside your domain — e.g. does "order" mean a purchase order or a sort order?) | As soon as the team uses any term that's ambiguous outside context |
 | `personas.md` | User personas with goals, pain points, and constraints | Before building the first user-facing feature |
 | `business-rules.md` | Invariant business rules (compliance, GDPR, audit, quotas) | As soon as any rule is non-obvious or could be forgotten |
 | `domain-model.md` | Entities and their relations, at the **business** level (not the SQL schema) | Before the data model stabilizes |
@@ -36,13 +36,13 @@ Routing rules (same "load only what you need" principle as `delivery/specs/`):
 
 ## Sizing discipline
 
-Keep each file under ~5k tokens (~20 KB). If a file grows past that, split it by sub-domain (for example `business/patients/glossary.md`, `business/billing/glossary.md`). The tech-spec-writer's budget is not strictly capped, but feeding it 30k tokens of domain context on every story will drown the technical spec it's trying to write.
+Keep each file under ~5k tokens (~20 KB). If a file grows past that, split it by sub-domain (for example `business/orders/glossary.md`, `business/billing/glossary.md`). The tech-spec-writer's budget is not strictly capped, but feeding it 30k tokens of domain context on every story will drown the technical spec it's trying to write.
 
 ## Relationship with `project-memory.md`
 
 [`delivery/specs/project-memory.md`](../specs/project-memory.md) is for **emergent cross-story patterns discovered during implementation** — things like "we decided to use `updated_at` for optimistic locking in story 7, so story 12 should follow the same pattern." It is project-owned but technical.
 
-This directory is for **business knowledge that exists independently of any story** — things like "a patient can only be enrolled in one active care plan at a time, because French healthcare regulations require a single responsible provider." It is project-owned and business-level.
+This directory is for **business knowledge that exists independently of any story** — things like "a customer can have at most one active subscription at a time, because our billing provider enforces it upstream." It is project-owned and business-level.
 
 If you're not sure where a fact belongs: if removing the project and rebuilding it from scratch would still leave the fact valid, it's business (here). If the fact only exists because of how the code was written, it's project memory (specs/project-memory.md).
 
@@ -58,24 +58,24 @@ In short:
 
 ## Language convention
 
-The content of `delivery/business/` reflects the **project's business language**, which is a project-level choice. For French-domain projects (French users, French-speaking stakeholders, French-specific regulations like RGPD, CPAM, or medical compliance), writing this content in French preserves nuances that English translation would flatten. For international projects, English is the natural default.
+The content of `delivery/business/` reflects the **project's business language**, which is a project-level choice. For projects whose domain, users, or regulations are expressed in a non-English language (French RGPD, Spanish commerce regulations, German engineering vocabulary, etc.), writing this content in that language preserves nuances that English translation would flatten. For international projects, English is the natural default.
 
-The `kiat-tech-spec-writer` agent reads these files regardless of language. When it writes the technical sections of a story (everything below `## Business Context`), it uses **English** — aligned with the code, API payloads, commit messages, and the rest of the framework. This means a story file can legitimately be **bilingual**: French Business Context at the top, English technical sections below.
+The `kiat-tech-spec-writer` agent reads these files regardless of language. When it writes the technical sections of a story (everything below `## Business Context`), it uses **English** — aligned with the code, API payloads, commit messages, and the rest of the framework. This means a story file can legitimately be **bilingual**: a non-English Business Context at the top, English technical sections below.
 
-To bridge the two languages cleanly, `glossary.md` should include a **code identifier** for each French domain term that maps to how it's named in the codebase:
+To bridge the two languages cleanly, `glossary.md` should include a **code identifier** for each domain term that maps to how it's named in the codebase. Generic bilingual example (replace with your own domain's terms):
 
 ```markdown
-## Dossier patient
+## Commande
 
-**Définition (FR)** : document consolidé regroupant toutes les informations
-médicales d'un patient, avec un statut de confidentialité renforcé par la loi.
+**Définition (FR)** : engagement d'achat confirmé par un client, avec ligne
+d'articles, adresse de livraison figée, et prix total calculé hors TVA.
 
-**Code identifier (EN)** : `patient_file` / `PatientFile` / `/api/patient-files`
+**Code identifier (EN)** : `order` / `Order` / `/api/orders`
 
-**Règles associées** : voir `business-rules.md#confidentialite-patient`
+**Règles associées** : voir `business-rules.md#immuabilite-commande`
 ```
 
-This lets the tech-spec-writer read the French definition for understanding, then use the English code identifier in the technical sections without losing the link.
+This lets the tech-spec-writer read the non-English definition for understanding, then use the English code identifier in the technical sections without losing the link.
 
 ---
 
