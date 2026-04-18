@@ -40,6 +40,8 @@ BMad is **external to Kiat** (any Claude Code session invoking `bmad-*` skills a
 
 ### BMad's 4 input modes
 
+> Quick reference below (trigger → destination). The **authoritative definition** lives in [`delivery/business/README.md`](delivery/business/README.md#bmads-4-input-modes) — if the two ever drift, that file wins. Any new mode is added there first.
+
 | Mode | Trigger phrase | Writes to |
 |---|---|---|
 | **Explore** | "help me think through X", "I'm not sure yet" | Nothing — think out loud, converge toward Capture or Plan |
