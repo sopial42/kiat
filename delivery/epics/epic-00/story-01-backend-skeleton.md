@@ -54,6 +54,8 @@ No mockups — backend-only story, no UI.
 
 > To be filled by `kiat-tech-spec-writer` at Phase -1. Expected shape:
 >
+> - [ ] A `users` table is shipped as **foundational** — columns at minimum: `id UUID PRIMARY KEY` (matches the Clerk user ID subject claim), `created_at`, `updated_at`. No RLS on this table itself; it's read-only from the app layer and upserted on first authenticated request via a middleware (or an explicit "sync" endpoint). Future epics add columns (e.g., `display_name` in EPIC 01).
+> - [ ] The `items` table has `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE` + RLS policy keyed on `auth.uid()`.
 > - [ ] `POST /api/items` with valid JWT returns 201 and persists `{id, title, user_id, created_at, updated_at}`
 > - [ ] `GET /api/items` returns only the authenticated user's items
 > - [ ] RLS policy verified via `SET LOCAL request.jwt.claim.sub = '<other-uuid>'` in a Venom testcase returns zero rows for another user's data

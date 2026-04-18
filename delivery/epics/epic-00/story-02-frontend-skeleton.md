@@ -33,9 +33,9 @@ Minimal but production-shape UI proves the auth plumbing, RSC boundary, and desi
 
 ### Mockups
 
-> No Figma at EPIC 00. The frontend-coder uses the design system (see `delivery/specs/design-system.md`) and Shadcn primitives directly — no custom visual work.
->
-> If a client wants visual polish on the bootstrap demo, add Figma URLs here and re-run Team Lead.
+**No mockups — implementer uses the existing design system (neutral Tailwind v4 defaults) and Shadcn primitives directly.** No custom visual work in EPIC 00.
+
+This is a deliberate choice, not an oversight: the scaffold is design-neutral by construction so a forker's first visual reference in EPIC 01+ doesn't have to fight an existing design. See `kiat-how-to.md` → "Scaffold teaches patterns, not aesthetics".
 
 ---
 
@@ -58,6 +58,7 @@ Minimal but production-shape UI proves the auth plumbing, RSC boundary, and desi
 > - [ ] Client components that call `fetch('/api/items')` attach `Authorization: Bearer <jwt>` via a wrapper hook — bare `fetch` is BLOCKED by reviewer
 > - [ ] The wrapper hook selection (`useTokenGetterClerk` vs `useTokenGetterTestAuth`) is resolved at **module load**, not in render (UA02-class conditional hook risk)
 > - [ ] No JWT is serialised into a Client Component's props from a Server Component (PC06)
+> - [ ] **Scaffold is design-neutral**: UI uses only Shadcn primitives with default Tailwind. No custom layout beyond auth-gating. No color/typography/spacing/radius overrides in `@theme`. No navbar, sidebar, dashboard, or landing-page design. The `<SignIn>` / `<SignUp>` pages use Clerk's default components. The items list is a raw `<ul>` of items with create/delete buttons; the items form is a bare Shadcn `<Form>` with no custom layout. **Every visual decision is deferred to EPIC 01+ stories that bring a visual reference.**
 
 ---
 

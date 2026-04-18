@@ -1,292 +1,235 @@
-# Design System: Colors, Spacing, Typography
+# Design System — Protocol, Not Specific System
 
-Visual guidelines and Tailwind tokens for consistent UI.
+How this project defines and uses visual tokens (colors, spacing, typography, radius). **The values shipped in this file are neutral defaults** — they exist so EPIC 00 renders something usable, not to impose a visual direction.
 
----
-
-## Colors
-
-### Primary (Kotai Blue)
-- **Base**: `#273D54` (dark blue, primary actions)
-- **Light**: `#52ACD9` (sky blue, secondary, hover states)
-- **Pale**: `#E8F1F6` (very light blue, backgrounds)
-
-### Grayscale
-- **Dark**: `#1F2937` (text, headings)
-- **Mid**: `#6B7280` (secondary text, disabled)
-- **Light**: `#F3F4F6` (backgrounds, borders)
-- **White**: `#FFFFFF` (cards, main content)
-
-### Semantic
-- **Success**: `#10B981` (green, checkmarks, confirmations)
-- **Warning**: `#F59E0B` (amber, caution, warnings)
-- **Error**: `#EF4444` (red, errors, destructive actions)
-- **Info**: `#3B82F6` (blue, information)
-
-### Timeline Phases (Epic 24)
-- **Phase 1**: `#7AB87A` (green, inactive: `#A0C9A0`)
-- **Phase 2**: `#F49952` (orange, inactive: `#FEB078`)
-- **Phase 3**: `#6AAFD4` (blue, inactive: `#9DC9E5`)
+> **Principle: Scaffold teaches patterns, not aesthetics.**
+> EPIC 00 is design-neutral by construction. Values here stay at Tailwind v4 defaults (slate grayscale, semantic colors from `tailwindcss/colors`) until your first visual reference arrives. **When a Figma URL or screenshot lands in a story's `## Mockups` section, customize the values in this file in the same commit as the feature implementation.** Don't bulk-customize upfront.
 
 ---
 
-## Tailwind v4 Setup
+## What this file is
 
-**No `tailwind.config.ts`** — All tokens in `frontend/src/globals.css`:
+A **protocol**: where tokens live, how they're named, how components consume them. The *specific values* matter less than the *consistency of the contract*.
+
+What belongs here:
+- The token categories your project uses (primary / semantic / grayscale / spacing / radius / typography)
+- The `@theme` block in `frontend/src/globals.css` with the current values
+- Component-level patterns (button, input, card) that read from tokens
+- Dark mode strategy when it arrives
+
+What does NOT belong here:
+- Visual decisions without a visual reference driving them (no "I think we should use blue-600") — drive from Figma / screenshots, document the result
+- Component-specific implementations (those live in `frontend/src/components/`)
+
+---
+
+## Tailwind v4 setup
+
+**No `tailwind.config.ts`** — Tailwind v4 uses CSS `@theme` directives. All tokens in `frontend/src/globals.css`:
 
 ```css
 /* frontend/src/globals.css */
 
+@import "tailwindcss";
+
 @theme {
-  --color-primary: #273d54;
-  --color-primary-light: #52acd9;
-  --color-primary-pale: #e8f1f6;
-  
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
-  
-  --color-gray-dark: #1f2937;
-  --color-gray-mid: #6b7280;
-  --color-gray-light: #f3f4f6;
-  
-  --spacing-xs: 0.25rem;  /* 4px */
-  --spacing-sm: 0.5rem;   /* 8px */
-  --spacing-md: 1rem;     /* 16px */
-  --spacing-lg: 1.5rem;   /* 24px */
-  --spacing-xl: 2rem;     /* 32px */
-  
-  --radius-sm: 8px;
-  --radius-md: 16px;
+  /* ─── Primary palette ───
+     Defaults = Tailwind slate 700 / 500 / 100. Replace with your
+     brand palette when the first visual reference arrives. */
+  --color-primary:        #334155;  /* slate-700 */
+  --color-primary-light:  #64748b;  /* slate-500 */
+  --color-primary-pale:   #f1f5f9;  /* slate-100 */
+
+  /* ─── Semantic colors ───
+     Neutral defaults from tailwindcss/colors. Safe to keep as-is
+     unless your brand overrides them explicitly. */
+  --color-success: #10b981;  /* emerald-500 */
+  --color-warning: #f59e0b;  /* amber-500 */
+  --color-error:   #ef4444;  /* red-500 */
+  --color-info:    #3b82f6;  /* blue-500 */
+
+  /* ─── Grayscale ─── */
+  --color-gray-dark:  #1f2937;  /* gray-800 — text */
+  --color-gray-mid:   #6b7280;  /* gray-500 — secondary text */
+  --color-gray-light: #f3f4f6;  /* gray-100 — surfaces */
+
+  /* ─── Spacing scale (4px base) ───
+     Matches Tailwind's default p-1..p-8. Rarely customized. */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* ─── Radius ───
+     Defaults to Tailwind's rounded-md / rounded-lg. Customize if
+     your brand is particularly rounded (pill-heavy) or particularly
+     sharp (brutalist). */
+  --radius-sm:   0.375rem;  /* 6px */
+  --radius-md:   0.5rem;    /* 8px */
+  --radius-lg:   1rem;      /* 16px */
   --radius-full: 9999px;
+
+  /* ─── Typography ───
+     Defaults to Tailwind's font-sans stack. Pair with a display font
+     (e.g. Inter, Outfit, Geist) when your brand calls for it. */
+  --font-sans:    ui-sans-serif, system-ui, sans-serif;
+  --font-display: ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer utilities {
-  .text-heading { @apply font-nunito font-bold text-xl text-gray-dark; }
-  .text-body { @apply font-inter text-base text-gray-dark; }
-  .text-small { @apply font-inter text-sm text-gray-mid; }
+  .text-heading { @apply font-display font-bold text-xl text-gray-dark; }
+  .text-body    { @apply font-sans text-base text-gray-dark; }
+  .text-small   { @apply font-sans text-sm text-gray-mid; }
 }
 ```
 
 ---
 
-## Using Colors in Components
+## Token naming protocol
+
+Follow these patterns consistently:
+
+| Category | Naming | Example |
+|---|---|---|
+| Color | `--color-<role>` or `--color-<role>-<shade>` | `--color-primary`, `--color-primary-light` |
+| Spacing | `--spacing-<size>` | `--spacing-md` |
+| Radius | `--radius-<size>` | `--radius-lg` |
+| Font | `--font-<role>` | `--font-display` |
+
+**Do NOT invent ad-hoc shade counts.** Primary + primary-light + primary-pale is enough for 95% of use cases. If a visual reference demands more shades, add them — but name them by ROLE (`--color-primary-hover`, `--color-primary-pressed`) not by arbitrary Tailwind-like numbers (`--color-primary-600`).
+
+**Do NOT skip the `@theme` layer.** Inline hex values in components (`className="bg-[#273d54]"`) bypass the token system and break any future rebrand. Reviewer rule: any hex code in a component's Tailwind class is a `NEEDS_DISCUSSION` — does it belong in `@theme`?
+
+---
+
+## Using tokens in components
 
 ```tsx
-// Using Tailwind classes
-<button className="bg-primary hover:bg-primary-light text-white">
+// ✅ Token-based
+<button className="bg-primary hover:bg-primary-light text-white rounded-lg">
   Create
 </button>
 
-<div className="bg-success/10 text-success">
+<div className="bg-success/10 text-success px-3 py-1 rounded-md">
   ✓ Success
 </div>
 
-<input 
-  className="border border-gray-light focus:border-primary focus:ring-1 focus:ring-primary-light"
-/>
+<input className="border border-gray-light focus:border-primary focus:ring-2 focus:ring-primary-light/30" />
+```
+
+Tailwind v4 auto-generates utility classes from the `@theme` block — `bg-primary`, `text-gray-dark`, `rounded-lg`, `p-md`, etc. No config file needed.
+
+```tsx
+// ❌ Inline hex — bypasses the system
+<button className="bg-[#273d54] text-white">Create</button>
 ```
 
 ---
 
-## Spacing
+## Spacing scale
 
-**Scale**: 4px base unit
+4px base. Mobile-first responsive:
 
-| Size | Value | Usage |
-|---|---|---|
-| `p-1` | 4px | Tight spacing, chip padding |
-| `p-2` | 8px | Inputs, small elements |
-| `p-3` | 12px | Form fields, compact |
-| `p-4` | 16px | Cards, buttons, default |
-| `p-6` | 24px | Sections, generous |
-| `p-8` | 32px | Page sections, form card |
-
-**Mobile-first responsive**:
 ```tsx
 <div className="p-4 sm:p-6 lg:p-8">
   Content
 </div>
 ```
 
+| Class | Value | Typical use |
+|---|---|---|
+| `p-1` / `p-2` | 4px / 8px | Tight element padding (chip, icon) |
+| `p-3` / `p-4` | 12px / 16px | Form fields, buttons, cards |
+| `p-6` | 24px | Section padding |
+| `p-8` / `p-10` / `p-12` | 32px+ | Page sections, landing-page heroes |
+
 ---
 
-## Border Radius
+## Border radius
 
-**Standard**:
-- `rounded-[16px]` — Buttons, inputs, selects, cards, dialogs
-- `rounded-full` — Circles only: radio dots, pills, avatars
-- No `rounded-lg` (not in design system)
+Default strategy: medium rounding (`rounded-lg` = 16px) for interactive elements, sharp corners for structural elements.
 
-**Usage**:
-```tsx
-<button className="rounded-[16px] bg-primary">
-  Click me
-</button>
+| Class | Use |
+|---|---|
+| `rounded-md` (8px) | Small elements — chips, badges, small inputs |
+| `rounded-lg` (16px) | Buttons, inputs, cards, dialogs — the default |
+| `rounded-full` | Circles only — avatars, radio dots, pill tags |
 
-<div className="rounded-full w-10 h-10 bg-primary">
-  Avatar
-</div>
-```
+**If your visual reference calls for a different default** (e.g. sharp "brutalist" design uses `rounded-none`, or ultra-rounded uses `rounded-2xl`), change the `--radius-lg` value in `@theme` globally — don't override per-component.
 
 ---
 
 ## Typography
 
-### Fonts
-- **Headings**: Nunito (Bold for prominence)
-- **Body**: Inter (default, readable)
+Default: `font-sans` (system stack) for everything. Scaffold-acceptable for EPIC 00. When a visual reference specifies fonts:
 
-### Sizes & Weights
-
-| Role | Font | Size | Weight | Example |
-|---|---|---|---|---|
-| Page Title | Nunito | 24px | Bold (700) | Wizard header |
-| Section Title | Nunito | 20px | Bold (700) | Card titles |
-| Button Text | Inter | 14px | Medium (500) | Button labels |
-| Body Text | Inter | 16px | Regular (400) | Paragraphs, form text |
-| Small Text | Inter | 14px | Regular (400) | Captions, hints |
-| Tiny Text | Inter | 12px | Regular (400) | Labels, metadata |
-
-**Tailwind classes**:
-```tsx
-<h1 className="font-nunito text-2xl font-bold">Page Title</h1>
-<h2 className="font-nunito text-xl font-bold">Section Title</h2>
-<p className="font-inter text-base">Body text</p>
-<label className="font-inter text-sm">Label</label>
-```
-
----
-
-## Shadows & Elevation
-
-**Cards & Modals**:
-```tsx
-<div className="shadow-md bg-white rounded-[16px]">
-  Card
-</div>
-```
-
-**Hover (subtle lift)**:
-```tsx
-<button className="hover:shadow-lg transition-shadow">
-  Hover me
-</button>
-```
-
----
-
-## Component Styles
-
-### Button (Shadcn)
-```tsx
-<Button className="h-12 rounded-[16px] bg-primary text-white hover:bg-primary-light">
-  Action
-</Button>
-```
-
-### Input (Shadcn)
-```tsx
-<Input 
-  className="rounded-[16px] border-gray-light focus:border-primary"
-  placeholder="Enter text"
-/>
-```
-
-### Card (Shadcn)
-```tsx
-<Card className="rounded-[16px] shadow-md">
-  <CardContent className="p-8">
-    Content
-  </CardContent>
-</Card>
-```
-
-### Radio Button
-**Visual**: 16×16px dot  
-**Hit area**: 44×44px (via label padding)
-```tsx
-<label className="flex items-center p-3">
-  <input type="radio" className="w-4 h-4" />
-  <span className="ml-3">Option</span>
-</label>
-```
-
----
-
-## Responsive Design
-
-**Mobile-first approach**:
-```tsx
-{/* Default (mobile): 1 column */}
-<div className="grid grid-cols-1">
-  {/* At sm: 2 columns */}
-  <div className="sm:grid-cols-2">
-    {/* At lg: 3 columns */}
-    <div className="lg:grid-cols-3">
-      Items
-    </div>
-  </div>
-</div>
-```
-
-**Breakpoints**:
-- `sm`: 640px (tablet portrait)
-- `md`: 768px (tablet landscape)
-- `lg`: 1024px (desktop)
-
-**Padding responsive**:
-```tsx
-<div className="p-4 sm:p-6 lg:p-8">
-  Content (gets larger on wider screens)
-</div>
-```
-
----
-
-## Dark Mode
-
-**If implementing dark mode** (not in current spec):
 ```css
 @theme {
-  --color-dark-bg: #1a1a1a;
-  --color-dark-text: #ffffff;
-}
-
-@media (prefers-color-scheme: dark) {
-  .dark { @apply bg-dark-bg text-dark-text; }
+  --font-display: "Outfit", ui-sans-serif, sans-serif;  /* headings */
+  --font-sans:    "Inter",  ui-sans-serif, sans-serif;  /* body */
 }
 ```
 
----
+Then import the font in `frontend/src/app/layout.tsx`:
 
-## Accessibility
-
-**Color contrast**: All text must have WCAG AA contrast (4.5:1 for body, 3:1 for large)
 ```tsx
-// ✅ Good: Dark text on light background
-<p className="text-gray-dark bg-white">Readable</p>
+import { Inter, Outfit } from "next/font/google";
 
-// ❌ Bad: Gray text on light gray background (low contrast)
-<p className="text-gray-mid bg-gray-light">Hard to read</p>
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-display" });
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+      <body className="font-sans">{children}</body>
+    </html>
+  );
+}
 ```
 
-**Reduced motion**:
-```tsx
-<div className="transition-all motion-safe:duration-300 motion-reduce:duration-0">
-  Animated element
-</div>
-```
+**Rule**: pair max, not trio. A display font + a body font is enough; a third font almost always means the system is unclear.
 
 ---
 
-## Figma Source of Truth
+## Accessibility floor (WCAG AA)
 
-Design files reference: See project Figma design file for exact hex values and component library.
+Regardless of the visual reference, these checks are non-negotiable:
+
+- **Contrast**: foreground ↔ background ≥ 4.5:1 for body text, ≥ 3:1 for large text (≥ 18px or 14px bold). See [testing-pitfalls-frontend.md:UA01](testing-pitfalls-frontend.md).
+- **Focus states**: every interactive element must have a visible focus ring. Tailwind's `focus:ring-2` + `focus:ring-offset-2` is the minimum.
+- **Disabled state**: never convey by color alone. Add `aria-disabled="true"` + `opacity-50 cursor-not-allowed`.
+- **Touch targets**: minimum 44×44px on mobile (iOS HIG standard).
+
+Reviewer rule: if the mockup shows a contrast-failing combination, flag as `NEEDS_DISCUSSION` — the mockup might be decorative, but shipping an inaccessible component is not OK.
+
+---
+
+## Dark mode
+
+**Not shipped in EPIC 00.** Add when a visual reference includes a dark-mode variant. The protocol:
+
+- Dual token blocks in `@theme`: base (light) + `@media (prefers-color-scheme: dark)` override
+- Tailwind v4 handles the switch automatically
+- Test every component in both modes; contrast floor applies to both
+
+---
+
+## When to customize — checklist
+
+Before touching values in this file:
+
+- [ ] The story that drove the change has a visual reference (Figma URL or screenshot)
+- [ ] The customization is extracted from the reference, not invented
+- [ ] Every new token name follows the protocol above (role-based, not arbitrary numbers)
+- [ ] The component that consumes the new token doesn't inline hex values
+- [ ] The change ships in the same commit as the feature that needs it
+
+When in doubt, leave the default. The scaffold stays neutral until a visual reference forces a decision.
 
 ---
 
 See also:
-- [CLAUDE.md](../../CLAUDE.md) — Tailwind v4 conventions
-- [frontend-architecture.md](frontend-architecture.md) — Component patterns
+- [frontend-architecture.md](frontend-architecture.md) — RSC boundary, hook patterns
+- [testing-pitfalls-frontend.md](testing-pitfalls-frontend.md) — UA01 (contrast), UA02 (auto-save timing)
+- `kiat-how-to.md` (repo root) — the two visual-reference shapes (Figma URL / static screenshots)

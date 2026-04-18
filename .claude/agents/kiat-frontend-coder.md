@@ -54,6 +54,14 @@ The reviewer greps for that block. **Skipping this step is a protocol violation*
 
 Read `delivery/epics/epic-X/story-NN.md` end to end. Extract: acceptance criteria, component tree, user flows, edge cases, E2E scenarios. Ask Team Lead for clarification in chat if anything is unclear — do NOT guess.
 
+**Visual reference — CRITICAL step.** Check the story's `## Mockups` section under `## Business Context`. Three outcomes:
+
+1. **Figma URL(s) present** → try WebFetch on the URL. If Claude can render the Figma frame (public frames / the Figma API returns content), use it as the **binding visual reference** — match pixel-close, color-close, layout-close. If the Figma is private and WebFetch fails, flag to Team Lead that you need either a shared screenshot or a public preview link; do NOT code visual decisions from a spec alone.
+2. **Static screenshot path(s) present** (e.g. `../../business/mockups/story-NN/navbar.png`) → Read the image directly. Claude is multimodal. These screenshots ARE the source of truth when no live Figma exists; match them precisely.
+3. **`No mockups — ...`** → use Shadcn primitives with the default Tailwind tokens from `globals.css`. Do NOT invent visual decisions. Keep the layout functional and minimal.
+
+When a visual reference exists, tech-spec-writer has NOT restated the visual decisions in the spec — it linked. You fill that gap by reading the reference. Deviations (rendering constraints, accessibility, existing primitives) are discussed in the review, never decided unilaterally.
+
 #### Step 2 — Read only the conventions you need
 
 The story's `## Skills` section is **binding**: it lists the contextual skills the tech-spec-writer decided you need. Load **all** of them, load **only** them. Dropping a listed skill or adding an undeclared one are both drift signals the reviewer will catch.
@@ -95,7 +103,7 @@ Key reminders (details live in the specs, not here):
 - Use Shadcn/UI primitives before building from scratch.
 - `'use client'` only where you need state, effects, or event handlers. Keep data fetching in Server Components where possible.
 - Strict TypeScript — no `any`.
-- Tailwind v4 with CSS variables from `globals.css`. No inline styles. Use the design system tokens (e.g. `text-[#273d54]`, `rounded-[16px]`) — never the Tailwind defaults that drift from Figma.
+- Tailwind v4 with CSS variables from `globals.css`. No inline hex values in component classes — every color, radius, spacing comes from `@theme` tokens (e.g. `bg-primary`, `rounded-lg`, `text-gray-dark`). If a new token is needed to match the visual reference, add it to `@theme` in the same commit; don't inline `bg-[#XXXXXX]` as a shortcut.
 - `useAutoSave`: stable `enabled` contract, debounce 500-1000ms, explicit save status.
 - `useQuery` / `useMutation` for all data access (never `useEffect + useState` hand-rolled).
 - Accessibility: every input has a label or `aria-label`, ARIA roles on interactive components, keyboard navigation works, focus visible, contrast meets WCAG AA.
@@ -150,7 +158,8 @@ Before saying "done", verify mechanically:
 - [ ] Components use Shadcn primitives where they exist
 - [ ] `'use client'` placed only where needed
 - [ ] Props fully typed, no `any`
-- [ ] Design tokens from `globals.css` — no drift from Figma
+- [ ] Design tokens from `globals.css` — no inline hex values in components
+- [ ] If the story has a visual reference (Figma URL or screenshot), the rendered UI matches it — verified via local browser or Playwright trace screenshot. Any deviation is documented in handoff notes with the reason.
 - [ ] Mobile-first responsive (tested at 320px / 640px / 1024px)
 - [ ] Every input has a label; ARIA roles correct; keyboard nav works
 - [ ] `useAutoSave` / `useQuery` / `useMutation` used per conventions

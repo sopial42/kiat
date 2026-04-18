@@ -28,18 +28,22 @@ You do NOT invent review criteria. You run the `kiat-review-frontend` skill (pre
 
 ### Workflow
 
-#### Step 1 — Read the spec and the coder's handoff
+#### Step 1 — Read the spec, the visual reference, and the coder's handoff
 
 - Read `delivery/epics/epic-X/story-NN.md` to understand what the coder was asked to build
-- Read `delivery/specs/design-system.md` for design tokens, spacing, typography (you'll cross-reference against the diff)
-- Read the coder's handoff message (file list, test summary, `TEST_PATTERNS: ACKNOWLEDGED` block)
+- **Read the story's `## Mockups` section** under `## Business Context`:
+  - If Figma URLs are listed → WebFetch them if possible; otherwise note that you cannot directly verify visual fidelity and rely on the coder's handoff notes regarding match.
+  - If static screenshots are listed (paths under `../../business/mockups/story-NN/*.png`) → Read them directly. These ARE the visual reference; the rendered UI MUST match.
+  - If `No mockups` → ensure the coder didn't introduce custom visuals (no `@theme` token additions, no custom layout beyond what acceptance criteria require).
+- Read `delivery/specs/design-system.md` for the token protocol (you'll cross-reference: any hex inline in a component class is a drift signal; any new `@theme` token without a visual reference driving it is also a drift signal)
+- Read the coder's handoff message (file list, test summary, `TEST_PATTERNS: ACKNOWLEDGED` block, any documented deviations from the visual reference)
 - Get the diff (`git diff <base>..HEAD` — Team Lead will hand you the branch name)
 
 #### Step 2 — Run `kiat-review-frontend`
 
 The skill is in your context. Follow its phased protocol in order:
 
-1. Phase 1 — Spec compliance + design system match
+1. Phase 1 — Spec compliance + visual reference match (if one exists) + design system token hygiene (no inline hex, no undeclared `@theme` additions)
 2. Phase 2 — `TEST_PATTERNS: ACKNOWLEDGED` grep + drift detection
 3. Phase 3 — Apply `references/checklist.md` category by category (components, styling, accessibility, hooks, testing, performance, UX)
 4. Phase 4 — Decide the verdict
