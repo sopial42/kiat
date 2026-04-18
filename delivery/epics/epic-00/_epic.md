@@ -2,9 +2,11 @@
 
 **Status**: 📝 Drafted
 
-> Framework, specs, and skeletons are shipped (`aa7e245` and onward). Code is not yet implemented — each story flips to 🚧 In Progress when Team Lead picks it up, and this epic auto-aggregates to 🚧 when any child is in progress. See [`../README.md#status-lifecycle`](../README.md#status-lifecycle).
+> **This is Phase C of the forker journey** (see repo-root [`README.md`](../../../README.md) → "Quick start — the 4 phases" and [`kiat-getting-started.md`](../../../kiat-getting-started.md)). Every new fork executes this epic on day 1, AFTER credentials are set up (Phase B). Kiat ships these stories as unimplemented drafts on purpose: running them on your fork validates that the agents work in your environment (your Clerk, your DB, your docker) before you trust them with real business work.
 
-**Outcome**: a fresh fork of kiat can run `make dev` end-to-end on day 1 — auth Clerk fonctionnelle, 1 CRUD générique (items) persisté en Postgres sous RLS, suite Playwright verte, CI GitHub Actions verte au premier push. Une fois EPIC 00 done, la stack ne doit plus jamais être retouchée pour des raisons d'infra — toutes les stories suivantes ajoutent uniquement du métier.
+**How to execute**: in a fresh Claude Code session at the repo root, `claude --agent kiat-team-lead`, then point Team Lead at each story file in order (01 → 02 → 03 → 04). Each story flips to 🚧 In Progress when Team Lead picks it up; this epic auto-aggregates to 🚧 when any child is in progress. See [`../README.md#status-lifecycle`](../README.md#status-lifecycle).
+
+**Outcome once done**: a fork of kiat can run `make dev` end-to-end — auth Clerk fonctionnelle, 1 CRUD générique (items) persisté en Postgres sous RLS, suite Playwright verte, CI GitHub Actions verte au premier push. Après EPIC 00 done, la stack ne doit plus jamais être retouchée pour des raisons d'infra — toutes les stories suivantes ajoutent uniquement du métier.
 
 ---
 

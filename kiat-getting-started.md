@@ -1,8 +1,15 @@
 # Kiat — Getting Started
 
-One-time setup to take a fresh fork from zero to **green CI on your first push**. Budget: ~30–45 minutes with all accounts ready.
+Covers **Phase B** of the fork journey — the credentials setup that humans must do by hand before Kiat's agents can take over. Budget: **~30–45 minutes** with all accounts ready.
 
-> **Scope of this doc.** Humans do what agents can't: create third-party accounts, click dashboards, paste secrets into GitHub settings. Everything else (code, tests, CI YAML) Team Lead will produce autonomously once the secrets are in place.
+> **Where this fits in the bigger picture**:
+> - **Phase A** (~2 min) — fork & clone the repo
+> - **Phase B** (~30–45 min) — **this doc** — Clerk dev instance, JWT template, test users, `.env` file, GitHub secrets, optional GCP project
+> - **Phase C** (~2–4 hours of pipeline) — run Team Lead on `delivery/epics/epic-00/story-01..04` to ship the backend / frontend / Playwright harness / CI workflow. Agents do this autonomously; you monitor and arbitrate `NEEDS_DISCUSSION` verdicts if they arise.
+> - **Phase D** (~30–60 min) — run Team Lead on `delivery/epics/epic-01/story-01` for a learning walkthrough of the full pipeline.
+> - **After D** — you're ready for real EPIC 02+ business stories via BMad.
+
+> **Scope of this doc.** Humans do what agents can't: create third-party accounts, click dashboards, paste secrets into GitHub settings. Everything else (Go code, Next.js code, test files, CI YAML) is produced by Team Lead's pipeline in Phase C — not by this doc.
 
 ---
 
@@ -90,22 +97,27 @@ Fill the following (the template has placeholders):
 
 ---
 
-## 4. First local boot
+## 4. First local boot — what actually works before EPIC 00
+
+On a fresh fork, **there is no Go code and no Next.js code yet** — `backend/` and `frontend/` are README-only directories describing what EPIC 00 will produce. So most `make` targets are documented stubs, not runnable yet.
 
 ```bash
-# Start postgres + minio + smocker
-make infra-up-test
+# What works now:
+make infra-up-test      # Starts postgres + minio + smocker containers ✓
+make infra-down         # Stops them ✓
 
-# Wait for health, seed Smocker (no-op if no scenarios yet), then run tests
-make test-back          # Go unit tests — should pass green immediately on a fresh fork
-make test-venom         # Backend HTTP suite against Smocker (requires story-01 implemented)
-make test-e2e-mocked    # Playwright mocked — fast, no real Clerk needed
+# What fails now (on purpose — will work after Phase C / EPIC 00):
+make dev                # No backend binary yet
+make dev-test           # Same
+make test-back          # No go.mod yet → "go: no module found"
+make test-venom         # Backend isn't running, no venom suite yet
+make test-e2e-mocked    # No frontend, no Playwright config wired yet
+make test-e2e           # Same + requires real Clerk
 ```
 
-**What works on a fresh fork before any code is shipped:**
-- `make infra-up-test` brings up containers
-- `make test-back` runs (may have zero tests until stories land, which is fine)
-- The 4 Makefile modes are documented stubs — actual running of `make dev` requires the EPIC 00 code to be shipped (next section)
+This is expected. The whole point of Phase C is to produce all the code these commands need. Do NOT try to bypass it by writing code yourself — the purpose of running Team Lead on EPIC 00 is to validate that **the agents work in your environment** (your Clerk keys, your Postgres, your docker setup). If you hand-write the bootstrap, you skip that validation.
+
+If `make infra-up-test` works and `docker compose ps` shows three healthy containers (`postgres`, `minio`, `smocker`), Phase B is complete. Move to Phase C (section 5).
 
 ---
 

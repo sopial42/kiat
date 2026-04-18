@@ -2,9 +2,11 @@
 
 **Status**: 📝 Drafted
 
-> Story-01 is shipped as a learning example, ready for Team Lead to execute. See [`../README.md#status-lifecycle`](../README.md#status-lifecycle) for transitions.
+> **This is Phase D of the forker journey** (see repo-root [`README.md`](../../../README.md) → "Quick start — the 4 phases"). It's a **pre-written learning walkthrough**, not a real business feature. Team Lead executes story-01 end-to-end to demonstrate the full pipeline on your fork (tech-spec-writer enrichment → parallel coders → reviewers → 3-way verdict → rollup). After it passes, you've seen a cross-layer feature produced from a complete spec — and you can delete this epic or keep it as reference.
+>
+> **Why a "learning" epic**: EPIC 00 exercises the code-side agents (backend, frontend, infra), but skips BMad because its stories are pre-written by Kiat maintainers. EPIC 01 similarly ships with a pre-written `## Business Context` (standing in for a BMad session), so the tech pipeline gets exercised once more on a cross-layer feature. Your FIRST real BMad run happens at EPIC 02+, when you describe your own domain.
 
-**Outcome**: after this epic, a signed-in user has a navbar with their display name and can edit it from a modal. This is the **first "real" feature** on top of the EPIC 00 infrastructure — a starter demonstration of how Kiat's pipeline builds features end-to-end (backend + frontend + tests in parallel), with explicit guidance on bringing your own visual reference.
+**Outcome once executed**: a signed-in user has a navbar with their display name and can edit it from a modal. Demonstrates how Kiat's pipeline builds features end-to-end (backend + frontend + tests in parallel) and where a visual reference (Figma or screenshot) would plug into a story.
 
 ---
 

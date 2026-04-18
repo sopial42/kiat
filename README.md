@@ -18,29 +18,66 @@ If you only have 2 minutes, keep reading below.
 
 ---
 
-## Quick start
+## What you get when you fork
 
-```bash
-# 1. Fork + clone
-git clone git@github.com:<you>/kiat.git && cd kiat
+**Specs + stories + scaffolding + working agents.** NOT compiled code. The `backend/` and `frontend/` directories are skeleton READMEs — the actual Go and Next.js source is produced on your fork, by Kiat's own agents, when you run them for the first time (Phase C below).
 
-# 2. Set up secrets (see kiat-getting-started.md for how)
-cp .env.example .env
-# Fill Clerk keys, GCP SA key, etc.
+This is intentional: each fork gets **fresh code produced by the same pipeline the forker will use for every subsequent feature**. Running EPIC 00 on day 1 validates that the pipeline works end-to-end in your environment (your Clerk instance, your GCP, your CI). If the agents can't ship EPIC 00, they can't ship EPIC 02 either — better to discover that on day 1.
 
-# 3. Run the stack
-make dev-test   # offline-capable: test-auth bypass + Smocker for external APIs
-# OR
-make dev        # real Clerk + real external upstreams (needs real credentials)
+## Quick start — the 4 phases
 
-# 4. Verify everything passes
-make test-back          # Go unit tests (no containers)
-make test-venom         # Backend HTTP black-box against Smocker
-make test-e2e-mocked    # Playwright mocked (fast)
-make test-e2e           # Full stack: real backend + real Clerk + Smocker
+```
+Phase A — Fork & clone                    (~2 min)
+Phase B — Credentials setup               (~30–45 min, human only)
+Phase C — Run Team Lead on EPIC 00        (~2–4 hours of pipeline, mostly automated)
+Phase D — Run Team Lead on EPIC 01        (~30–60 min, walkthrough of the full loop)
+   → after D, you're ready for real EPIC 02+ business stories via BMad
 ```
 
-Four modes, two axes (auth + external mocks):
+### Phase A — Fork & clone
+
+```bash
+git clone git@github.com:<you>/kiat.git && cd kiat
+```
+
+### Phase B — Credentials setup (follow `kiat-getting-started.md`)
+
+Clerk dev instance + `playwright-ci` JWT template + test users + `.env` + (optionally) GCP project + GitHub Environment secrets. **This is the only part Kiat's agents cannot do for you** — third-party dashboards need human hands.
+
+```bash
+cp .env.example .env
+# Fill Clerk keys, E2E user credentials, etc. per kiat-getting-started.md
+```
+
+### Phase C — Ship EPIC 00 via Team Lead
+
+In a fresh Claude Code session at the repo root:
+
+```bash
+claude --agent kiat-team-lead
+```
+
+Then, one story at a time:
+
+```
+Run the full pipeline on delivery/epics/epic-00/story-01-backend-skeleton.md
+```
+
+Repeat for `story-02` (frontend), `story-03` (Playwright harness), `story-04` (CI workflow). Team Lead spawns `kiat-tech-spec-writer` at Phase -1 for each story (technical sections are empty — they get filled), then backend and/or frontend coders in parallel, then reviewers, test gates, 45-min fix budget, rollup event.
+
+**After all 4 stories pass**: `make ci-local` green, `make dev-test` boots a working app (sign-in / items CRUD / sign-out), `.github/workflows/ci.yml` exists. This is the "EPIC 00 done" baseline — the agents just proved they work in your environment.
+
+### Phase D — Run Team Lead on EPIC 01
+
+```
+Run the full pipeline on delivery/epics/epic-01/story-01-edit-display-name.md
+```
+
+EPIC 01 is a **learning walkthrough** — a pre-written business story (navbar + edit your display name) that exercises the full BMad-to-production loop without requiring you to do any BMad work yet. After it passes, you've seen the pipeline produce a cross-layer feature from a complete spec. Delete the EPIC 01 folder if you don't want the demo feature, or keep it as reference.
+
+### Four runtime modes (after Phase C ships the code)
+
+Two axes vary: auth + external API source.
 
 | Mode | Auth | External APIs |
 |---|---|---|
@@ -66,15 +103,16 @@ Humans **never** invoke `kiat-tech-spec-writer` or the coders directly. Team Lea
 
 ---
 
-## Your first feature — end-to-end in five steps
+## Your first real feature — after EPIC 00 and EPIC 01
 
-1. **Fork and set up** — follow [`kiat-getting-started.md`](kiat-getting-started.md).
-2. **Capture the domain with BMad** — in a Claude Code session at the repo root, run a BMad skill (`bmad-product-brief`, `bmad-create-epics-and-stories`, etc.). BMad writes to `delivery/business/` (glossary, personas, rules) and creates stories in `delivery/epics/epic-NN/story-NN-slug.md`, populating only the `## Business Context` section.
-3. **Hand off to Team Lead** — close the BMad session, relaunch with `claude --agent kiat-team-lead`, and point it at the new story file. Team Lead enters Phase -1 (spawns `kiat-tech-spec-writer` to enrich the story with technical sections), then launches backend + frontend coders in parallel, reviewers, test gates.
-4. **Watch the pipeline run** — Team Lead streams its phase log. At the end you get either `story_rollup: passed` or an escalation for you to resolve.
-5. **Run locally, verify, commit** — `make dev` to poke the feature in a browser, `make ci-local` to run the full gate, then push. CI green on GitHub → ready to ship.
+Once Phases A-D above are done, you're in the state where every new feature follows this loop:
 
-A walkthrough story already exists at [`delivery/epics/epic-01/story-01-edit-display-name.md`](delivery/epics/epic-01/story-01-edit-display-name.md) — a business-neutral "edit your display name from the navbar" feature. Run Team Lead on it once to see the full pipeline produce working code. Then delete or adapt it for your first real feature.
+1. **Capture the domain with BMad** — in a Claude Code session at the repo root, run a BMad skill (`bmad-product-brief`, `bmad-create-epics-and-stories`, `bmad-create-story`…). BMad writes to `delivery/business/` (glossary, personas, rules) and creates stories in `delivery/epics/epic-NN/story-NN-slug.md`, populating only the `## Business Context` section.
+2. **Hand off to Team Lead** — close the BMad session, relaunch with `claude --agent kiat-team-lead`, and point it at the new story file. Team Lead enters Phase -1 (spawns `kiat-tech-spec-writer` to enrich the story with technical sections), then launches backend + frontend coders in parallel, reviewers, test gates.
+3. **Watch the pipeline run** — Team Lead streams its phase log. At the end you get either `story_rollup: passed` or an escalation for you to resolve.
+4. **Run locally, verify, commit** — `make dev` to poke the feature in a browser, `make ci-local` to run the full gate, then push. CI green on GitHub → ready to ship.
+
+This is the loop for every story from EPIC 02 onwards. EPIC 00 (infra) and EPIC 01 (learning walkthrough) were one-time events to prove the agents work in your environment.
 
 ---
 
