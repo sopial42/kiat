@@ -115,6 +115,7 @@ If the target file doesn't exist yet, BMad creates it the first time — always 
 3. **No duplication** — cf. "Relationship with `delivery/epics/`" above. A business fact lives in one place in this folder; stories link to it, they do not recopy it.
 4. **Size discipline** — cf. "Sizing discipline" above. If a file approaches ~5k tokens, BMad proposes a split before writing more.
 5. **Zones BMad never touches.** `delivery/specs/` (technical conventions) and `.claude/` (Kiat framework machinery) are off-limits. If a capture is actually about code structure, API design, or framework behavior, BMad refuses and redirects.
+6. **Slicing discipline (when writing in `delivery/epics/`).** Stories BMad produces in Plan mode must follow the vertical-slice discipline defined in [`../epics/README.md#slicing-discipline`](../epics/README.md) — every story delivers a user-observable increment end-to-end, exceptions (`backend-infra`, `frontend-chrome`, `infra`) require a one-line justification. This rule does not apply to captures in this folder (glossary, personas, rules…) — only to Plan-mode writes that land in `delivery/epics/`.
 
 ### What BMad does NOT write here
 

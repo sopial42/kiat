@@ -37,6 +37,62 @@ Of BMad's 4 input modes (Explore / Capture / Plan / Review — defined in the si
 
 Explore converges *into* Capture or Plan. Capture lands in `../business/`. Review writes nothing. See the sibling README for the full mode vocabulary.
 
+### Slicing discipline
+
+**Vertical slices by default.** Every story delivers a **user-observable increment end-to-end** (DB → API → UI → test when all three layers are involved), however thin. Not "all the backend, then all the frontend". Horizontal-by-layer decomposition is the most common LEAN anti-pattern and is disallowed unless the story explicitly fits one of the exceptions listed below.
+
+**Why**: stacking a pure-backend story then a pure-frontend story on the same feature means hours or days elapse before anyone sees a working slice. Misinterpretations of the API contract surface at integration time — after the code is written — and trigger rework on both sides. Thin vertical slices invert this: each story is demoable, the feedback loop closes in hours not days, and each slice teaches the next one what to adjust.
+
+#### Walking skeleton principle
+
+In an epic with multiple stories on the same feature, **story 01 is the walking skeleton**: it carries a single data point from the user's click down to the database and back, with the minimum vital (one field, one happy path). Subsequent stories add **depth** (validation, edge cases, empty states, performance) — not **breadth** (other features). A user-visible demo exists at the end of story 01, however crude.
+
+#### Demo check — the anti-horizontal gate
+
+Every story's `### Acceptance criteria (user-facing)` must contain **at least one criterion observable by a non-technical viewer**. A criterion like "the user sees the updated name in the navbar" passes. A criterion like "`GET /users/me` returns the new name in the response body" does **not** pass — it's a technical contract, not a user observation.
+
+If every user-facing AC reads like a technical assertion, the story is a horizontal slice in disguise and must be reshaped before coding begins. `kiat-validate-spec` Category 6 enforces this mechanically.
+
+#### Two metadata fields on every story
+
+Every story carries two header fields that make its slicing shape explicit:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `**Scope**` | `vertical-slice` *(default)* \| `backend-infra` \| `frontend-chrome` \| `infra` | Architectural shape of the slice |
+| `**User signal**` | `direct` \| `indirect` \| `none` *(justify)* | Observable symptom the story produces |
+
+The two are **orthogonal**: `Scope` describes the architectural shape, `User signal` describes the observable symptom. A `backend-infra` story that speeds up existing search is `User signal: indirect` (the user feels the change via existing UI). A `vertical-slice` story with `User signal: none` is a contradiction caught at spec validation.
+
+- **`direct`** — the user sees, clicks, types, or receives something new
+- **`indirect`** — effect observable in existing behavior (faster, more accurate, an edge case now handled gracefully) — requires a scenario to verify
+- **`none`** — infra with no user-facing signal; landing verified via logs, metrics, or a downstream story
+
+#### Legitimate exceptions — `Scope ≠ vertical-slice`
+
+Non-default `Scope` values exist and are legitimate **when the work truly has no product-feature shape**. Any story that chooses a non-default `Scope` **must carry a one-line `**Scope justification**` next to the field** — unjustified exceptions are blocked at spec validation.
+
+| Non-default `Scope` | Legitimate when… | Typical `User signal` |
+|---|---|---|
+| `backend-infra` | Background job, webhook receiver, service-to-service wiring, async pipeline without a UI counterpart in this story | `indirect` or `none` |
+| `frontend-chrome` | Design system token, layout shell, shared navigation primitive without a new backend contract | `indirect` or `none` |
+| `infra` | Bootstrap scaffolding (e.g., epic-00 skeleton stories), CI pipeline, migration script, DevOps tooling | `none` |
+
+If you find yourself reaching for `backend-infra` because "the UI will come in the next story", **stop** — that's exactly the horizontal-by-layer pattern the rule forbids. Reshape as a vertical slice with one tiny UI touch, or split differently.
+
+#### Anti-pattern gallery
+
+| Anti-pattern | Why it fails LEAN | Prefer |
+|---|---|---|
+| "Implement the backend for feature X" (then story 02: "Build the UI for feature X") | Hours before any demo; integration bugs surface late | Thin slice DB→API→UI with one field; enrich in story 02 |
+| "Wire the Playwright E2E suite" as a standalone story (outside bootstrap) | Tests are not a feature; they ship with each slice | Tests embedded in every vertical slice from story 01 onward |
+| "Refactor before building the feature" | No user feedback, no signal the refactor was needed | Build the first slice; refactor when the second slice reveals the pattern |
+| "Land the migration, land the API, land the UI" as 3 stories | Same horizontal anti-pattern, three stories deep | One vertical slice with minimum migration + minimum API + minimum UI |
+
+#### Relationship with `### Target architecture`
+
+`### Target architecture` below describes the **final state** of a shared artifact after all its stories land. The slicing discipline here describes **how we get there, slice by slice**. They cooperate: when an epic has ≥2 stories on the same feature, the `_epic.md` should carry both — `### Target architecture` for the destination, `#### Slicing plan` inside it for the step-by-step path. Neither replaces the other.
+
 ### The one section BMad writes
 
 BMad writes **exclusively** the `## Business Context` section, in two places:
@@ -129,6 +185,22 @@ The same pattern applies to any artifact touched by multiple stories: a shared e
 BMad writes both sides — the epic section **and** the per-story pointers — as a single coherent act. A story whose epic has a `### Target architecture` but which lacks the cross-reference pointer is a contract violation.
 
 **When to skip this section**: when every story in the epic touches a **different** artifact (e.g., 4 independent backend fetchers, each in its own package + test suite, plus 1 aggregation story). The rule is "2+ stories on the **same** artifact", not "any epic with 2+ stories". If in doubt, add it — the cost of writing it is minutes, the cost of not writing it is one or two stories of backtracked architecture.
+
+#### Slicing plan
+
+**Complement to `### Target architecture`.** When `### Target architecture` is populated, it describes the destination; the slicing plan describes the path — one line per story, calling out the user-observable value that slice adds. Keep the prose tight (title-case fragment or short sentence, no implementation detail).
+
+```markdown
+#### Slicing plan
+
+- **Story 01 (walking skeleton)**: <smallest end-to-end slice that proves the data flows — e.g., "User sees an empty list at `/items`, backed by a seeded row">
+- **Story 02**: <next user-observable increment — e.g., "User can add an item via inline form; list updates immediately">
+- **Story 03**: <...>
+```
+
+Write the slicing plan with the same user-facing voice as `### Target architecture` — no routes, no component names, no framework terms. Its purpose is to make the per-slice demo explicit at epic-authoring time, so BMad catches horizontal-by-layer decomposition before any story file is written. See [`#slicing-discipline`](#slicing-discipline) for the underlying rule.
+
+**When to skip**: the same rule as `### Target architecture` above — skip when every story in the epic targets a different feature. When kept, each story carrying the `⚠️ Required reading` pointer in its `## Business Context` covers both the target-architecture constraints and the slicing plan in one read.
 
 ### Mockups — how UI designs flow into stories
 

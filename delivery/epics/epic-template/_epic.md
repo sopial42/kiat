@@ -47,6 +47,14 @@
 
 [Describe the **final state** of the shared artifact after all its stories land — zones, navigation, composable blocks, primitives reused. Then a **per-story evolution** table (one line per story: what each adds or activates). Then the **implicit architectural constraints** each story must anticipate (e.g., "state must be listeable from story 01 because story 02 will introduce N items", "button X must render from story 01 even if inactive, to avoid re-layout in story 03"). User-facing / information architecture only — no component names, no routes, no framework terms.]
 
+#### Slicing plan
+
+> Populate when this epic has ≥ 2 stories on the same feature. One line per story describing the **user-observable value** each slice adds — walking skeleton first, then depth (validation / edge cases / UX), never breadth (other features). Rule and rationale: [`../README.md#slicing-discipline`](../README.md).
+
+- **Story 01 (walking skeleton)**: [smallest end-to-end slice that proves the data flows — the user sees something, however crude]
+- **Story 02**: [next user-observable increment on top of story 01]
+- **Story 03**: [...]
+
 ### Linked business knowledge
 
 _Point at the evergreen docs in `delivery/business/` that frame this epic. Link only the sections that actually matter for this epic — don't list the whole folder._

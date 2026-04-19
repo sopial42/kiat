@@ -8,7 +8,11 @@
 
 **T-Shirt Size**: M
 
-**Scope**: frontend-only (consumes story-01 API)
+**Scope**: infra
+
+**Scope justification**: bootstrap scaffolding — stands up the Next.js + Clerk frontend on top of story-01's API so subsequent product stories have a working shell to build in. Paired with story-01; together they form the walking skeleton for epic-00 but each standalone is infra-only.
+
+**User signal**: none
 
 ---
 

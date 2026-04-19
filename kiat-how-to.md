@@ -53,6 +53,10 @@ BMad is **external to Kiat** (any Claude Code session invoking `bmad-*` skills a
 
 Every BMad session that may write to `delivery/business/` or a story's `## Business Context` **must first list `delivery/business/` and read every non-empty `.md` in it**. Prevents contradicting or duplicating facts captured earlier. See the BMad writing protocol in [`delivery/business/README.md`](delivery/business/README.md) for the full rules.
 
+### Slicing discipline — vertical slices, not horizontal layers
+
+BMad writes **iterative, user-observable stories**, not layered ones. The rule: each story delivers a user-observable increment end-to-end (DB → API → UI), however thin. "Implement all the backend for feature X" followed by "build the UI for feature X" is the anti-pattern — it burns hours before any demo, and integration bugs surface late. The full rule (with legitimate exceptions for bootstrap / infra / chrome work) lives in [`delivery/epics/README.md#slicing-discipline`](delivery/epics/README.md). BMad in Plan mode must read it before proposing story splits; `kiat-validate-spec` Category 6 enforces it mechanically.
+
 ### What BMad never does
 
 - Writes SQL schemas, API paths, React component names, test framework references

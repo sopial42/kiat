@@ -101,7 +101,32 @@ A UI story without a design reference forces the coder to invent a design. Check
 
 Missing Figma on a new-component story is usually `BLOCKED`. Missing interaction states is usually `NEEDS_CLARIFICATION`.
 
-### 6. Cross-layer contract consistency
+### 6. Slicing & user-observability
+
+The Kiat project enforces **vertical slicing** — every story should deliver a user-observable increment end-to-end. The full rule lives in [`delivery/epics/README.md#slicing-discipline`](../../../delivery/epics/README.md). This category is the mechanical gate that catches horizontal-by-layer decomposition before coders run. It checks two header fields (`**Scope**` and `**User signal**`) and cross-checks them against the user-facing acceptance criteria.
+
+Parse the story header for these two fields (format `**Field name**: value`).
+
+**6.a — `Scope` field present and valid.** Expected values: `vertical-slice`, `backend-infra`, `frontend-chrome`, `infra`. Missing or unrecognized value → `BLOCKED` (the coder can't know which slicing shape is intended).
+
+**6.b — Scope justification required on non-default Scope.** If `Scope` is anything other than `vertical-slice`, the story must carry a non-empty `**Scope justification**` line with a concrete reason. Missing or empty justification on a non-default `Scope` → `BLOCKED`. An unjustified `backend-infra` or `frontend-chrome` is the most common way horizontal slicing re-enters through the back door.
+
+**6.c — `User signal` field present and valid.** Expected values: `direct`, `indirect`, `none`. Missing → `NEEDS_CLARIFICATION` (can be added without reshaping the spec).
+
+**6.d — Demo check on `vertical-slice` stories.** When `Scope` = `vertical-slice`, inspect `### Acceptance criteria (user-facing)`. At least one criterion must be observable by a non-technical viewer — it either names a user action (`the user sees / clicks / types / receives / can edit / can select...`) or describes a user-visible outcome (`the navbar shows...`, `the modal closes...`, `a confirmation appears...`). Pure technical assertions — `POST /... returns 201`, `row is inserted`, `event is emitted`, `queue receives the job` — do **not** qualify on their own.
+
+If **no** user-facing AC passes the demo check on a `vertical-slice` story → `BLOCKED` with the suggestion: *"Add an acceptance criterion of the form 'User sees/clicks/receives...' — currently every user-facing AC is a technical assertion, which means this story is a horizontal slice in disguise."*
+
+**6.e — Cross-check `Scope` vs `User signal` for consistency.**
+
+| `Scope` | Compatible `User signal` | Incompatible combo — what to emit |
+|---|---|---|
+| `vertical-slice` | `direct` (most common), `indirect` (rare but valid) | `vertical-slice` + `none` → `BLOCKED` (contradictory by construction) |
+| `backend-infra` | `indirect`, `none` | `backend-infra` + `direct` → `NEEDS_CLARIFICATION` (unusual — confirm story isn't actually a vertical slice mis-labeled) |
+| `frontend-chrome` | `indirect`, `none` | `frontend-chrome` + `direct` → `NEEDS_CLARIFICATION` (confirm it isn't a user-feature mis-labeled as chrome) |
+| `infra` | `none` | `infra` + `direct` or `indirect` → `NEEDS_CLARIFICATION` (infra usually has no user signal; confirm or re-scope) |
+
+### 7. Cross-layer contract consistency
 
 When a story touches backend and frontend together, the two sides have to agree. Read both sections and check:
 
@@ -112,7 +137,7 @@ When a story touches backend and frontend together, the two sides have to agree.
 
 Any mismatch here is `BLOCKED` — one side will have to change before coding starts, and delaying that decision just puts the cost on whoever hits the merge conflict later.
 
-### 7. Edge case enumeration
+### 8. Edge case enumeration
 
 The spec should mention, even briefly, how the feature behaves at the edges:
 
@@ -125,7 +150,7 @@ The spec should mention, even briefly, how the feature behaves at the edges:
 
 Missing all of these is a yellow flag, not automatically `BLOCKED`. One or two unaddressed edges is `NEEDS_CLARIFICATION`. If the story involves a PATCH endpoint and concurrency is never mentioned, that's specifically worth flagging — it's the single most common gap that causes data-loss bugs in review.
 
-### 8. Testability
+### 9. Testability
 
 A story that can't be tested is a story that can't be verified as done. Check that:
 
@@ -154,6 +179,7 @@ Vague verb scan: <N> matches (all defined in context)
 API contract: <summary>
 DB contract: <summary or "N/A">
 UI contract: <summary or "N/A">
+Slicing: Scope=<value>, User signal=<value>, demo check <passed or "N/A (non-vertical-slice)">
 Cross-layer: <consistent or "N/A">
 Edge cases: <list>
 Testability: <summary>
@@ -203,8 +229,8 @@ attempt.
 | Situation | Verdict |
 |---|---|
 | All checklist items pass | `CLEAR` |
-| Minor ambiguities (1-4 vague verbs, missing edge cases) that the tech-spec-writer can answer in a few minutes | `NEEDS_CLARIFICATION` |
-| Structural gaps (no acceptance criteria, missing API contract, cross-layer mismatch, no Figma on a new-component story) | `BLOCKED` |
+| Minor ambiguities (1-4 vague verbs, missing edge cases, missing User signal field) that the tech-spec-writer can answer in a few minutes | `NEEDS_CLARIFICATION` |
+| Structural gaps (no acceptance criteria, missing API contract, cross-layer mismatch, no Figma on a new-component story, missing Scope field, unjustified non-default Scope, vertical-slice with no user-observable AC, vertical-slice + User signal=none contradiction) | `BLOCKED` |
 | You find one structural gap and several ambiguities | `BLOCKED` (structural gaps take precedence; list the ambiguities in the body too) |
 | You're unsure whether something is a real problem | `NEEDS_CLARIFICATION` (never hide doubt behind `CLEAR`) |
 

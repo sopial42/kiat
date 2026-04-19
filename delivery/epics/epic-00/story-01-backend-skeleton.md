@@ -8,7 +8,11 @@
 
 **T-Shirt Size**: M
 
-**Scope**: backend-only
+**Scope**: infra
+
+**Scope justification**: bootstrap scaffolding — first story of epic-00, lays down the backend skeleton (Clean Architecture layers, auth middleware, generic CRUD) that subsequent product stories will build on. No user-facing increment by design; paired with story-02 (frontend skeleton) which consumes this API.
+
+**User signal**: none
 
 ---
 
@@ -37,7 +41,7 @@ This is the infra baseline. Every future business story depends on it. Getting i
 
 ### Mockups
 
-No mockups — backend-only story, no UI.
+No mockups — infra story, no UI.
 
 ---
 

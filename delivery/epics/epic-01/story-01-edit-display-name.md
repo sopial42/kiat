@@ -8,7 +8,9 @@
 
 **T-Shirt Size**: M
 
-**Scope**: both (backend migration + API, frontend navbar + modal + hook)
+**Scope**: vertical-slice
+
+**User signal**: direct
 
 ---
 

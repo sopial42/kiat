@@ -74,14 +74,14 @@ Label changes, copy edits, one-line text updates, color swaps that don't affect 
 - Swapping a placeholder image
 - Adjusting padding on an existing component by a few pixels
 
-### The story is backend-only
+### The story has no UI surface (Scope = backend-infra / infra)
 
-No UI, no user-visible changes, no frontend work at all. Skip unconditionally.
+No UI, no user-visible changes, no frontend work at all. Skip unconditionally. Applies to stories whose `**Scope**` is `backend-infra` or `infra` (see [`delivery/epics/README.md#slicing-discipline`](../../../../delivery/epics/README.md)).
 
 **Examples to skip:**
-- Adding a new API endpoint with no frontend consumer yet
-- Writing a database migration
-- Refactoring backend services
+- Adding a new API endpoint with no frontend consumer yet (`Scope: backend-infra`)
+- Writing a database migration (`Scope: infra`)
+- Refactoring backend services (`Scope: backend-infra`)
 - Adding logging or metrics
 
 ### The story is pure refactoring

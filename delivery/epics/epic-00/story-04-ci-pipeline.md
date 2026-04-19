@@ -8,7 +8,11 @@
 
 **T-Shirt Size**: S
 
-**Scope**: infra / CI only
+**Scope**: infra
+
+**Scope justification**: bootstrap — CI pipeline scaffolding (GitHub Actions workflow, caching, deploy placeholder). No user-facing artifact.
+
+**User signal**: none
 
 ---
 

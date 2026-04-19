@@ -175,7 +175,8 @@ If after two rounds the request still can't be nailed down, return `SPEC_HANDOFF
 Determine:
 - **Epic**: which epic does this belong to? Is it a new epic or an existing one? Read `delivery/epics/epic-*` to check.
 - **Size**: XS (one file change), S (one feature, single layer), M (feature crossing 2-3 layers), L (feature crossing many layers or with significant unknowns), XL (too big, must be split).
-- **Layers**: backend only? frontend only? both? database changes?
+- **Slicing shape** (`Scope` field): `vertical-slice` (default — DB→API→UI→test, user-observable increment) or a justified exception (`backend-infra` for a UI-less job/webhook, `frontend-chrome` for design-system-only work, `infra` for bootstrap/CI/migration scripts). The full rule lives in [`delivery/epics/README.md#slicing-discipline`](../../delivery/epics/README.md). **If you find yourself about to emit a `backend-infra` story whose follow-up will be a `frontend-chrome` story on the same feature, stop — that's exactly the horizontal-by-layer decomposition the rule forbids. Propose a vertical slice instead, however thin.**
+- **User signal**: `direct` (the user sees/clicks/receives something new), `indirect` (observable change in existing behavior), or `none` (infra with no user-facing signal). This field is orthogonal to `Scope` — a `vertical-slice` with `User signal: none` is a contradiction and will be blocked at spec validation.
 - **Skills**: which contextual skills from `available-skills.md` apply?
 
 If you estimate size as XL, **stop and propose a split to the user**. Do not write an XL story. Kiat is designed to fail on XL stories at the context budget check; catch them earlier.
@@ -191,14 +192,16 @@ Create the file at `delivery/epics/epic-X/story-NN.md` where:
 **In enrichment mode:** do NOT touch `## Business Context` — it is already written by BMad. Add or complete only the sections below it.
 **In greenfield mode:** write every section, including `## Business Context`. That section must be rendered in the project's business language (user story + personas + rationale), not in technical vocabulary — it is the voice of the product, not the engineer.
 
-The story file follows this structure — adapt the technical sections to what's actually in scope (a backend-only story doesn't need a Frontend section):
+The story file follows this structure — adapt the technical sections to what's actually in scope (a `backend-infra` story doesn't need a Frontend section):
 
 ```markdown
 # Story NN: <Short title>
 
 **Epic**: <epic-X-name>
 **T-shirt size**: XS | S | M | L
-**Scope**: <backend-only | frontend-only | both | infra>
+**Scope**: <vertical-slice | backend-infra | frontend-chrome | infra>
+**Scope justification**: <one line — only required when Scope ≠ vertical-slice; omit the line entirely for vertical-slice>
+**User signal**: <direct | indirect | none>
 
 ## Business Context
 

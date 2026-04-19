@@ -8,7 +8,11 @@
 
 **T-Shirt Size**: M
 
-**Scope**: frontend tests + some backend plumbing (CORS middleware check, Smocker scenarios)
+**Scope**: infra
+
+**Scope justification**: bootstrap scaffolding — ships the canonical Playwright harness (JWT swap, real-backend mode, Smocker seeding, CORS exposure headers) so every future story inherits the test infrastructure by copy-paste. Not a product feature.
+
+**User signal**: none
 
 ---
 

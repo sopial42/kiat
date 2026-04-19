@@ -8,7 +8,13 @@
 
 **T-Shirt Size**: S / M / L
 
-**Scope**: backend-only | frontend-only | both | infra
+**Scope**: vertical-slice | backend-infra | frontend-chrome | infra
+
+**Scope justification**: [_only when Scope ≠ `vertical-slice` — one line explaining why this story legitimately has no user-facing increment._ Delete this line when Scope = `vertical-slice`.]
+
+**User signal**: direct | indirect | none
+
+> `**Scope**` defaults to `vertical-slice` (DB→API→UI→test end-to-end). Non-default values require the `**Scope justification**` line above. `**User signal**` is orthogonal: `direct` = user sees/clicks/receives something new, `indirect` = observable change in existing behavior (faster, edge case now handled), `none` = infra with no user-facing signal (verify via logs/metrics). A `vertical-slice` story with `User signal: none` is a contradiction and will be blocked at spec validation. Rule: [`../README.md#slicing-discipline`](../README.md).
 
 > The `**Status**:` line above is the single source of truth for this story's state. Values and transitions defined in [`../README.md#status-lifecycle`](../README.md#status-lifecycle). Team Lead flips it automatically as phases run.
 
@@ -42,6 +48,16 @@
 As a [persona], I want [goal], so that [value].
 
 ### Acceptance criteria (user-facing)
+
+<!--
+Demo check (enforced by kiat-validate-spec Category 6):
+When **Scope** = `vertical-slice`, at least ONE criterion below MUST be
+observable by a non-technical viewer — a user action or a user-visible outcome.
+"User sees / clicks / types / receives ..." qualifies.
+"API returns 200" / "row is inserted" / "job is queued" does NOT qualify.
+If every criterion reads like a technical assertion, the story is a horizontal
+slice in disguise — reshape before handoff.
+-->
 
 - [ ] [User-facing criterion: what the user can do, see, or experience]
 - [ ] ...
