@@ -26,6 +26,16 @@
 > tech-spec-writer reads this section regardless of its language and writes
 > the technical sections below in English (the framework default, aligned
 > with code and API conventions).
+>
+> **⚠️ Required reading before this story (delete if not applicable)**:
+> [`_epic.md` — Target architecture](./_epic.md#target-architecture) — this
+> story [creates | extends | activates] the shared artifact described
+> there. Follow the per-story evolution to avoid architecture choices that
+> will be redone in a later story. Rule and rationale: [`../README.md#target-architecture`](../README.md#target-architecture).
+>
+> If this story touches an artifact that no other story in the epic
+> touches (typical for independent backend fetchers, isolated migrations,
+> standalone services), **delete the blockquote above** and proceed.
 
 ### User story
 

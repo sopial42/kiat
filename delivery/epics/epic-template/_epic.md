@@ -39,6 +39,14 @@
 - [What we assume and that could turn out to be wrong]
 - [Dependencies on external stakeholders, regulations, or timing]
 
+### Target architecture
+
+> **Keep this sub-section when ≥ 2 stories in this epic touch the same artifact** (page, endpoint, shared component, table, service). **Delete it** when every story touches a different artifact. Rule and rationale: [`../README.md#target-architecture`](../README.md#target-architecture).
+>
+> When kept, each story in the series MUST open its `## Business Context` with a `⚠️ Required reading before this story` pointer to this section — BMad writes both sides as a single coherent act.
+
+[Describe the **final state** of the shared artifact after all its stories land — zones, navigation, composable blocks, primitives reused. Then a **per-story evolution** table (one line per story: what each adds or activates). Then the **implicit architectural constraints** each story must anticipate (e.g., "state must be listeable from story 01 because story 02 will introduce N items", "button X must render from story 01 even if inactive, to avoid re-layout in story 03"). User-facing / information architecture only — no component names, no routes, no framework terms.]
+
 ### Linked business knowledge
 
 _Point at the evergreen docs in `delivery/business/` that frame this epic. Link only the sections that actually matter for this epic — don't list the whole folder._

@@ -100,6 +100,36 @@ The **user-facing acceptance criteria** that BMad writes are different from the 
 
 Two different heading levels on purpose: the user-facing list is a sub-section of `## Business Context` (BMad's only sandbox), while the technical list is a peer of `## Backend`, `## Frontend`, etc. A story that drops the `(user-facing)` / `(technical)` suffix, or merges the two lists into one, is a two-layer boundary violation — stop and fix the structure before proceeding.
 
+### Target architecture
+
+**Rule in one line**: whenever **2 or more stories in the same epic touch the same artifact** (page, endpoint, shared component, table, service), the `_epic.md` MUST include a dedicated sub-section in `## Business Context` titled `### Target architecture` that describes the artifact's final state and its per-story evolution.
+
+Backend work naturally decomposes into independent units: each endpoint, each fetcher, each migration lives in its own file with its own test suite, and stories can be written in isolation without losing context. **Frontend work does not decompose that way.** A page is built incrementally: story 01 creates the skeleton, story 02 adds multi-select, story 03 activates an export button — all on the same page, sharing the same state shape, the same layout, the same composable result sections. The writer who attacks story 01 without seeing where stories 02 and 03 will land makes architectural choices (state shape, layout, data flow) that have to be redone 1-2 stories later.
+
+The same pattern applies to any artifact touched by multiple stories: a shared endpoint progressively enriched, a table extended across migrations, a shared component whose props grow story by story. Each affected story then carries a short `⚠️ Required reading before this story` pointer in its own Business Context, linking back to the epic's `### Target architecture`.
+
+**What goes in `### Target architecture`** (user-facing / information architecture only — no code):
+
+- **Final state of the shared artifact** — what zones, what links, what navigation, what composable blocks the user sees when all its stories have landed
+- **Per-story evolution** — a one-liner per story: what each story adds or activates on the artifact (e.g., "story 01 establishes the skeleton with N inactive buttons; story 02 activates button X; story 03 activates button Y")
+- **Primitives reused** from other parts of the codebase — point at the existing patterns the artifact will inherit (design system, shared layout chrome, shared endpoint envelope) so the tech-spec-writer does not reinvent
+- **Implicit architectural constraints** — decisions story 01 must make to avoid rework, phrased in user-facing / structural terms (e.g., "the result zone must be a repeatable unit because story 02 will duplicate it N times", "the export button must be rendered from story 01 even if inactive, to avoid a visual re-layout in story 03")
+
+**What does NOT go in this section** — still BMad's sandbox, still user-facing:
+
+- No component names, no route paths, no framework-specific terms (Next.js App Router, React Context, Shadcn), no file paths
+- No state-management library choice, no caching strategy — those are the tech-spec-writer's territory
+
+**Per-story cross-reference** — every story belonging to the series carries, as the first line of its `## Business Context` blockquote, a pointer like:
+
+```markdown
+> ⚠️ Required reading before this story: [_epic.md — Target architecture](./_epic.md#target-architecture) — this story [creates | extends | activates] the shared artifact described there. Follow the per-story evolution to avoid architecture choices that will be redone in a later story.
+```
+
+BMad writes both sides — the epic section **and** the per-story pointers — as a single coherent act. A story whose epic has a `### Target architecture` but which lacks the cross-reference pointer is a contract violation.
+
+**When to skip this section**: when every story in the epic touches a **different** artifact (e.g., 4 independent backend fetchers, each in its own package + test suite, plus 1 aggregation story). The rule is "2+ stories on the **same** artifact", not "any epic with 2+ stories". If in doubt, add it — the cost of writing it is minutes, the cost of not writing it is one or two stories of backtracked architecture.
+
 ### Mockups — how UI designs flow into stories
 
 Stories that touch UI carry a `### Mockups` sub-section under `## Business Context`. **Two valid shapes, one per story, never mixed.**
