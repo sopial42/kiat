@@ -108,7 +108,24 @@ or
 Skills-declaration check: BLOCKED — story lists [A, B, C]; handoff shows [A, C] (missing B)
 ```
 
-#### Step 6 — Test patterns drift check (behavioral, not textual)
+#### Step 6 — Business Deviations presence check
+
+The coder's handoff MUST contain a `Business Deviations:` section (either listing deviations or stating `NONE`). This is a **presence check only** — you do NOT judge the content. The deviations are consumed downstream by Team Lead and BMad for business reconciliation.
+
+1. **Grep for `Business Deviations:` in the coder's handoff**:
+   - **Missing** → `VERDICT: BLOCKED` with the note *"coder handoff missing mandatory `Business Deviations:` section — re-submit with deviations listed or explicit NONE"*
+   - **Present** → record it in your audit line and proceed
+
+**Audit line (always emit)**:
+```
+Business-deviations check: present ✓ (NONE | N deviations listed)
+```
+or
+```
+Business-deviations check: BLOCKED — section missing from handoff
+```
+
+#### Step 7 — Test patterns drift check (behavioral, not textual)
 
 The coder's handoff MUST contain a `TEST_PATTERNS: ACKNOWLEDGED` block from `kiat-test-patterns-check`. **Verbatim match is necessary but not sufficient** — the reviewer's job is to verify the code actually follows the rules the coder acknowledged.
 
@@ -136,7 +153,7 @@ or
 Test-patterns check: BLOCKED — Block <X> drift at <file>:<line>: <detail>
 ```
 
-#### Step 7 — Emit the verdict (machine-parseable) and the Review Log block (paste-ready)
+#### Step 8 — Emit the verdict (machine-parseable) and the Review Log block (paste-ready)
 
 Your output has **two parts** that Team Lead consumes differently:
 
@@ -164,7 +181,8 @@ REVIEW_LOG_BLOCK_BEGIN
 **Audit lines from the reviewer**:
 - Clerk-auth skill: <the exact audit line you emitted in Step 3>
 - Skills-declaration check: <the exact audit line you emitted in Step 5>
-- Test-patterns check: <the exact audit line you emitted in Step 6>
+- Business-deviations check: <the exact audit line you emitted in Step 6>
+- Test-patterns check: <the exact audit line you emitted in Step 7>
 
 **Issues raised** (<N>):
 1. [<category> — <file:line>] <one-line description of the issue>
@@ -175,7 +193,7 @@ REVIEW_LOG_BLOCK_END
 
 Rules for the block:
 - **Verdict line at the top of the block** must match Part A (line 1) exactly.
-- **Audit lines** are the three audit lines you already emit in Steps 3, 5, 6. Don't rephrase them — paste them into the block character-for-character so Team Lead's `## Review Log` is a faithful transcript of your review.
+- **Audit lines** are the four audit lines you already emit in Steps 3, 5, 6, 7. Don't rephrase them — paste them into the block character-for-character so Team Lead's `## Review Log` is a faithful transcript of your review.
 - **Issues raised** is the concrete, fixable issue list for `BLOCKED` / the discussion items for `NEEDS_DISCUSSION` / `_(none)_` for `APPROVED`. Keep each issue to one line (category, file:line, short description). Typical categories for frontend: `components`, `styling`, `accessibility`, `hooks`, `testing`, `performance`, `ux`. The long-form body of your review stays outside the block.
 - **No arbitration in this block.** The arbitration column is Team Lead's job — you emit the raw issue list, Team Lead decides ACCEPT / REJECT / SEND_BACK per issue when it writes the final cycle entry.
 - **APPROVED with 0 issues**: emit the block with `**Issues raised** (0): _(none)_` and that's it. The block is always emitted, never skipped.

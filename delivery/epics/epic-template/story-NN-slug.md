@@ -308,6 +308,17 @@ _(no cycles run yet)_
 
 ---
 
+## Post-Delivery Notes
+
+> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
+> Review mode to reconcile `delivery/business/` with what was actually shipped.
+> Protocol: [`../../../.claude/agents/kiat-team-lead.md`](../../../.claude/agents/kiat-team-lead.md) Phase 5c
+> and [`../README.md#post-delivery-notes`](../README.md#post-delivery-notes).
+
+_(no deviations)_
+
+---
+
 ## Prod Validation
 
 > Filled by Team Lead at Phase 7 for production-affecting stories. Protocol in

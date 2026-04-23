@@ -383,6 +383,65 @@ Team Lead replaces this placeholder after executing Phase 7, per the protocol in
 
 ---
 
+## Post-Delivery Notes
+
+Stories that go through the pipeline may accumulate a `## Post-Delivery Notes` section **below `## Review Log` and above `## Prod Validation`**. Team Lead writes it at Phase 5c by aggregating the `Business Deviations:` sections from each coder's handoff. Append-only — once written, the section is never rewritten.
+
+### Why this section exists
+
+During implementation, coders regularly make decisions that deviate from the spec: an acceptance criterion is implemented differently due to technical constraints, a new domain concept is introduced that isn't in the glossary, a judgment call is made on something the spec was silent about. Without a structured place to capture these deviations, the business layer (`delivery/business/`) silently diverges from what was actually shipped — and the PO/PM never knows.
+
+### Template pre-scaffold
+
+Every story file ships with this section pre-created:
+
+```markdown
+## Post-Delivery Notes
+
+> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
+> Review mode to reconcile `delivery/business/` with what was actually shipped.
+
+_(no deviations)_
+```
+
+If all coders reported `Business Deviations: NONE`, Team Lead leaves the placeholder untouched. If any coder reported deviations, Team Lead replaces `_(no deviations)_` with the aggregated content.
+
+### Populated format
+
+```markdown
+## Post-Delivery Notes
+
+> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
+> Review mode to reconcile `delivery/business/` with what was actually shipped.
+
+### Backend deviations
+- AC-3: "User can delete in bulk" → async job queue, not synchronous. Reason: timeout above 50 items.
+- SPEC_GAP: "soft delete" concept introduced for GDPR compliance — not in glossary.
+
+### Frontend deviations
+- DECISION: Mobile breakpoint set to 480px (spec said "mobile-friendly" without a number).
+```
+
+### Deviation categories
+
+| Prefix | Meaning |
+|---|---|
+| `AC-N` | Acceptance criterion N implemented differently than specified |
+| `SPEC_GAP` | New concept/behavior introduced that the spec and `delivery/business/` don't mention |
+| `DECISION` | Judgment call on something the spec was silent about |
+
+### How BMad consumes this section
+
+When the PO/PM invokes BMad in **Review mode** on a delivered story (status `✅ Done`), BMad reads `## Post-Delivery Notes`. If deviations exist:
+
+1. BMad switches to **Capture mode** to update `delivery/business/` — adding missing glossary terms (`SPEC_GAP`), adjusting business rules, updating domain model entries.
+2. If a deviation changes the meaning of an acceptance criterion (`AC-N`), BMad may also switch to **Plan mode** to annotate the `## Business Context` of the current story or related future stories.
+3. Once all deviations are reconciled, BMad notes it in the story file (append a line: `_Reconciled by BMad on <date>_` below the deviations).
+
+This keeps `delivery/business/` as a faithful record of what was **actually built**, not what was **originally planned**. The full BMad reconciliation protocol is documented in [`../business/README.md#review-mode--post-delivery-reconciliation`](../business/README.md#review-mode--post-delivery-reconciliation).
+
+---
+
 ## What does NOT go here
 
 - ❌ **Evergreen domain knowledge** — glossary, personas, business rules, domain model, user journeys live in `../business/`, not here. The epic/story files link to them.

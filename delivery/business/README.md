@@ -90,7 +90,7 @@ This section governs what BMad writes **into `delivery/business/`**. Rules for w
 | **Explore** | Your idea is still fuzzy, you want to think out loud | Only if the exploration converges on a stable business fact |
 | **Capture** | You want to record a domain fact (term, persona, rule…) | **Yes — primary destination for this folder** |
 | **Plan** | You want to turn ideas into backlog (epic, story) | No — lands in `delivery/epics/` instead |
-| **Review** | You want BMad to audit what's already here | No writes; report only |
+| **Review** | You want BMad to audit what's already here, or reconcile post-delivery deviations | Writes only when reconciling `## Post-Delivery Notes` from delivered stories |
 
 You don't have to name the mode explicitly — BMad detects it from your phrasing. But the four modes are the vocabulary of the contract; if you're unsure what BMad is about to do, ask which mode it thinks it's in.
 
@@ -120,3 +120,43 @@ If the target file doesn't exist yet, BMad creates it the first time — always 
 ### What BMad does NOT write here
 
 Everything already listed in "What does NOT go here" above still holds — in particular, **no story specs and no epic briefs in this folder**. The business layer of every story (its `## Business Context` section) lives inside the story file itself, in `delivery/epics/epic-X/`. This folder is only for evergreen domain knowledge that outlives any single story.
+
+---
+
+### Review mode — Post-Delivery Reconciliation
+
+When the PO/PM invokes BMad in **Review mode** on a delivered story (status `✅ Done`), BMad performs a **reconciliation check** — reading the story's `## Post-Delivery Notes` section to discover any deviations between what the spec planned and what the coders actually shipped.
+
+#### When to trigger
+
+- **Periodically**: the PO/PM can ask BMad to scan all `✅ Done` stories in an epic for unreconciled `## Post-Delivery Notes`. BMad lists the stories that have non-placeholder content.
+- **Per-story**: the PO/PM points BMad at a specific delivered story file.
+- **In `/loop`**: BMad can be set up via `/loop` to periodically scan for unreconciled stories across all epics.
+
+#### Reconciliation protocol
+
+1. **Read** the story's `## Post-Delivery Notes`. If the placeholder `_(no deviations)_` is present, the story shipped as specified — report "no reconciliation needed" and stop.
+
+2. **For each deviation**, classify the business impact:
+
+   | Deviation prefix | BMad action |
+   |---|---|
+   | `AC-N` (acceptance criterion changed) | Read the original AC in `## Business Context`. Assess whether the difference is cosmetic (e.g., toast instead of modal — same UX outcome) or material (e.g., async instead of sync — different user experience). If material: propose an update to the `## Business Context` acceptance criterion and, if applicable, to the relevant `delivery/business/` file. |
+   | `SPEC_GAP` (new concept introduced) | Check if the concept exists in `delivery/business/glossary.md` or `domain-model.md`. If not: switch to **Capture mode** and propose adding it. If it exists but the definition doesn't match: propose an update. |
+   | `DECISION` (judgment call on silence) | Assess whether the decision should become a **business rule** (e.g., "rate limit is 100 req/min" → belongs in `business-rules.md` if it's a product decision, not just a technical default). If yes: switch to **Capture mode** and propose. If it's purely technical: note it and move on — it belongs in `delivery/specs/project-memory.md`, not here. |
+
+3. **Propose before writing** — same rule as Capture mode. BMad announces each update it intends to make and waits for green light before writing.
+
+4. **Mark as reconciled**. After all deviations in a story are processed, BMad appends a line to the story's `## Post-Delivery Notes`:
+
+   ```markdown
+   _Reconciled by BMad on 2026-04-22 — 2 items updated in delivery/business/, 1 noted as technical-only._
+   ```
+
+   This line is the signal that the story's deviations have been reviewed by the PO/PM and the business layer is up to date.
+
+#### What BMad does NOT do during reconciliation
+
+- **No technical changes.** BMad never edits `delivery/specs/`, code, or `.claude/` files. If a deviation is purely technical (e.g., "used async job queue" with no business impact), BMad notes it and moves on.
+- **No retroactive story edits.** BMad does not modify the `## Business Context` of a `✅ Done` story to pretend the spec was always right. The `## Post-Delivery Notes` section is the historical record of what changed. If BMad updates an acceptance criterion, it adds a note explaining the update was post-delivery.
+- **No new stories from deviations alone.** If a deviation reveals a bigger gap (e.g., "we introduced soft delete but have no GDPR retention policy"), BMad flags it to the PO/PM as a potential future story — it does not create the story unilaterally.

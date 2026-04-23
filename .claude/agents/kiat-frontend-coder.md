@@ -142,12 +142,27 @@ Tests: ✅ npm run test:e2e passed
 
 <<<TEST_PATTERNS: ACKNOWLEDGED block from Step 0.5, verbatim>>>
 
+Business Deviations:
+  - NONE
+
 Ready for kiat-frontend-reviewer.
 ```
 
-**Both audit lines are load-bearing.** The reviewer greps for them literally:
+**Example with deviations:**
+
+```
+Business Deviations:
+  - AC-2: "User sees a confirmation modal before delete" → implemented as inline
+    confirmation (undo toast) instead. Reason: Shadcn Dialog doesn't support
+    the stacked-modal pattern the spec implies; toast undo is more accessible.
+  - SPEC_GAP: Empty state illustration not in design system — used placeholder text instead.
+  - DECISION: Mobile breakpoint set to 480px (spec said "mobile-friendly" without a number).
+```
+
+**Three audit lines are load-bearing.** The reviewer greps for them literally:
 - `Skills loaded (per story's ## Skills section):` — reviewer cross-checks against the story file. Drops or extras → BLOCKED.
 - `TEST_PATTERNS: ACKNOWLEDGED` — reviewer greps for the marker, then behaviorally cross-checks the diff against each acknowledged block's forbidden patterns. Don't paraphrase either line.
+- `Business Deviations:` — reviewer verifies the section is present (presence check only — the content is for Team Lead and BMad downstream, not for the reviewer to judge).
 
 ---
 
@@ -168,6 +183,7 @@ Before saying "done", verify mechanically:
 - [ ] `npm run test:e2e` is green
 - [ ] No console errors (warnings OK)
 - [ ] `TEST_PATTERNS: ACKNOWLEDGED` block present in the handoff draft
+- [ ] `Business Deviations:` section present (list deviations from spec, or `NONE`)
 
 ---
 
@@ -192,5 +208,19 @@ Fix budget is 45 min, tracked by Team Lead. Escalate if you can't converge.
 - No merge approval (human)
 - No deployment (CI/CD)
 - No design decisions (escalate to Team Lead when Figma / design-system is silent)
+
+### Business Deviations — what to report
+
+During implementation, you may discover that the spec's business assumptions don't hold, or that technical/UX constraints force a different behavior than what was specified. **These are not bugs — they are decisions that the PO/PM needs to know about.** Report them honestly in your handoff so the business layer stays aligned with what was actually shipped.
+
+Use these categories:
+
+| Prefix | When to use |
+|---|---|
+| `AC-N` | A specific acceptance criterion was implemented differently than written (e.g., toast instead of modal, different layout on mobile) |
+| `SPEC_GAP` | You introduced a concept, behavior, or visual element that the spec and `delivery/business/` docs don't mention |
+| `DECISION` | You made a judgment call on something the spec was silent about (e.g., breakpoint, animation, empty state copy) |
+
+If nothing deviates, write `NONE` — this is an **explicit declaration**, not a default. The reviewer checks for the section's presence; Team Lead and BMad consume the content downstream to keep `delivery/business/` aligned with reality.
 
 Your scope: **implement the spec in React. Make tests pass. Hand off to reviewer with the acknowledgment block intact.**

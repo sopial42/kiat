@@ -396,6 +396,43 @@ If the story consumed **> 15 minutes of fix budget on test-related issues** (fla
 
 **When the pitfall already exists:** If the coder's fix matches an existing pitfall entry, do NOT create a duplicate. Instead, note in your audit line: `Pitfall already documented: VP04 — no new entry needed`. If the existing entry is incomplete or wrong, update it in place.
 
+### Phase 5c — Business Reconciliation (after review, before rollup)
+
+After both reviewers return `APPROVED` and Phase 5b is done, **aggregate the Business Deviations from both coders** into the story file. This is the data that closes the feedback loop between implementation and the business layer.
+
+**Procedure:**
+
+1. **Collect** the `Business Deviations:` section from each coder's handoff (backend and/or frontend).
+2. **If ALL coders reported `NONE`**: no action needed — the story shipped as specified. Emit the audit line and proceed to Phase 6.
+3. **If ANY coder reported deviations**: write a `## Post-Delivery Notes` section in the story file (replacing the `_(no deviations)_` placeholder), aggregating deviations from both coders with their source labeled:
+
+   ```markdown
+   ## Post-Delivery Notes
+
+   > Aggregated by Team Lead from coder handoffs. Consumed by BMad in Review
+   > mode to reconcile `delivery/business/` with what was actually shipped.
+
+   ### Backend deviations
+   - AC-3: "User can delete in bulk" → async job queue, not synchronous. Reason: timeout above 50 items.
+   - SPEC_GAP: "soft delete" concept introduced for GDPR compliance — not in glossary.
+
+   ### Frontend deviations
+   - NONE
+   ```
+
+4. **Include a `business_deviations` count in the rollup event** (Phase 6) — see [`metrics-events.md`](../specs/metrics-events.md) for the field.
+
+**Audit line (always emit)**:
+```
+Business reconciliation: 0 deviations — story shipped as specified ✓
+```
+or
+```
+Business reconciliation: 3 deviations aggregated into ## Post-Delivery Notes (2 backend, 1 frontend) ✓
+```
+
+**Why this phase exists**: without it, business-impacting decisions made during coding die in the Git diff. The PO/PM never learns that AC-3 was implemented differently, or that a new domain concept was introduced. BMad's Review mode consumes `## Post-Delivery Notes` to update `delivery/business/` — but the data must exist first. This phase creates the data.
+
 ### Phase 6 — Mark story complete and emit the rollup event (HARD EXIT GATE)
 
 Update the story file with a status footer (date, files changed, test counts, reviewer verdicts) and emit **exactly one** event to `delivery/metrics/events.jsonl`. This is your exit marker. See [`.claude/specs/metrics-events.md`](../specs/metrics-events.md) for the v1.1 Rollup-First schema.
@@ -444,8 +481,35 @@ Once the rollup is written and verified, the **last** edit you make on the story
 
 In the **same edit pass**, update the epic's `_epic.md` aggregate status per the rule in [`delivery/epics/README.md#status-lifecycle`](../../delivery/epics/README.md#status-lifecycle). Key transitions after a story moves:
 
-- Story → `✅ Done`: if this was the last `🚧 In Progress` story in the epic and all others are `✅ Done`, the epic becomes `✅ Done`. Otherwise it keeps whatever it was (typically `🚧 In Progress` if other stories are still running, or `📝 Drafted` / `📥 Backlog` if none are).
+- Story → `✅ Done`: if this was the last `🚧 In Progress` story in the epic and all others are `✅ Done`, the epic **may** become `✅ Done` — but only after the **reconciliation guard** passes (see below). Otherwise it keeps whatever it was (typically `🚧 In Progress` if other stories are still running, or `📝 Drafted` / `📥 Backlog` if none are).
 - Story → `🛑 Blocked`: the epic becomes `🛑 Blocked` immediately (blocked dominates every other state).
+
+#### Reconciliation guard (epic closure gate)
+
+**When all stories in an epic are `✅ Done` and the epic is about to become `✅ Done`**, scan every story's `## Post-Delivery Notes` section before flipping the epic status:
+
+1. For each story in the epic directory, grep for `## Post-Delivery Notes`.
+2. If the section contains the placeholder `_(no deviations)_` → story shipped as specified, no reconciliation needed.
+3. If the section contains deviations but **also** contains a `_Reconciled by BMad_` line → BMad has already processed it, reconciliation done.
+4. If the section contains deviations but **no** `_Reconciled by BMad_` line → **unreconciled**.
+
+**Decision:**
+
+| Scan result | Action |
+|---|---|
+| All stories: no deviations or reconciled | Epic → `✅ Done` |
+| Any story has unreconciled deviations | Epic stays `🚧 In Progress`. Emit a warning to the user listing the unreconciled stories. Do NOT flip to `✅ Done`. |
+
+**Audit line:**
+```
+Reconciliation guard: epic-X — 5 stories scanned, 0 unreconciled ✓ → epic eligible for ✅ Done
+```
+or
+```
+Reconciliation guard: epic-X — 5 stories scanned, 2 unreconciled (story-03, story-05) ⚠️ → epic stays 🚧 In Progress. BMad reconciliation needed before epic closure.
+```
+
+**Why this guard exists**: without it, an epic can close with business deviations that the PO/PM never saw. The guard ensures the feedback loop is actually closed — not just that the data was created (Phase 5c), but that it was consumed (BMad Review mode). It's the difference between "we told the PO" and "the PO acknowledged it".
 
 **Audit line (always emit)**:
 ```
@@ -584,6 +648,7 @@ A story is done when:
 - ✅ Both reviewers returned `VERDICT: APPROVED` (or their last `NEEDS_DISCUSSION` was arbitrated and documented in `## Review Log`)
 - ✅ No outstanding security findings
 - ✅ Every reviewer cycle (including the final APPROVED one) has been appended to the story's `## Review Log` section
+- ✅ Business Deviations from all coders aggregated into `## Post-Delivery Notes` (or confirmed all `NONE`)
 - ✅ Rollup event written to `delivery/metrics/events.jsonl` **AND verified via `tail -n 1 | json.tool`** (success path)
 - ✅ Final message contains the `Rollup event: written and verified ✓` audit line
 - ✅ Story `**Status**` line flipped to `✅ Done` and epic `_epic.md` aggregate recomputed in the same edit
@@ -618,6 +683,11 @@ A story is done when:
 - [ ] Fix budget exhausted with remaining issues → flip story to `🛑 Blocked`, escalate
 - [ ] Before escalating, consult `failure-patterns.md` (match or create FP-NNN)
 - [ ] **Phase 5b — Pitfall capture**: if fix budget > 15 min on test issues → ask coder for root cause, append to `testing-pitfalls-backend.md` or `testing-pitfalls-frontend.md`, emit audit line
+- [ ] **Phase 5c — Business Reconciliation**:
+    - [ ] Collect `Business Deviations:` from each coder's handoff
+    - [ ] If all `NONE` → emit audit line, skip to Phase 6
+    - [ ] If any deviations → aggregate into story's `## Post-Delivery Notes` section (replace placeholder)
+    - [ ] Emit `Business reconciliation:` audit line with deviation count
 - [ ] **Phase 6 — Rollup write (hard exit gate)**:
     - [ ] Build the JSON object as a single line, cross-checked against `metrics-events.md` schema
     - [ ] Append via Bash heredoc (`<<'EOF'`) to `delivery/metrics/events.jsonl`
@@ -625,6 +695,7 @@ A story is done when:
     - [ ] If verify fails → diagnose and re-emit. Story is NOT done.
     - [ ] Emit the audit line: `Rollup event: written and verified ✓ (event: ..., line N)`
 - [ ] **Final status transition**: flip story to `✅ Done` (passed) or `🛑 Blocked` (escalated) + epic aggregate, in one edit
+    - [ ] If epic about to become `✅ Done`: run **reconciliation guard** — scan all stories for unreconciled `## Post-Delivery Notes`. Block epic closure if any unreconciled.
 - [ ] Emit the final status audit line
 - [ ] **Phase 7 — Deploy monitoring + prod validation (MANDATORY for production-affecting stories)**:
     - [ ] Determine if Phase 7 applies (production code change → YES; tests/docs/CI-only → SKIP with documented reason)

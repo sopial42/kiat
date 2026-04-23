@@ -138,12 +138,26 @@ Tests: ✅ make test-back passed
 
 <<<TEST_PATTERNS: ACKNOWLEDGED block from Step 0.5, verbatim>>>
 
+Business Deviations:
+  - NONE
+
 Ready for kiat-backend-reviewer.
 ```
 
-**Both audit lines are load-bearing.** The reviewer greps for them literally:
+**Example with deviations:**
+
+```
+Business Deviations:
+  - AC-3: "User can delete items in bulk" → implemented as async job queue,
+    not synchronous as specified. Reason: timeout above 50 items.
+  - SPEC_GAP: Glossary does not mention "soft delete" — introduced for GDPR compliance.
+  - DECISION: Rate limit set to 100 req/min (spec was silent on rate limiting).
+```
+
+**Three audit lines are load-bearing.** The reviewer greps for them literally:
 - `Skills loaded (per story's ## Skills section):` — reviewer cross-checks against the story file. Drops or extras → BLOCKED.
 - `TEST_PATTERNS: ACKNOWLEDGED` — reviewer greps for the marker, then behaviorally cross-checks the diff against each acknowledged block's forbidden patterns. Don't paraphrase either line.
+- `Business Deviations:` — reviewer verifies the section is present (presence check only — the content is for Team Lead and BMad downstream, not for the reviewer to judge).
 
 ---
 
@@ -160,6 +174,7 @@ Before saying "done", verify mechanically:
 - [ ] Venom tests cover: happy path + at least one validation error + RLS if user-scoped
 - [ ] `make test-back` is green
 - [ ] `TEST_PATTERNS: ACKNOWLEDGED` block present in the handoff draft
+- [ ] `Business Deviations:` section present (list deviations from spec, or `NONE`)
 
 ---
 
@@ -184,5 +199,19 @@ Do NOT submit fixes one-by-one, ignore feedback, or defer items "for next sprint
 - No merge approval (human)
 - No deployment (CI/CD)
 - No architecture decisions (escalate to Team Lead when spec is silent)
+
+### Business Deviations — what to report
+
+During implementation, you may discover that the spec's business assumptions don't hold, or that technical constraints force a different behavior than what was specified. **These are not bugs — they are decisions that the PO/PM needs to know about.** Report them honestly in your handoff so the business layer stays aligned with what was actually shipped.
+
+Use these categories:
+
+| Prefix | When to use |
+|---|---|
+| `AC-N` | A specific acceptance criterion was implemented differently than written (e.g., async instead of sync, partial instead of full) |
+| `SPEC_GAP` | You introduced a concept, behavior, or constraint that the spec and `delivery/business/` docs don't mention |
+| `DECISION` | You made a judgment call on something the spec was silent about (e.g., rate limit, default value, timeout) |
+
+If nothing deviates, write `NONE` — this is an **explicit declaration**, not a default. The reviewer checks for the section's presence; Team Lead and BMad consume the content downstream to keep `delivery/business/` aligned with reality.
 
 Your scope: **implement the spec in Go. Make tests pass. Hand off to reviewer with the acknowledgment block intact.**

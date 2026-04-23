@@ -96,7 +96,12 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
     }
   },
   "fix_budget_used_min": 13,
-  "total_elapsed_min": 43
+  "total_elapsed_min": 43,
+  "business_deviations": {
+    "count": 2,
+    "backend": ["AC-3: bulk delete → async job queue", "SPEC_GAP: soft delete for GDPR"],
+    "frontend": []
+  }
 }
 ```
 
@@ -118,6 +123,10 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
   - `total_issues_across_cycles` (int): sum of `issues_count` from all BLOCKED verdicts during the story
 - `fix_budget_used_min` (int): approximate minutes between `fix_budget_started` and story completion. **Team Lead's best estimate** — not required to be precise. Set to 0 if the story was APPROVED on first try without entering a fix cycle.
 - `total_elapsed_min` (int): approximate minutes from story reception to completion. **Team Lead's best estimate.**
+- `business_deviations` (object): summary of deviations from spec reported by coders at Phase 5c. Contains:
+  - `count` (int): total number of deviations across all coders (0 if all reported `NONE`)
+  - `backend` (array of strings): one-line summaries of backend deviations (empty array if `NONE`)
+  - `frontend` (array of strings): one-line summaries of frontend deviations (empty array if `NONE`)
 
 **On precision of timestamps:** Team Lead does NOT have a reliable system clock. The `ts`, `fix_budget_used_min`, and `total_elapsed_min` fields are best-effort estimates based on the conversation context. Acceptable precision: ±5 minutes. If Team Lead cannot estimate, set the minute fields to `null` — `report.py` will handle it gracefully.
 
