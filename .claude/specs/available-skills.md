@@ -110,6 +110,57 @@ These skills are not Kiat-owned — they're part of the broader Claude Code skil
 - **When to use**: stories touching security-sensitive code paths
 - **Loaded by**: `kiat-backend-coder` or `kiat-backend-reviewer` (optional)
 
+### clerk-nextjs-patterns
+
+- **Source**: [clerk/skills](https://github.com/clerk/skills) (official Clerk AI skill)
+- **Size**: ~5k tokens (SKILL.md) + ~2k per reference file (5 references)
+- **Location**: `.agents/skills/clerk-nextjs-patterns/` (symlinked into `.claude/skills/`)
+- **Purpose**: Next.js App Router patterns for Clerk — `auth()` vs hooks, middleware strategies (public-first vs protected-first), Server Action protection, API route auth (401 vs 403), user-scoped caching
+- **When to use**: stories that add or modify Clerk middleware, auth guards on pages/layouts, Server Actions with auth, API route handlers with auth, or caching of user-scoped data
+- **When to skip**: pure backend stories, stories that don't touch Next.js auth integration, trivial UI changes behind existing auth guards
+- **Loaded by**: `kiat-frontend-coder` (contextual, when story touches Clerk + Next.js)
+- **Complements**: `kiat-clerk-auth-review` (review-time checks) — this skill is build-time guidance
+
+**Audit line pattern**: `clerk-nextjs-patterns: applied <pattern> from references/<file>.md`
+
+### clerk-testing
+
+- **Source**: [clerk/skills](https://github.com/clerk/skills) (official Clerk AI skill)
+- **Size**: ~1.5k tokens
+- **Location**: `.agents/skills/clerk-testing/` (symlinked into `.claude/skills/`)
+- **Purpose**: E2E testing patterns for Clerk apps — `clerkSetup()`, `setupClerkTestingToken()`, `storageState` for persistent auth, framework-specific setup (Playwright/Cypress)
+- **When to use**: stories that add or modify E2E tests involving authenticated flows, stories that set up Playwright auth fixtures, stories that touch `clerkSetup` or storage state management
+- **When to skip**: backend-only stories, stories with no E2E test component, stories where auth tests already exist and aren't being modified
+- **Loaded by**: `kiat-frontend-coder` (contextual, when story involves E2E auth tests)
+- **Complements**: `block-c-clerk` (test-patterns-check) and `kiat-clerk-auth-review` (review-time)
+
+**Audit line pattern**: `clerk-testing: applied <pattern> for <Playwright|Cypress> auth setup`
+
+### clerk-backend-api
+
+- **Source**: [clerk/skills](https://github.com/clerk/skills) (official Clerk AI skill)
+- **Size**: ~8k tokens
+- **Location**: `.agents/skills/clerk-backend-api/` (symlinked into `.claude/skills/`)
+- **Purpose**: Clerk Backend REST API explorer — user management, organization CRUD, invitations, metadata operations (public/private/unsafe), rate limit awareness, endpoint schema inspection
+- **When to use**: stories that need to interact with Clerk's Backend API (user sync, org provisioning, metadata updates), stories that add webhook handlers for Clerk events, debugging auth issues that require API inspection
+- **When to skip**: stories that only use Clerk client-side (hooks, components), stories with no server-to-Clerk communication
+- **Loaded by**: `kiat-backend-coder` (contextual, when story involves Clerk API calls)
+- **Caution**: requires `CLERK_SECRET_KEY` env var — never expose in frontend code
+
+**Audit line pattern**: `clerk-backend-api: used <endpoint> for <purpose>`
+
+### clerk-custom-ui
+
+- **Source**: [clerk/skills](https://github.com/clerk/skills) (official Clerk AI skill)
+- **Size**: ~4k tokens (SKILL.md) + ~2k per reference file (5 references across core-2/core-3)
+- **Location**: `.agents/skills/clerk-custom-ui/` (symlinked into `.claude/skills/`)
+- **Purpose**: Custom authentication flows (useSignIn/useSignUp hooks) and appearance customization (themes, variables, options) — covers both Core 2 and current SDK patterns, shadcn theme integration
+- **When to use**: stories that build custom sign-in/sign-up pages (not using Clerk's pre-built components), stories that style or theme Clerk components, stories that integrate Clerk appearance with the project's design system (especially shadcn)
+- **When to skip**: stories using Clerk's pre-built components without customization, backend-only stories, stories where auth UI is unchanged
+- **Loaded by**: `kiat-frontend-coder` (contextual, when story involves custom auth UI or Clerk theming)
+
+**Audit line pattern**: `clerk-custom-ui: applied <core-2|core-3> <custom-sign-in|custom-sign-up|appearance> pattern`
+
 ---
 
 ## How to add a new skill to this registry
