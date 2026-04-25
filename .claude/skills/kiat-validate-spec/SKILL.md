@@ -159,6 +159,17 @@ A story that can't be tested is a story that can't be verified as done. Check th
 - Test data seeding is explained if the preconditions are non-trivial
 - The full E2E flow is documented if the feature is a multi-step journey
 
+### 10. Real-backend E2E coverage (vertical slices only)
+
+Every `vertical-slice` story claims to deliver a user-observable increment end-to-end. That claim is unverified unless a real-backend E2E test proves the increment works against the full stack (browser → frontend → backend → real DB, external APIs mocked via Smocker).
+
+Check:
+
+- If `Scope` = `vertical-slice`: the `## Test scenarios` section MUST contain a `### Real-backend E2E` subsection describing at least one happy-path flow to be covered by a spec under `frontend/e2e/real-backend/`. The description should name the user action and the observable outcome, not just "happy path works". Missing subsection or subsection containing only "TBD" → `NEEDS_CLARIFICATION`.
+- If `Scope` ≠ `vertical-slice` (`infra`, `backend-infra`, `frontend-chrome`): the subsection should read "N/A — non-vertical-slice story" or be absent. No action needed.
+
+This category does NOT apply to error cases, edge cases, or validation scenarios — those may use mocked Playwright specs (`page.route`) or lower-level tests at the coder's discretion. Only the happy path of a vertical slice is gated here.
+
 ## Output format
 
 The first line of your output is parsed by Team Lead to decide the next step, so it has to be one of three exact strings. The rest of the output is free-form human-readable.
@@ -183,6 +194,7 @@ Slicing: Scope=<value>, User signal=<value>, demo check <passed or "N/A (non-ver
 Cross-layer: <consistent or "N/A">
 Edge cases: <list>
 Testability: <summary>
+Real-backend E2E: <described or "N/A (non-vertical-slice)">
 
 → Safe to launch coders.
 ```

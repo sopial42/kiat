@@ -15,6 +15,8 @@ Loaded by `kiat-frontend-coder` and `kiat-frontend-reviewer` whenever a story in
 
 ## 1. Philosophy and position in the pyramid
 
+> **Core principle: every vertical-slice story ships a real-backend E2E spec for its happy path. No exceptions.** A vertical slice claims to deliver a user-observable increment end-to-end. If there's no real-backend E2E test proving that increment works against the full stack (browser → frontend → backend → real DB, external APIs mocked via Smocker), the claim is unverified. This rule is enforced at three levels: the spec writer describes the scenario (`## Test scenarios → ### Real-backend E2E`), the coder implements it under `e2e/real-backend/`, and the reviewer blocks if it's missing.
+
 Playwright is the **outer ring** of the pyramid. It validates that:
 
 - The frontend renders correctly for real browser users
@@ -35,7 +37,7 @@ It is **NOT** a replacement for:
 | `frontend/e2e/` | Mocked via `page.route()` | Error states, edge cases, validation, UI-only flows |
 | `frontend/e2e/real-backend/` | Real backend on localhost (via `make test-e2e`) | Happy path of any `/api/*` surface, auth headers, polling correctness, envelope shape |
 
-**Hard rule** (enforced by reviewer, PP15): any story touching fetch / polling / auth-header surfaces MUST add or extend a spec in `e2e/real-backend/`.
+**Hard rule** (enforced at spec, coder, and reviewer levels — PP15, TD03, validate-spec Category 10): every vertical-slice story MUST add or extend a spec in `e2e/real-backend/` covering at least the happy path. Any story touching fetch / polling / auth-header surfaces MUST also cover those surfaces in a real-backend spec.
 
 ---
 

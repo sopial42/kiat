@@ -284,6 +284,17 @@ simply say "See Business Context acceptance criteria." and skip the list.>
 ### Happy path
 <User flow from start to finish.>
 
+### Real-backend E2E (mandatory for vertical slices)
+<When Scope=vertical-slice: describe the happy-path flow that MUST be covered
+by a spec under `frontend/e2e/real-backend/`. This spec runs against the full
+stack (browser → frontend → backend → real DB, external APIs mocked via
+Smocker) and proves the user-observable increment described in the acceptance
+criteria actually works end-to-end. The coder implements this spec; the
+reviewer blocks if it's missing.
+
+When Scope ≠ vertical-slice (infra, backend-infra, frontend-chrome): write
+"N/A — non-vertical-slice story" and skip.>
+
 ### Error cases
 <At least two: validation error, permission error, conflict.>
 
