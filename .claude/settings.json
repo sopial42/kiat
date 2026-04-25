@@ -41,6 +41,15 @@
             "command": ".claude/tools/hooks/check-verdict-line.sh"
           }
         ]
+      },
+      {
+        "matcher": "kiat-team-lead",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/tools/hooks/check-post-delivery-schema.sh"
+          }
+        ]
       }
     ]
   }

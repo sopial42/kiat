@@ -310,10 +310,48 @@ _(no cycles run yet)_
 
 ## Post-Delivery Notes
 
-> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
-> Review mode to reconcile `delivery/business/` with what was actually shipped.
-> Protocol: [`../../../.claude/agents/kiat-team-lead.md`](../../../.claude/agents/kiat-team-lead.md) Phase 5c
-> and [`../README.md#post-delivery-notes`](../README.md#post-delivery-notes).
+> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by
+> `bmad-reconcile` (per story) and `bmad-retrospective` (per epic) to
+> produce companion `.reconcile.md` files. **Schema is enforced** by
+> `.claude/tools/hooks/check-post-delivery-schema.sh` — see the full
+> protocol in [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).
+>
+> **Two valid forms** — pick whichever applies:
+>
+> 1. **No deviations** → leave the placeholder `_(no deviations)_` below.
+>    The hook accepts the placeholder verbatim and skips the schema check.
+> 2. **One or more deviations** → replace the placeholder with one or
+>    more bullets between the `<!-- POST_DELIVERY_BLOCK_BEGIN -->` and
+>    `<!-- POST_DELIVERY_BLOCK_END -->` markers, following the schema:
+>
+> ```markdown
+> <!-- POST_DELIVERY_BLOCK_BEGIN -->
+> ### Backend deviations
+>
+> - **Tag**: AC-3 | **Severity**: L1
+>   **Summary**: <one-line, non-jargon, readable by a non-coder>
+>   **File**: <path:line — what was changed>
+>   **SpecRef**: <story-NN.md:line for AC-N tags, or "none" for gaps>
+>   **Status**: RESOLVED | NEEDS_PROMOTION | BLOCKING
+>   **Why**: <one or two sentences — the business or technical reason>
+>
+> ### Frontend deviations
+>
+> - _(none)_
+> <!-- POST_DELIVERY_BLOCK_END -->
+> ```
+>
+> **Tags** (the "what kind"): `AC-N` | `SPEC_GAP` | `DECISION` |
+> `OUT-OF-SCOPE` | `SKILL_GAP`
+>
+> **Severities** (the "how reconcile reacts"): `L1` (auto-apply) | `L2`
+> (queue for human) | `L3` (block next story). The coder's initial
+> severity is a hint — `bmad-reconcile` may re-classify based on cross-
+> story scope.
+>
+> Once `bmad-reconcile` has processed this section, a companion file
+> `story-NN-<slug>.reconcile.md` is created in this directory with the
+> per-deviation outcome (L1 audit, L2 queue refs, L3 escalations).
 
 _(no deviations)_
 

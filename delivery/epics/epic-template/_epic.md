@@ -119,3 +119,16 @@ _(populate as stories discover surprises — e.g., "the S3 bucket policy require
 ## Notes
 
 [Any additional context? Background? Prior discussions?]
+
+---
+
+## Reconciliation companion file
+
+> When the epic closes (final story moves to `✅ Done` and the
+> reconciliation guard passes), `bmad-retrospective` generates
+> `_epic.reconcile.md` next to this file with the cross-story patterns,
+> queue closures, process lessons, and doc-state audit for the epic.
+>
+> If you don't see `_epic.reconcile.md` next to this `_epic.md`, the epic
+> hasn't been retrospectively closed yet. Schema and protocol:
+> [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).

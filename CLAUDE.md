@@ -92,6 +92,8 @@ When you need project-specific information, go directly to the right file under 
 | Two-layer story model + BMad Plan-mode protocol + tech-spec-writer handoff | [`delivery/epics/README.md`](delivery/epics/README.md) |
 | Epic and story files (two layers: `## Business Context` by BMad + technical sections by tech-spec-writer) | `delivery/epics/epic-X/story-NN.md` |
 | Epic / story templates (both layers pre-scaffolded) | [`delivery/epics/epic-template/`](delivery/epics/epic-template/) |
+| Reconciliation queue contract + folder protocol (L2 proposals from `bmad-reconcile`) | [`delivery/_queue/README.md`](delivery/_queue/README.md) |
+| Open L2 proposals waiting for human triage | [`delivery/_queue/needs-human-review.md`](delivery/_queue/needs-human-review.md) |
 
 ---
 
@@ -109,6 +111,8 @@ Framework machinery — **not project-specific**, do not edit per project:
 | Metrics event schema (JSONL) | [`.claude/specs/metrics-events.md`](.claude/specs/metrics-events.md) |
 | Failure patterns registry | [`.claude/specs/failure-patterns.md`](.claude/specs/failure-patterns.md) |
 | Available skills registry (read by tech-spec-writer) | [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md) |
+| Reconciliation protocol (L1/L2/L3 model, `.reconcile.md` companion files, queue + auto-promotion rules) | [`.claude/specs/reconciliation-protocol.md`](.claude/specs/reconciliation-protocol.md) |
+| `bmad-reconcile` contract (what BMad's per-story reconcile mode must produce) | [`.claude/specs/bmad-reconcile-contract.md`](.claude/specs/bmad-reconcile-contract.md) |
 | Weekly health report tool | `python3 kiat/.claude/tools/report.py` |
 | Doc audit tool (M1 size + M2 structure) | `python3 kiat/.claude/tools/doc-audit.py` |
 

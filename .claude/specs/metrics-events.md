@@ -186,6 +186,173 @@ Everything in `story_rollup` PLUS:
 
 ---
 
+---
+
+### Reconciliation Events (v1.2 additive)
+
+These event types support the per-story reconciliation protocol
+introduced in v1.2. Full semantics live in
+[`reconciliation-protocol.md`](reconciliation-protocol.md). The events
+are written by **`bmad-reconcile`** (per story) and **tech-spec-writer**
+(when its Phase -1 queue scan auto-promotes an L2 to L3).
+
+These events are additive — they don't replace any v1.1 event. A
+story can have one `story_rollup` AND one `reconcile_complete` AND zero
+or more `epic_block` events.
+
+---
+
+### `reconcile_complete` (v1.2)
+
+Emitted by `bmad-reconcile` once per story it processes, AFTER it has
+written the `.reconcile.md` companion file and applied L1 changes /
+queued L2 entries / written L3 escalations. This event is what
+`bmad-retrospective` reads to discover which stories had reconciles.
+
+```json
+{
+  "ts": "2026-04-25T15:30:00Z",
+  "story": "story-05",
+  "epic": "epic-2",
+  "event": "reconcile_complete",
+  "reconcile_path": "delivery/epics/epic-2/story-05-soft-delete.reconcile.md",
+  "l1_applied": 2,
+  "l2_queued": 1,
+  "l3_blocked": 0,
+  "next_story_launchable": true,
+  "queue_ids_added": ["Q-014"]
+}
+```
+
+**Field semantics:**
+
+- `reconcile_path` (string): path to the generated `.reconcile.md`
+  companion file
+- `l1_applied` (int): number of L1 deviations reconcile applied
+  directly to `delivery/business/` or `delivery/specs/`
+- `l2_queued` (int): number of L2 deviations reconcile appended to
+  `delivery/_queue/needs-human-review.md`
+- `l3_blocked` (int): number of L3 deviations reconcile escalated via
+  `epic_block` events (see below)
+- `next_story_launchable` (bool): false if `l3_blocked > 0`, true
+  otherwise. Team Lead's pre-launch check uses this to decide whether
+  the next story can start.
+- `queue_ids_added` (array of string): list of `Q-NNN` IDs
+  appended in this run, for traceability
+
+If reconcile failed entirely (could not produce a valid
+`.reconcile.md`), it emits `reconcile_failed` instead — see below.
+
+---
+
+### `reconcile_failed` (v1.2)
+
+Emitted by `bmad-reconcile` when it cannot complete (typically because
+the `## Post-Delivery Notes` section is malformed and somehow bypassed
+the validator hook). A failure here blocks epic closure exactly as a
+missing reconcile would — the reconciliation guard at Team Lead Phase 6
+greps for `RECONCILE_DONE` markers, and a failed reconcile produces a
+`RECONCILE_FAILED` marker instead.
+
+```json
+{
+  "ts": "2026-04-25T15:32:00Z",
+  "story": "story-05",
+  "epic": "epic-2",
+  "event": "reconcile_failed",
+  "reason": "post_delivery_schema_invalid",
+  "note": "Block contains bullets but no `**Tag**:` field on bullet 2"
+}
+```
+
+**Field semantics:**
+
+- `reason` (enum): `"post_delivery_schema_invalid"` |
+  `"queue_write_failed"` | `"events_write_failed"` |
+  `"contradiction_with_business"` | `"other"`
+- `note` (string, optional): free-text context
+
+---
+
+### `epic_block` (v1.2)
+
+Emitted by `bmad-reconcile` (when it classifies a deviation as L3) OR
+by tech-spec-writer (when its Phase -1 queue scan auto-promotes an L2
+to L3 due to scope overlap with the new story). Team Lead reads
+`events.jsonl` for unresolved `epic_block` events at every story
+pre-launch — an unresolved event refuses the next story.
+
+```json
+{
+  "ts": "2026-04-25T15:30:00Z",
+  "story": "story-05",
+  "epic": "epic-2",
+  "event": "epic_block",
+  "source": "bmad-reconcile",
+  "deviation_tag": "SPEC_GAP",
+  "summary": "RLS contract break — 401 returned where AC-4 spec'd 404",
+  "blocked_until": "human_signoff",
+  "reconcile_path": "delivery/epics/epic-2/story-05-soft-delete.reconcile.md",
+  "queue_id": null
+}
+```
+
+**Field semantics:**
+
+- `source` (enum): `"bmad-reconcile"` (deviation classified as L3 at
+  reconcile time) | `"tech-spec-writer"` (L2 auto-promoted via Phase
+  -1 scope-overlap)
+- `deviation_tag` (enum): `AC-N` | `SPEC_GAP` | `DECISION` |
+  `OUT-OF-SCOPE` | `SKILL_GAP`
+- `summary` (string): one-line description, copied verbatim from the
+  Post-Delivery Notes bullet
+- `blocked_until` (enum): `"human_signoff"` (current spec) — future
+  values may include `"timeout"`, `"automatic_promotion"`, etc.
+- `reconcile_path` (string): pointer to the `.reconcile.md` (when
+  `source` is `bmad-reconcile`) — null when `source` is
+  `tech-spec-writer` and the block came from a queue overlap
+- `queue_id` (string or null): `Q-NNN` ID of the queue entry that was
+  promoted (only set when `source` is `tech-spec-writer`)
+
+### How Team Lead checks for unresolved blocks
+
+Before launching any new story, Team Lead greps `events.jsonl` for
+`epic_block` events whose epic matches the new story's epic AND whose
+`story` field has NOT been followed by an `epic_unblock` event for the
+same `(epic, story, deviation_tag)` triple. An unresolved match refuses
+the launch.
+
+---
+
+### `epic_unblock` (v1.2)
+
+Emitted by Team Lead (or by a human via a manual append) when an
+`epic_block` has been resolved. Cancels the block.
+
+```json
+{
+  "ts": "2026-04-25T18:00:00Z",
+  "story": "story-05",
+  "epic": "epic-2",
+  "event": "epic_unblock",
+  "blocks_cleared": [
+    {"deviation_tag": "SPEC_GAP", "ts": "2026-04-25T15:30:00Z"}
+  ],
+  "resolution": "Updated AC-4 to specify 401 (RLS-driven), added matching frontend handling in story-05a"
+}
+```
+
+**Field semantics:**
+
+- `blocks_cleared` (array of objects): each object identifies the
+  `epic_block` event being canceled by `(deviation_tag, ts)`. Multiple
+  blocks may be cleared in one event when a single human signoff
+  resolves them together.
+- `resolution` (string): one or two sentences explaining what the
+  human decided / did
+
+---
+
 ### v1.0 Legacy Events (deprecated — still parsed by report.py for backward compat)
 
 The event types below are from v1.0 (intra-story phase transitions). Team Lead should NOT emit these anymore — use `story_rollup` / `story_escalated` instead. `report.py` still reads them for stories written before v1.1, and aggregates them on the fly if no rollup is present.
