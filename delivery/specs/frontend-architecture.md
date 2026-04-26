@@ -391,36 +391,47 @@ export function ItemForm() {
 
 ### Tailwind v4 (No Config)
 
-All tokens in `frontend/src/globals.css`:
+All tokens in `frontend/src/globals.css`. The full token set + naming protocol lives in [`design-system.md`](design-system.md); this is just an excerpt to show the wiring.
 
 ```css
 @import 'tailwindcss';
 
-@layer base {
-  body {
-    @apply bg-gray-50 text-gray-900;
-  }
-}
-
-/* Neutral Tailwind v4 defaults — see delivery/specs/design-system.md for the
-   protocol. Replace with your brand palette when the first visual reference
-   arrives, in the same commit as the feature that needs it. */
+/* Shadcn/UI vocabulary — every primitive added via `npx shadcn@latest add`
+   references these names. Defaults are neutral (slate grayscale) until a
+   visual reference arrives. See design-system.md for the full block. */
 @theme {
-  --color-primary:       #334155;  /* slate-700 */
-  --color-primary-light: #64748b;  /* slate-500 */
-  --color-success:       #10b981;  /* emerald-500 */
+  --color-background:           #ffffff;
+  --color-foreground:           #0f172a;  /* slate-900 */
+
+  --color-primary:              #0f172a;
+  --color-primary-foreground:   #f8fafc;  /* slate-50 */
+
+  --color-muted:                #f1f5f9;  /* slate-100 */
+  --color-muted-foreground:     #64748b;  /* slate-500 */
+
+  --color-destructive:          #ef4444;  /* red-500 */
+  --color-destructive-foreground: #f8fafc;
+
+  --color-border:               #e2e8f0;  /* slate-200 */
+  --color-ring:                 #0f172a;
 
   --spacing-md: 1rem;
-  --radius-lg: 1rem;  /* 16px — see design-system.md radius scale */
+  --radius:     0.5rem;          /* 8px base — derived sizes in design-system.md */
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-lg shadow-md p-6;
+    @apply bg-card text-card-foreground rounded-lg border shadow-sm p-6;
   }
 
   .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-light;
+    @apply px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90;
   }
 }
 ```

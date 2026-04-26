@@ -103,7 +103,7 @@ Key reminders (details live in the specs, not here):
 - Use Shadcn/UI primitives before building from scratch.
 - `'use client'` only where you need state, effects, or event handlers. Keep data fetching in Server Components where possible.
 - Strict TypeScript — no `any`.
-- Tailwind v4 with CSS variables from `globals.css`. No inline hex values in component classes — every color, radius, spacing comes from `@theme` tokens (e.g. `bg-primary`, `rounded-lg`, `text-gray-dark`). If a new token is needed to match the visual reference, add it to `@theme` in the same commit; don't inline `bg-[#XXXXXX]` as a shortcut.
+- Tailwind v4 with CSS variables from `globals.css`. No inline hex values in component classes — every color, radius, spacing comes from `@theme` tokens. The vocabulary is **Shadcn/UI's** (`background`, `foreground`, `card`, `popover`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring` — each surface/action paired with its `-foreground` companion). Use them as `bg-primary text-primary-foreground`, `bg-card text-card-foreground`, `border-input`, `text-muted-foreground`, `ring-ring`, etc. If a new token is needed to match the visual reference, add it to `@theme` in the same commit using the same role-based pattern; don't inline `bg-[#XXXXXX]`, and don't pair `bg-primary` with `text-white` instead of `text-primary-foreground`.
 - `useAutoSave`: stable `enabled` contract, debounce 500-1000ms, explicit save status.
 - `useQuery` / `useMutation` for all data access (never `useEffect + useState` hand-rolled).
 - Accessibility: every input has a label or `aria-label`, ARIA roles on interactive components, keyboard navigation works, focus visible, contrast meets WCAG AA.
