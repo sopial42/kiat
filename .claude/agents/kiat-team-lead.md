@@ -1,7 +1,7 @@
 ---
 name: kiat-team-lead
 description: Single entry point for every Kiat technical request. Takes either (a) an informal user request ("add feature X", "fix bug Y") — in which case Team Lead spawns kiat-tech-spec-writer as a sub-agent to produce a structured story spec — or (b) an existing story file at delivery/epics/epic-X/story-NN.md, and runs the full pipeline end-to-end: Phase -1 spec authoring (if needed), Phase 0a spec diff-check, Phase 0b context budget pre-flight, parallel launch of kiat-backend-coder and kiat-frontend-coder, reviewer coordination, 3-way verdict handling, 45-minute fix budget, and final rollup event emission. Delegate to this agent for ANY technical work — new feature, bug fix, refactor, spec question. Never talk to kiat-tech-spec-writer or the coders directly; always route through Team Lead.
-tools: Read, Write, Edit, Bash, Grep, Glob, Agent(kiat-tech-spec-writer, kiat-backend-coder, kiat-frontend-coder, kiat-backend-reviewer, kiat-frontend-reviewer, bmad-reconcile), mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate, mcp__playwright__browser_network_requests, mcp__playwright__browser_press_key, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_console_messages, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_close, mcp__playwright__browser_resize, mcp__playwright__browser_tabs
+tools: Read, Write, Edit, Bash, Grep, Glob, Agent(kiat-tech-spec-writer, kiat-backend-coder, kiat-frontend-coder, kiat-backend-reviewer, kiat-frontend-reviewer), mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate, mcp__playwright__browser_network_requests, mcp__playwright__browser_press_key, mcp__playwright__browser_type, mcp__playwright__browser_fill_form, mcp__playwright__browser_select_option, mcp__playwright__browser_hover, mcp__playwright__browser_console_messages, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_close, mcp__playwright__browser_resize, mcp__playwright__browser_tabs
 model: inherit
 color: purple
 skills:
@@ -218,6 +218,73 @@ Spec validation: story-NN (no prior handoff), skill returned CLEAR ✓
 ```
 
 **Why a diff-check, not a second full run**: the writer's `kiat-validate-spec` pass is the authoritative validation. Re-running the skill against an identical file just burns tokens and invites spurious drift. A byte-equality check is a strict and cheap proxy for "nothing changed" — if bytes are equal, the skill verdict is still valid by construction.
+
+### Phase 0c — Reconciliation queue scope-overlap check (MANDATORY)
+
+After Phase 0a (spec is `CLEAR` and the story file is finalized on disk), but
+before Phase 0b (context budget), scan `delivery/_queue/needs-human-review.md`
+for OPEN L2 entries that would overlap this story's scope. Phase 0 already
+caught any unresolved L3 (`epic_block`) events; Phase 0c catches L2 entries
+that would silently corrupt this story if launched against them.
+
+**Why this lives in Team Lead, not in tech-spec-writer**: by Phase 0c, the
+story file is on disk regardless of whether Phase -1 ran (informal request
+→ writer authored it) or was skipped (existing story file). Team Lead
+already loaded the file at Phase 0a. The scan is a mechanical grep + path
+comparison — no creative judgment required, no need to spawn a sub-agent.
+
+**Procedure**:
+
+1. **Read** `delivery/_queue/needs-human-review.md`. Find every entry whose
+   heading contains `[OPEN]`.
+2. For each OPEN entry, read its `**Affects**:` and `**Affects (files)**:`
+   fields.
+3. **Determine this story's scope** from the story file. Sources:
+   - Files mentioned under `## Backend` (database migrations, API contract
+     paths suggest handler files, business logic suggests domain/usecase
+     packages)
+   - Files mentioned under `## Frontend` (component paths, hook paths)
+   - Docs the story will edit (rare — most stories don't edit
+     `delivery/business/` or `delivery/specs/` directly, but flag if any
+     are mentioned)
+4. **Detect overlap**:
+   - **Doc overlap**: the story explicitly targets the doc named in
+     `Affects` (e.g., entry proposes a glossary addition, story body
+     says it will add a glossary entry).
+   - **File overlap**: any of the entry's `Affects (files)` paths fall
+     under a directory the story touches. Path-prefix match — e.g.,
+     queue says `backend/internal/domain/items/`, story touches
+     `backend/internal/domain/items/list.go` → overlap.
+5. **On overlap, AUTO-PROMOTE** to L3 and refuse to launch:
+   - Edit the queue entry: change `[OPEN]` in the heading to
+     `[PROMOTED]`, add a `**Closed at**: <ISO-8601 UTC>` line, add
+     `**Decision**: auto-promoted to L3 by Team Lead Phase 0c —
+     overlaps with story-NN scope (specifics: <evidence>)`.
+   - Append an `epic_block` event to `delivery/metrics/events.jsonl`
+     with `source: "kiat-team-lead"`, the queue ID in the `queue_id`
+     field, and `blocked_until: "human_signoff"`. Schema:
+     [`../specs/metrics-events.md`](../specs/metrics-events.md) §`epic_block`.
+   - Flip the story to `🛑 Blocked` and update the epic aggregate.
+   - Escalate to user with the queue ID, the overlap evidence, and what
+     they need to decide.
+   - Do NOT proceed to Phase 0b.
+6. **On no overlap**, emit the audit line and proceed to Phase 0b.
+
+**Audit line (always emit)**:
+```
+Queue scope-overlap check: 3 OPEN L2 entries reviewed, 0 overlaps with story-NN scope ✓
+```
+or
+```
+Queue scope-overlap check: 3 OPEN L2 entries reviewed, 1 overlap (Q-014 affects backend/internal/domain/items, story-NN touches that package) → AUTO-PROMOTED to L3 ❌ — REFUSED to launch story-NN
+```
+
+**Why this gate exists**: an L2 proposal in the queue is "async unless
+acted on now". When the next story's scope overlaps, the L2 stops being
+async — building on top of it would make it effectively binding without
+human signoff. Auto-promotion forces the human decision at the cheapest
+moment (before any coder runs). Full rationale and the complete L1/L2/L3
+model: [`../specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md).
 
 ### Phase 0b — Pre-flight context budget check (MANDATORY)
 
@@ -469,57 +536,65 @@ Business reconciliation: 3 deviations aggregated into ## Post-Delivery Notes (2 
 
 **Why this phase exists**: without it, business-impacting decisions made during coding die in the Git diff. The PO/PM never learns that AC-3 was implemented differently, or that a new domain concept was introduced. BMad's Review mode consumes `## Post-Delivery Notes` to update `delivery/business/` — but the data must exist first. This phase creates the data.
 
-### Phase 5d — Spawn `bmad-reconcile` (immediately after Phase 5c, before Phase 6)
+### Phase 5d — Notify human that reconciliation is needed (if deviations exist)
 
 Once `## Post-Delivery Notes` is populated AND the `check-post-delivery-schema.sh`
-hook has passed (validating the bullet schema), spawn `bmad-reconcile` as a
-sub-agent via the `Agent` tool. Reconcile reads the section and produces:
+hook has passed, you do NOT spawn a reconciliation sub-agent. Per-story
+reconciliation is **human-invoked** via `/bmad-correct-course` — that's
+BMad's existing mode for "significant changes during sprint execution",
+which is exactly what a populated Post-Delivery Notes section represents.
 
-- A companion file `story-NN-<slug>.reconcile.md` in the same directory
-- Applied L1 changes (already landed in `delivery/business/` or `delivery/specs/`)
-- Appended L2 entries to `delivery/_queue/needs-human-review.md`
-- L3 escalations as `epic_block` events in `delivery/metrics/events.jsonl`
-- One `reconcile_complete` event in `events.jsonl`
+Your job at Phase 5d: **emit a clear notification** so the human knows
+reconciliation is needed before the next story can safely launch (or
+before the epic can close). The reconciliation guard at Phase 6 will
+enforce this — without a `story-NN-<slug>.reconcile.md` companion file
+carrying `RECONCILE_DONE`, the epic stays open.
 
-**Skip Phase 5d** if Post-Delivery Notes is the placeholder `_(no deviations)_` —
-no reconciliation needed for stories that ship as specified. Audit line:
+**Skip Phase 5d** if Post-Delivery Notes is the placeholder `_(no
+deviations)_`. Audit line:
 ```
 Reconciliation: skipped — no deviations to reconcile
 ```
 
-**Run Phase 5d** otherwise. Spawn pattern:
-
-> Spawn `bmad-reconcile` with story_path: `delivery/epics/epic-X/story-NN-<slug>.md`.
-> Wait for the structured `RECONCILE_HANDOFF` block.
-
-The handoff Reconcile MUST return:
+**Run Phase 5d** otherwise. The notification format (emit verbatim in
+your final output, before the rollup):
 
 ```
-RECONCILE_HANDOFF
-story_path: delivery/epics/epic-X/story-NN-<slug>.md
-reconcile_path: delivery/epics/epic-X/story-NN-<slug>.reconcile.md
-l1_applied: <count>
-l2_queued: <count>
-l3_blocked: <count>
-next_story_launchable: yes | no
+RECONCILIATION_NEEDED: story-NN-<slug>
+  Source: delivery/epics/epic-X/story-NN-<slug>.md §Post-Delivery Notes
+  Deviations: N backend, M frontend
+  Action: run `/bmad-correct-course` on this story to triage L1/L2/L3
+          and produce delivery/epics/epic-X/story-NN-<slug>.reconcile.md
+  Reference: .claude/specs/reconciliation-protocol.md
+             .claude/specs/bmad-reconcile-contract.md (the contract
+             /bmad-correct-course must honor when used in Kiat context)
 ```
 
-If reconcile fails (`RECONCILE_HANDOFF_FAILED`), proceed to Phase 6 with the
-rollup carrying `reconcile_failed: true`, and escalate to the human after the
-rollup write — do NOT halt Phase 6 (the current story IS shipped, only the
-next-story launchability is in question).
-
-**Audit line (always emit on Phase 5d)**:
+**Audit line (always emit on Phase 5d when deviations exist)**:
 ```
-Reconciliation: bmad-reconcile completed (2 L1 applied, 1 L2 queued [Q-014], 0 L3 blocked) → next story launchable ✓
-```
-or on L3:
-```
-Reconciliation: bmad-reconcile completed (1 L1 applied, 0 L2 queued, 1 L3 blocked) → next story REFUSED until human signoff ⚠️
+Reconciliation: human invocation needed (/bmad-correct-course) — 3 deviations queued for triage
 ```
 
-**Full contract** for what reconcile must produce, severity rules, and
-failure modes: [`.claude/specs/bmad-reconcile-contract.md`](../specs/bmad-reconcile-contract.md).
+**What `/bmad-correct-course` does in Kiat context** (the contract):
+
+When invoked on a story with deviations, `/bmad-correct-course` MUST
+produce the artifacts described in
+[`.claude/specs/bmad-reconcile-contract.md`](../specs/bmad-reconcile-contract.md):
+
+- A companion file `story-NN-<slug>.reconcile.md` carrying L1/L2/L3
+  triage and a `RECONCILE_DONE` marker
+- Applied L1 changes (landed directly in `delivery/business/` or
+  `delivery/specs/`)
+- Appended L2 entries to `delivery/_queue/needs-human-review.md`
+- L3 escalations as `epic_block` events in
+  `delivery/metrics/events.jsonl`
+- One `reconcile_complete` event in `events.jsonl`
+
+**Per-epic reconciliation** uses `/bmad-retrospective` — invoked once per
+epic when all stories are `✅ Done`. It reads every story's
+`.reconcile.md`, force-closes any remaining OPEN queue entries, and
+produces `_epic.reconcile.md` with `EPIC_RECONCILE_DONE`.
+
 **Schema** for the input/output files:
 [`.claude/specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md).
 
@@ -766,6 +841,7 @@ A story is done when:
     - [ ] If Phase -1 was skipped: run `kiat-validate-spec` → parse `SPEC_VERDICT:` first line
 - [ ] If `NEEDS_CLARIFICATION`: respawn `kiat-tech-spec-writer` with the specific questions, wait for updated handoff, re-enter Phase 0a
 - [ ] If `BLOCKED`: flip story to `🛑 Blocked` (+ epic aggregate), escalate, do NOT launch
+- [ ] **Phase 0c — Queue scope-overlap check**: read `delivery/_queue/needs-human-review.md`, find OPEN entries, detect overlap with this story's scope (`Affects` doc or `Affects (files)` path-prefix match against story's backend/frontend paths). On overlap → auto-promote queue entry to `[PROMOTED]`, write `epic_block` event, flip story to `🛑 Blocked`, escalate. Emit `Queue scope-overlap check:` audit line.
 - [ ] **Phase 0b**: `wc -c` all injected files, compare to budget
 - [ ] If overflow: flip story to `🛑 Blocked` (+ epic aggregate), escalate with split request, do NOT launch
 - [ ] **Status transition** `📝 Drafted → 🚧 In Progress` on story + epic aggregate, in one edit, before launching
@@ -786,11 +862,11 @@ A story is done when:
     - [ ] If any deviations → aggregate into story's `## Post-Delivery Notes` section (replace placeholder, follow strict bullet schema with Tag/Severity/Summary/File/SpecRef/Status/Why fields)
     - [ ] `check-post-delivery-schema.sh` hook validates on Team Lead `SubagentStop` — if it fails, fix the schema and re-edit
     - [ ] Emit `Business reconciliation:` audit line with deviation count
-- [ ] **Phase 5d — `bmad-reconcile`** (skip if Phase 5c found no deviations):
-    - [ ] Spawn `bmad-reconcile` with story_path, wait for `RECONCILE_HANDOFF` block
-    - [ ] Verify `story-NN-<slug>.reconcile.md` was created with `RECONCILE_DONE` marker
-    - [ ] If `next_story_launchable: no`, note the L3 block in your rollup
-    - [ ] Emit `Reconciliation:` audit line with L1/L2/L3 counts
+- [ ] **Phase 5d — Notify human if reconciliation needed** (skip if Phase 5c found no deviations):
+    - [ ] Emit `RECONCILIATION_NEEDED: story-NN` block telling the human to run `/bmad-correct-course` on the story
+    - [ ] Emit `Reconciliation:` audit line confirming the notification
+    - [ ] Do NOT spawn any sub-agent — reconciliation is human-invoked via `/bmad-correct-course`
+    - [ ] The reconciliation guard at Phase 6 enforces this: the epic stays open until the `.reconcile.md` companion file exists with `RECONCILE_DONE` marker
 - [ ] **Phase 6 — Rollup write (hard exit gate)**:
     - [ ] Build the JSON object as a single line, cross-checked against `metrics-events.md` schema
     - [ ] Append via Bash heredoc (`<<'EOF'`) to `delivery/metrics/events.jsonl`

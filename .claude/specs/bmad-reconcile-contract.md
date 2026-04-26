@@ -1,23 +1,29 @@
-# `bmad-reconcile` Contract
+# `/bmad-correct-course` Contract (Kiat per-story reconciliation)
 
 > **Why this file exists.** BMad is **external to Kiat** (per CLAUDE.md
-> §"How to Work in a Kiat Project"). Kiat owns the *contract* that BMad
-> must honor when reconciling story-level deviations; BMad owns the
-> *implementation* (the actual `bmad-reconcile` skill or mode lives in
-> BMad-land, alongside `bmad-retrospective`, `bmad-create-story`, etc.).
+> §"How to Work in a Kiat Project"). Kiat owns the *contract* for what
+> per-story reconciliation must produce; BMad owns the *implementation*
+> via its existing `/bmad-correct-course` skill ("Manage significant
+> changes during sprint execution"). A populated `## Post-Delivery
+> Notes` section IS a significant change during sprint execution — it
+> records every place the implementation diverged from the spec. So
+> `/bmad-correct-course` is the right BMad tool; this file pins the
+> Kiat-side expectations on its output.
 >
-> This file is the contract. Any BMad-side implementation of reconcile
-> MUST satisfy what's specified below to integrate cleanly with the
-> Kiat pipeline. Conversely, Kiat agents (Team Lead, tech-spec-writer,
-> coders) are entitled to assume reconcile honors this contract.
+> When a human runs `/bmad-correct-course` on a Kiat story file with a
+> populated `## Post-Delivery Notes`, the BMad session MUST satisfy
+> what's specified below to integrate cleanly with the Kiat pipeline.
+> Kiat agents (Team Lead at Phase 6, tech-spec-writer at Phase -1,
+> coders at scope reading) are entitled to assume the contract holds.
 
 ---
 
 ## Scope: per-story reconciliation, not per-epic retrospective
 
-`bmad-reconcile` handles **one story at a time**, immediately after
-Team Lead's Phase 5c. The epic-level rollup is the job of
-`bmad-retrospective` — a sibling mode with its own contract.
+`/bmad-correct-course` handles **one story at a time**, invoked by the
+human after Team Lead emits a `RECONCILIATION_NEEDED:` notification at
+Phase 5d. The epic-level rollup is `/bmad-retrospective` — a sibling
+BMad skill with its own contract (per-epic, not per-story).
 
 Why split: per-story reconcile is reactive (close out the deviations
 this story produced, before the next story builds on top); per-epic
@@ -27,7 +33,33 @@ different outputs.
 
 ---
 
-## Inputs reconcile MUST read
+## Trigger and invocation flow
+
+1. **Coder** ships story, emits `Business Deviations:` block in handoff.
+2. **Team Lead Phase 5c** aggregates into the story's
+   `## Post-Delivery Notes` section using the strict bullet schema.
+   Validator hook (`check-post-delivery-schema.sh`) enforces.
+3. **Team Lead Phase 5d** detects deviations and emits a
+   `RECONCILIATION_NEEDED:` notification block telling the human which
+   story needs `/bmad-correct-course`.
+4. **Team Lead Phase 6** writes the rollup and ships the story. The
+   reconciliation guard at Phase 6 (extended) refuses to flip the epic
+   to `✅ Done` until every story with deviations has a `.reconcile.md`
+   companion file with `RECONCILE_DONE` marker.
+5. **Human** invokes `/bmad-correct-course <story-path>` when convenient
+   (immediately if the next story's scope might overlap; can defer
+   otherwise).
+6. **BMad session** running `/bmad-correct-course` reads the story's
+   `## Post-Delivery Notes`, triages each deviation by L1/L2/L3
+   severity, and produces the artifacts below.
+
+`/bmad-correct-course` MUST NOT be invoked by Team Lead or any Kiat
+sub-agent — it is a human-driven skill. Team Lead notifies; the human
+decides when.
+
+---
+
+## Inputs `/bmad-correct-course` MUST read
 
 | Input | Path | Why |
 |---|---|---|
@@ -37,21 +69,22 @@ different outputs.
 | Open queue entries | `delivery/_queue/needs-human-review.md` | To check whether a similar proposal already exists (avoid duplicates) and to allocate the next `Q-NNN` ID |
 | Recent metrics events | `delivery/metrics/events.jsonl` (read-only, last ~50 lines) | To understand what happened in the immediately preceding stories — context for severity grading |
 
-Reconcile MUST NOT read:
+`/bmad-correct-course` MUST NOT read:
 - Other stories' Post-Delivery Notes (that's the retrospective's job)
 - Source code files beyond what's referenced in the deviation entries
 - The story's `## Review Log` (closed cycle, not relevant to deviations)
 
 ---
 
-## Outputs reconcile MUST produce
+## Outputs `/bmad-correct-course` MUST produce
 
-For every story it processes, reconcile produces ALL of the following:
+For every story it processes, the BMad session MUST produce ALL of the
+following:
 
 ### 1. The companion file `story-NN-<slug>.reconcile.md`
 
 Mandatory whenever the story's `## Post-Delivery Notes` contains at
-least one deviation (i.e., not the placeholder). Schema and template:
+least one deviation. Schema and template:
 [`reconciliation-protocol.md`](reconciliation-protocol.md) §"The
 `story-NN.reconcile.md` schema" + the canonical template at
 `delivery/epics/epic-template/story-NN-slug.reconcile.md`.
@@ -62,13 +95,13 @@ The file MUST end with the marker:
 <!-- RECONCILE_DONE: <ISO-8601 UTC timestamp> -->
 ```
 
-Without this marker, the reconciliation guard treats the story as
-unreconciled and refuses to flip the epic to `✅ Done`.
+Without this marker, Team Lead's reconciliation guard treats the story
+as unreconciled and refuses to flip the epic to `✅ Done`.
 
 ### 2. L1 changes — applied directly
 
-For every L1-classified deviation, reconcile MUST apply the change to
-its target file (typically under `delivery/business/` or
+For every L1-classified deviation, `/bmad-correct-course` MUST apply
+the change to its target file (typically under `delivery/business/` or
 `delivery/specs/`). Each application MUST:
 
 - Be reversible by a single git revert
@@ -79,10 +112,11 @@ its target file (typically under `delivery/business/` or
 
 ### 3. L2 entries — appended to the queue
 
-For every L2-classified deviation, reconcile MUST append a new entry to
-`delivery/_queue/needs-human-review.md`. The entry MUST follow the
-schema in [`reconciliation-protocol.md`](reconciliation-protocol.md)
-§"Queue entry schema". Specifically:
+For every L2-classified deviation, `/bmad-correct-course` MUST append
+a new entry to `delivery/_queue/needs-human-review.md`. The entry MUST
+follow the schema in
+[`reconciliation-protocol.md`](reconciliation-protocol.md) §"Queue
+entry schema". Specifically:
 
 - Allocate the next `Q-NNN` ID by scanning existing entries for the
   highest existing ID
@@ -93,38 +127,35 @@ schema in [`reconciliation-protocol.md`](reconciliation-protocol.md)
 
 ### 4. L3 escalations — written to events.jsonl
 
-For every L3-classified deviation, reconcile MUST append an
-`epic_block` event to `delivery/metrics/events.jsonl` (event schema in
-[`metrics-events.md`](metrics-events.md)). The event MUST include:
+For every L3-classified deviation, `/bmad-correct-course` MUST append
+an `epic_block` event to `delivery/metrics/events.jsonl` (event schema
+in [`metrics-events.md`](metrics-events.md)). The event MUST include:
 
 - The story ID and epic
 - The deviation tag and a one-line description
 - The `blocked_until` field set to `"human_signoff"`
 - A pointer to the story's `.reconcile.md` for full context
+- `source: "bmad-correct-course"`
 
-Reconcile MUST also reference the event line number in the
-`.reconcile.md` L3 table.
-
-Important: L3 events block Team Lead's pre-launch check for the next
-story. Misclassifying an L1/L2 as L3 has a real cost — it stops the
-pipeline. Reconcile should err on the side of L1 or L2 for ambiguous
-cases.
+The event blocks Team Lead's pre-launch check for the next story.
+Misclassifying L1/L2 as L3 has a real cost — it stops the pipeline.
+Err on the side of L1 or L2 for ambiguous cases.
 
 ### 5. The `reconcile_complete` event
 
-After all of the above, reconcile MUST emit a single
+After all of the above, `/bmad-correct-course` MUST emit a single
 `reconcile_complete` event to `delivery/metrics/events.jsonl` (schema
 in [`metrics-events.md`](metrics-events.md)). The event aggregates the
 counts (L1 applied, L2 queued, L3 blocked) and is what
-`bmad-retrospective` reads to discover which stories had reconciles.
+`/bmad-retrospective` reads to discover which stories had reconciles.
 
 ---
 
 ## Severity classification rules
 
 The coder hints at L1/L2/L3 in the `## Post-Delivery Notes` bullet.
-Reconcile MAY override the hint based on broader context. The
-authoritative rules:
+`/bmad-correct-course` MAY override the hint based on broader context.
+The authoritative rules:
 
 | Promote to L3 if… | Even if coder said L1 or L2 |
 |---|---|
@@ -151,8 +182,9 @@ pipeline unless you're sure).
 
 ## Idempotency and re-runs
 
-Reconcile MUST be idempotent. If invoked twice on the same story
-(e.g., Team Lead re-launches it after a fix to Post-Delivery Notes):
+`/bmad-correct-course` MUST be idempotent. If invoked twice on the
+same story (e.g., the human re-runs it after editing Post-Delivery
+Notes):
 
 - The companion `.reconcile.md` is OVERWRITTEN, not appended
 - Already-applied L1 changes are NOT re-applied (detect via git diff)
@@ -161,16 +193,16 @@ Reconcile MUST be idempotent. If invoked twice on the same story
 - Already-emitted L3 events are NOT re-emitted (detect via story ID
   matching in last N lines of `events.jsonl`)
 
-A re-run is rare but legitimate — typically the result of Team Lead
+A re-run is rare but legitimate — typically the result of a coder
 catching a Phase 5c aggregation bug. Don't double-act.
 
 ---
 
 ## Failure handling
 
-If reconcile cannot produce a valid `.reconcile.md` (e.g., the
-`## Post-Delivery Notes` section is malformed and the validator hook
-somehow let it through), reconcile MUST:
+If `/bmad-correct-course` cannot produce a valid `.reconcile.md` (e.g.,
+the `## Post-Delivery Notes` section is malformed and somehow bypassed
+the validator hook), it MUST:
 
 1. Write a single-line `.reconcile.md` with `<!-- RECONCILE_FAILED:
    <reason> -->` instead of the success marker
@@ -183,7 +215,7 @@ A failed reconcile blocks epic closure exactly as a missing
 
 ---
 
-## Things reconcile MUST NOT do
+## Things `/bmad-correct-course` MUST NOT do
 
 - ❌ Edit code (`backend/`, `frontend/`, `infra/`) — code changes
   belong to the next coder, not to reconcile
@@ -195,52 +227,27 @@ A failed reconcile blocks epic closure exactly as a missing
 - ❌ Delete entries from the queue
 - ❌ Re-classify a previously-applied L1 (the change is already in the
   doc; re-classifying breaks the audit trail)
-- ❌ Talk to the user directly — reconcile runs as a sub-agent of Team
-  Lead, communicates via the structured outputs above
 
 ---
 
-## Trigger and invocation
+## Per-epic reconciliation: `/bmad-retrospective`
 
-Reconcile is triggered by **Team Lead at Phase 5c**, after deviation
-aggregation but before Phase 6 rollup. Team Lead spawns it via the
-`Agent` tool. Reconcile returns a structured handoff:
+When the final story in an epic moves to `✅ Done`, the human invokes
+`/bmad-retrospective` on the epic. It is a separate BMad skill (not
+covered by this contract — but its Kiat-context output requirements
+mirror this one):
 
-```
-RECONCILE_HANDOFF
-story_path: delivery/epics/epic-X/story-NN-<slug>.md
-reconcile_path: delivery/epics/epic-X/story-NN-<slug>.reconcile.md
-l1_applied: <count>
-l2_queued: <count>
-l3_blocked: <count>
-next_story_launchable: yes | no
-```
+- Reads every story's `.reconcile.md`
+- Reads `delivery/_queue/needs-human-review.md` for any remaining OPEN
+  entries
+- Force-closes every remaining OPEN entry (with human input)
+- Detects cross-story patterns
+- Audits doc state (verifies every L1 actually landed where claimed)
+- Produces `_epic.reconcile.md` at the epic root with `<!-- EPIC_RECONCILE_DONE: ... -->`
 
-If `next_story_launchable: no`, Team Lead's Phase 6 still proceeds
-(the current story is shipped), but Team Lead notes the L3 block in
-its rollup event and the next story's pre-launch check will refuse.
-
-If reconcile failed entirely (returns `RECONCILE_HANDOFF_FAILED`),
-Team Lead falls back to the legacy mode — emits the rollup with a
-`reconcile_failed: true` flag and surfaces to the human.
-
----
-
-## Implementation notes for BMad-side authors
-
-This contract does not specify HOW reconcile achieves the above — only
-WHAT it must produce. Implementation choices belong to the BMad mode
-author. Suggested implementation patterns:
-
-- Use a deterministic prompt template that walks each Post-Delivery
-  Notes bullet and asks: "tag, severity, target, action?"
-- Maintain an in-memory mapping of `Q-NNN` IDs to avoid race conditions
-  on parallel reconciles (unlikely but possible if two stories merge
-  near-simultaneously)
-- Snapshot `delivery/_queue/needs-human-review.md` before append so a
-  failed write can be rolled back
-- Cite the protocol file and this contract in the BMad mode's prompt so
-  the LLM never re-derives the rules
+Without `_epic.reconcile.md`, the epic CANNOT close. See
+[`reconciliation-protocol.md`](reconciliation-protocol.md) §"The
+`_epic.reconcile.md` schema" for the canonical structure.
 
 ---
 
@@ -251,7 +258,8 @@ author. Suggested implementation patterns:
 - [`metrics-events.md`](metrics-events.md) — `epic_block`,
   `reconcile_complete`, `reconcile_failed` event schemas
 - [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) — Phase
-  5c (where reconcile gets spawned), Phase 6 (reconciliation guard)
+  5c (aggregation), Phase 5d (`RECONCILIATION_NEEDED` notification),
+  Phase 6 (reconciliation guard)
 - [`../../delivery/business/README.md`](../../delivery/business/README.md) §"Review mode" —
   the pre-protocol BMad reconciliation flow (still accepted in
   legacy-marker mode for backward compat)

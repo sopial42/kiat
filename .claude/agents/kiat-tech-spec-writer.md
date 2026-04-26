@@ -157,68 +157,6 @@ Typical outcome on a well-configured stack: CI runs in real-Clerk mode (`ENABLE_
 
 Cite the verified source in the spec body (e.g., in a "CI context" subsection or inline in the AC itself) with the file path and the current line number, so the coder and reviewer can trace the reasoning back.
 
-### 2.7. Scan the reconciliation queue for scope overlap (CRITICAL)
-
-The reconciliation protocol allows L2 proposals from previous stories to sit
-in `delivery/_queue/needs-human-review.md` while a human triages asynchronously.
-**This is safe ONLY when the new story's scope does not overlap any open
-proposal.** If it does overlap, the new story would be authored against
-out-of-date conventions — the proposal becomes effectively binding once you
-draft a spec on top of it, but neither the human nor the queue knows that yet.
-
-**You are the second line of defense** (after Team Lead's Phase 0 unblock check).
-Your job: scan the queue for OPEN entries and check each one for overlap with
-the story you're about to write.
-
-**Procedure** (cheap — the queue file is small):
-
-1. **Read** `delivery/_queue/needs-human-review.md`. Find every entry whose
-   heading contains `[OPEN]` (statuses are: `[OPEN]`, `[RESOLVED]`,
-   `[REJECTED]`, `[PROMOTED]`).
-2. For each OPEN entry, read its `**Affects**:` and `**Affects (files)**:`
-   fields.
-3. **Detect overlap** with the story you're writing:
-   - **Doc overlap**: does the new story explicitly target the doc named in
-     `Affects` (e.g., the story will edit `delivery/business/glossary.md`
-     and the queue entry proposes a glossary addition)?
-   - **File overlap**: do any of the entry's `Affects (files)` paths fall
-     under the layer the new story touches (same package, same component
-     directory)? Use a path-prefix match: e.g., entry says
-     `backend/internal/domain/items/`, story touches
-     `backend/internal/domain/items/list.go` → overlap.
-4. **On overlap, AUTO-PROMOTE**:
-   - Edit the queue entry: change the `[OPEN]` in the heading to `[PROMOTED]`,
-     add a `**Closed at**: <ISO-8601 UTC>` line, add `**Decision**:
-     auto-promoted to L3 by tech-spec-writer Phase -1 — overlaps with
-     story-(NN+1) scope`.
-   - Append an `epic_block` event to `delivery/metrics/events.jsonl` with
-     `source: "tech-spec-writer"`, the queue ID in the `queue_id` field,
-     and `blocked_until: "human_signoff"`. Schema:
-     [`.claude/specs/metrics-events.md`](../specs/metrics-events.md) §`epic_block`.
-   - Return `SPEC_HANDOFF_FAILED` with `reason: "queue_overlap_unresolved"`,
-     citing the queue ID and the overlap evidence.
-   - Do NOT proceed to draft the spec.
-5. **On no overlap**, proceed with the spec authoring. Reference the queue
-   entries you reviewed in your handoff for traceability.
-
-**Audit block to include in your final `SPEC_HANDOFF`** (always, even when
-zero entries existed):
-
-```
-queue_scan:
-  open_entries_reviewed: <count>
-  overlaps_detected: <count>  # 0 in the happy path
-  promoted_to_l3: <comma-separated Q-NNN list, or "none">
-```
-
-**Why this rule exists**: without it, an L2 proposal sits in the queue while
-story-(NN+1) silently builds against the un-promoted convention. By the time
-the human triages the queue, two stories disagree about the rule and merging
-them costs more than the proposal would have. Auto-promotion forces the
-issue at the cheapest moment — before the spec is even drafted. Full
-rationale: [`../specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md)
-§"Auto-promotion L2 → L3 (the scope-overlap rule)".
-
 ### 3. Identify ambiguities and ask the user
 
 Before writing anything, scan the user's request for:
@@ -482,6 +420,7 @@ A story that you write should have these properties when read by Team Lead:
 5. No section is empty or contains "TBD"
 6. Edge cases are enumerated, not hand-waved
 7. The `**Status**` line at the top of the story file reads `📝 Drafted` and the epic's `_epic.md` aggregate status has been recomputed in the same edit pass
-8. Your `SPEC_HANDOFF` includes a `queue_scan:` audit block confirming you reviewed every OPEN entry in `delivery/_queue/needs-human-review.md` and detected zero overlaps (or escalated to L3 if any did overlap)
 
-If all eight are true, you did your job. The coders and reviewers will take it from here.
+If all seven are true, you did your job. The coders and reviewers will take it from here.
+
+**Note on reconciliation queue scanning:** the queue-overlap check happens at Team Lead's Phase 0c, not here. By the time the story file is on disk, Team Lead has the scope (files, docs) it needs to grep `delivery/_queue/needs-human-review.md` and detect overlap with any OPEN L2 entries — without spawning a sub-agent. This applies uniformly whether you (the writer) authored the story in Phase -1 or whether Team Lead skipped Phase -1 entirely (existing story file). Full protocol: [`../specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md) §"Auto-promotion L2 → L3".
