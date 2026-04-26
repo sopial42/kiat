@@ -238,28 +238,63 @@ func (m *MockUserRepository) FindByEmail(ctx context.Context, email string) (*do
 
 ### Common Test Helpers
 
+Tests need TWO database connections, mirroring the runtime split (see [`deployment.md`](deployment.md) §"Database Roles" and [`database-conventions.md`](database-conventions.md) §"Database roles — the three-tier model"):
+
+- **Setup connection** — `TEST_SETUP_DATABASE_URL`, points at the tier-1 superuser. Used by helpers like `seedUser`, `seedItem`, `cleanupTestData` that must span the RLS boundary (seeding multiple users, truncating tables). The setup connection is a test-only privilege; production code never has access to it.
+- **System-under-test connection** — `TEST_DATABASE_URL`, points at `app_user` (tier 3, `NOSUPERUSER NOBYPASSRLS`). Used by the repository under test, exercises the same code path as production. Every user-scoped query goes through `withRLSTx`, which sets `SET LOCAL ROLE app_user` + `SET LOCAL request.jwt.claim.sub`.
+
 ```go
 // backend/venom/helpers.go
 
-func setupTestDB(t *testing.T) *sql.DB {
-    db, _ := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
-    // Run migrations
-    return db
+func setupTestDB(t *testing.T) (setupDB, appDB *sql.DB) {
+    setupDB = mustOpen(os.Getenv("TEST_SETUP_DATABASE_URL"))  // tier-1, for seed/cleanup
+    appDB   = mustOpen(os.Getenv("TEST_DATABASE_URL"))         // tier-3, for the SUT
+    return
 }
 
-func seedUser(t *testing.T, db *sql.DB, email, name string) uuid.UUID {
+// seedUser uses the setup connection. RLS doesn't gate this insert because the
+// setup role is BYPASSRLS — that's why seeding cross-user fixtures works in
+// tests but is impossible in production code.
+func seedUser(t *testing.T, setupDB *sql.DB, email, name string) uuid.UUID {
     id := uuid.New()
-    db.ExecContext(context.Background(), 
+    _, err := setupDB.ExecContext(context.Background(),
         "INSERT INTO users (id, email, name) VALUES ($1, $2, $3)",
         id, email, name,
     )
+    require.NoError(t, err)
     return id
 }
 
-func cleanupTestData(t *testing.T, db *sql.DB) {
-    db.ExecContext(context.Background(), "TRUNCATE users CASCADE")
+// cleanupTestData also uses the setup connection. TRUNCATE under FORCE RLS
+// with a NOBYPASSRLS role would silently no-op (zero matching rows under the
+// per-user predicate); the setup connection bypasses RLS so cleanup actually
+// removes the rows.
+func cleanupTestData(t *testing.T, setupDB *sql.DB) {
+    _, err := setupDB.ExecContext(context.Background(), "TRUNCATE users CASCADE")
+    require.NoError(t, err)
 }
 ```
+
+**Cross-user RLS test (the canonical RLS proof)**:
+
+```go
+// Seed user A and user B via setupDB (which bypasses RLS).
+userA := seedUser(t, setupDB, "a@example.com", "Alice")
+userB := seedUser(t, setupDB, "b@example.com", "Bob")
+
+// Save an item as user A through the repository (which uses appDB and
+// goes through withRLSTx with userA's ID).
+repo := repository.NewPostgresItemRepository(appDB)
+require.NoError(t, repo.Save(ctx, userA, &domain.Item{Title: "Alice's"}))
+
+// List as user B — RLS must return zero rows. If this returns Alice's item,
+// the architecture is broken and every cross-tenant request is a leak.
+items, err := repo.List(ctx, userB)
+require.NoError(t, err)
+require.Empty(t, items, "user B must not see user A's items")
+```
+
+A test that uses raw `setupDB` for the assertion (instead of going through the repository) bypasses the wrapper and proves nothing — it would pass even on a backend that has no RLS enforcement at all. **The assertion side of the test must always go through the production code path.**
 
 ---
 

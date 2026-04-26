@@ -71,16 +71,26 @@ assert.Equal(t, 0, len(items))  // ← Should be empty
 
 ### Row-Level Security (RLS) (OWASP A01)
 
-- [ ] Every table with user data has RLS enabled
-- [ ] RLS policy uses `user_id = auth.uid()` or equivalent
-- [ ] RLS tested (User B can't read User A's data)
+This project uses vanilla PostgreSQL (no Supabase, no Hasura, no `auth.uid()`). The full pattern lives in [`database-conventions.md`](database-conventions.md) §"Row-Level Security (RLS)". Reviewer-grep-able assertions:
+
+- [ ] Every user-scoped table has BOTH `ENABLE ROW LEVEL SECURITY` AND `FORCE ROW LEVEL SECURITY`. Without `FORCE`, the table owner silently bypasses RLS.
+- [ ] RLS policy predicate compares the row's user-FK to `current_setting('request.jwt.claim.sub', true)::uuid` (vanilla Postgres pattern). Policies referencing `auth.uid()`, `current_user_id()`, or any other vendor helper are wrong for this project.
+- [ ] Every public repository method opens a transaction and runs `SET LOCAL ROLE app_user; SET LOCAL request.jwt.claim.sub = '<uuid>'` before any data SQL. Naked `db.Query(...)` outside this wrapper is a blocking bug.
+- [ ] The runtime `DATABASE_URL` does NOT name a superuser or `BYPASSRLS` role. RLS is never disabled at runtime, by anybody, for any reason.
+- [ ] RLS tested via the repository or HTTP layer (not naked SQL): seed as User A, read as User B, assert empty result. A test that uses raw SQL bypasses the wrapper and proves nothing.
 - [ ] CASCADE deletes clean up related data
 
 **Policy structure**:
 ```sql
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS items_isolation ON items;
 CREATE POLICY items_isolation ON items
-    USING (user_id = auth.uid());
+    USING      (user_id = current_setting('request.jwt.claim.sub', true)::uuid)
+    WITH CHECK (user_id = current_setting('request.jwt.claim.sub', true)::uuid);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON items TO app_user;
 ```
 
 ### Rate Limiting (OWASP A04)
@@ -285,7 +295,7 @@ if !isAllowedMimeType(file.Header.Get("Content-Type")) {
 | XSS | React auto-escapes, DOMPurify for HTML |
 | CSRF | JWT tokens in headers (not cookies) |
 | Auth bypass | Validate JWT, check RLS |
-| RLS bypass | Every query includes user filter |
+| RLS bypass | `ENABLE` + `FORCE` RLS, connect at runtime as a `NOSUPERUSER NOBYPASSRLS` role, every query goes through `withRLSTx` (sets `SET LOCAL ROLE app_user` + `SET LOCAL request.jwt.claim.sub`) |
 | Secret leaks | Env vars only, .gitignore |
 | Weak password | Delegate to Clerk (uses standards) |
 | Rate limit bypass | Per-user limits, timestamp-based |

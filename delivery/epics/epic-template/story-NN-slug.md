@@ -154,18 +154,25 @@ Only list skills the story genuinely needs. When in doubt, leave it out — the 
 ```sql
 -- File: backend/migrations/NNN_description.sql
 CREATE TABLE IF NOT EXISTS feature_x (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  id         UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name       VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
--- RLS policy
+-- RLS: ENABLE + FORCE (vanilla PostgreSQL pattern — see database-conventions.md).
+-- FORCE is mandatory because the table owner (migration runner) bypasses RLS
+-- without it, even when policies exist.
 ALTER TABLE feature_x ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feature_x FORCE  ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS feature_x_user_isolation ON feature_x;
 CREATE POLICY feature_x_user_isolation ON feature_x
-  USING (user_id = auth.uid());
+  USING      (user_id = current_setting('request.jwt.claim.sub', true)::uuid)
+  WITH CHECK (user_id = current_setting('request.jwt.claim.sub', true)::uuid);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON feature_x TO app_user;
 ```
 
 ### API Contracts

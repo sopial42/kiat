@@ -356,21 +356,16 @@ CREATE INDEX idx_users_email ON users(email);
 
 ### Row-Level Security (RLS)
 
-Enable RLS on all tables to prevent data leakage:
+This is a one-paragraph summary. The full vanilla-PostgreSQL pattern (ENABLE + FORCE, idempotent policies, `app_user` role, per-request transaction wrapper) lives in [`database-conventions.md`](database-conventions.md) §"Row-Level Security (RLS)" — that is the source of truth.
 
-```sql
--- Enable RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+**The contract for backend Go code**:
 
--- Policy: Users can only see their own data
-CREATE POLICY user_own_data ON users
-    FOR SELECT USING (id = current_user_id());
+1. The backend connects with a `NOSUPERUSER NOBYPASSRLS` role at runtime. **Never** with a superuser. The deployment spec enforces this on `DATABASE_URL`.
+2. Every public repository method runs its SQL inside a `withRLSTx(ctx, userID, fn)` wrapper that opens a transaction, runs `SET LOCAL ROLE app_user`, runs `SET LOCAL request.jwt.claim.sub = '<uuid>'`, then executes the closure. `SET LOCAL` reverts at COMMIT/ROLLBACK, so there is no cross-request leak.
+3. Every user-scoped table has a policy of the form `USING (user_id = current_setting('request.jwt.claim.sub', true)::uuid)` (and a matching `WITH CHECK` for write policies). Vanilla Postgres has no `auth.uid()` or `current_user_id()` helper — those are Supabase / Hasura concepts and are not used here.
+4. Every user-scoped table has both `ENABLE ROW LEVEL SECURITY` AND `FORCE ROW LEVEL SECURITY` set. Without `FORCE`, the table owner (the migration runner) silently bypasses RLS regardless of the policy.
 
--- Policy: Service role (superuser) bypasses RLS
-GRANT ALL ON users TO service_role;
-```
-
-**Service role**: Migrations and backend API run as `service_role` (superuser) which bypasses RLS. RLS is enforced at HTTP API layer via Clerk JWT + `current_user_id()` function.
+**RLS is never disabled at runtime, by anybody, for any reason.** A bug in the handler layer that "needs admin access to other users' data" is the wrong solution to the wrong problem — the right solution is a separate admin code path that issues a different SQL user with explicit, auditable permissions, not "turn RLS off".
 
 ### Timestamps
 
