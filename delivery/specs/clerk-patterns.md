@@ -186,7 +186,9 @@ export default function RootLayout({ children }) {
   }
   
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+    // ClerkProvider auto-detects NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY from env;
+    // set the env var, don't repeat it as a prop.
+    <ClerkProvider>
       {children}
     </ClerkProvider>
   );

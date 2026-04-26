@@ -20,11 +20,11 @@ Hooks that need to respect the test-auth bypass mode should go through the proje
 
 *Why it matters*: ClerkProvider makes network calls to Clerk on mount. In test-auth mode, those calls are unwanted and can cause race conditions on CI where the provider's async init races with the test's sign-in step. Unconditional provider = unreliable test runs.
 
-### 1.3 `publishableKey` is passed explicitly from a runtime env var
+### 1.3 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is set in the build env (no explicit prop, no hardcoded value)
 
-`<ClerkProvider publishableKey={process.env.CLERK_PUBLISHABLE_KEY}>` — not relying on the Next.js auto-injection of `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` baked at build time. Same rule for `middleware.ts`.
+`<ClerkProvider>` (no prop) — the SDK auto-detects `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` from the build environment. Don't pass the prop redundantly, don't hardcode the key. Same rule for `clerkMiddleware`.
 
-*Why it matters*: the `NEXT_PUBLIC_*` env var is baked into the Docker image at build time. If the image is built against the staging publishable key and promoted to prod, the frontend still points at the staging Clerk instance — users sign in against staging but the backend validates against prod. Symptoms: users can log in but every API call returns 401. Passing the key explicitly at runtime (via Cloud Run env, Kubernetes secret, etc.) makes the image promotable across environments.
+*Why it matters*: `NEXT_PUBLIC_*` is build-time-inlined by Next.js — passing it as a prop adds zero runtime safety, just noise. Build the frontend image per environment with that environment's Clerk key (see `deployment.md` §"Build-time `NEXT_PUBLIC_*` values"). A hardcoded key (instead of env-driven) is a `BLOCKED` because it ties the code to one Clerk instance.
 
 ### 1.4 Hooks are not called from server components
 

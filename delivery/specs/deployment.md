@@ -155,27 +155,11 @@ This guard is **enforced by the `kiat-review-backend` skill** at review time and
 
 ---
 
-## Docker Image Promotability
+## Build-time `NEXT_PUBLIC_*` values
 
-For any setup that promotes the same Docker image from staging to production (e.g., Cloud Run), **environment-dependent values must be injected at runtime, not baked at build time**.
+`NEXT_PUBLIC_*` env vars are inlined into the JS bundle at `npm run build` time and **cannot be changed** by runtime env injection. Build the frontend image per target environment with that environment's values; promoting a single frontend image across staging→prod is NOT supported when those values differ (different Clerk instance, different feature flag defaults, etc.). This is a Next.js constraint, not a project choice.
 
-### Specific rule: Clerk publishable key
-
-❌ **Wrong:**
-```dockerfile
-# Dockerfile
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
-RUN npm run build
-```
-
-This bakes the staging key into the image, making promotion to production impossible (production has a different Clerk instance).
-
-✅ **Right:**
-- Dockerfile does NOT bake `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `layout.tsx` and `middleware.ts` read the key at runtime from `process.env.CLERK_PUBLISHABLE_KEY`
-- Cloud Run / K8s injects the correct value per environment
-
-**Same principle applies** to any `NEXT_PUBLIC_*` env var whose value differs between environments. If the value is the same everywhere (e.g., a feature flag default), baking it at build time is fine.
+Server-only env vars (no `NEXT_PUBLIC_` prefix — `BACKEND_URL`, `DATABASE_URL`, etc.) are read at runtime and CAN be injected per environment without rebuilding.
 
 ---
 
@@ -186,7 +170,7 @@ This bakes the staging key into the image, making promotion to production imposs
 - [ ] `ENABLE_TEST_AUTH` is unset or explicitly `false` in production
 - [ ] Production guard 1 (`os.Exit(1)` on test-auth leak) is present and tested
 - [ ] `CLERK_SECRET_KEY` is in production secret manager, not in the image
-- [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is injected at runtime, not baked
+- [ ] Frontend image is built per environment with the correct `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` baked in (no cross-env image promotion for client-bundled values — see "Build-time `NEXT_PUBLIC_*` values" above)
 
 **Database roles & RLS**
 - [ ] Tier-2 role `app_migrator` provisioned via Terraform / cloud CLI: `NOSUPERUSER NOBYPASSRLS CREATEROLE LOGIN` + `GRANT CREATE ON SCHEMA public` + `GRANT app_user TO app_migrator`
