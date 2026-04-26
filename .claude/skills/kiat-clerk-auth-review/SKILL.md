@@ -88,6 +88,7 @@ SignOut: safe wrapper used with redirectUrl in tests ✓
 RLS tests: User B isolated context, storage state refresh ✓
 Rate limits: clerkSetup called once per run ✓
 Secrets: CLERK_SECRET_KEY backend-only, publishable key runtime-injected ✓
+Middleware (App Router): explicit NextResponse.redirect with internal redirect_url, 307 status, publicRoutes additions justified, defense-in-depth at page/handler level, test-auth handled symmetrically ✓
 ```
 
 ### If `DISCUSSION`
