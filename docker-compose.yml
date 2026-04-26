@@ -47,7 +47,7 @@ services:
   # Only used when `make test-e2e` is running; backend base URLs for externals
   # point to this when ENV=e2e. See delivery/specs/smocker-patterns.md.
   smocker:
-    image: thiht/smocker:0.18
+    image: thiht/smocker:0.18.5
     container_name: kiat_smocker
     ports:
       - "${SMOCKER_PORT:-8100}:8080"     # Mock-serving HTTP (backend calls this)
