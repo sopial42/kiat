@@ -59,6 +59,26 @@ frontend/
 
 ---
 
+## API Integration
+
+Frontend calls the backend through **relative URLs** (`fetch('/api/items')`). `next.config.ts` rewrites `/api/*` to the backend service:
+
+```ts
+// frontend/next.config.ts
+const backend = process.env.BACKEND_URL ?? 'http://localhost:8080';
+export default {
+  async rewrites() {
+    return [{ source: '/api/:path*', destination: `${backend}/:path*` }];
+  },
+};
+```
+
+`BACKEND_URL` is a server-side env var (NO `NEXT_PUBLIC_` prefix) — change at deploy time without rebuilding the image, no CORS to configure (same-origin), no `NEXT_PUBLIC_API_URL` baked into the client bundle. Dev default is `http://localhost:8080`; in prod set to the backend service's internal URL (Cloud Run service, K8s service name, etc.).
+
+Do **not** ship a `NEXT_PUBLIC_API_URL` for the frontend to read directly — that path puts the backend hostname into the client bundle, requires explicit CORS, and forces a per-env image rebuild. Use the rewrite.
+
+---
+
 ## Server vs Client Components
 
 ### Server Components (Default)
