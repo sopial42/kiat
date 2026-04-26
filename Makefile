@@ -25,7 +25,7 @@
 #
 # See delivery/specs/deployment.md for the production env var matrix.
 
-.PHONY: help dev dev-offline infra-up infra-down test-back test-venom test-e2e test-e2e-mocked ci-local clean
+.PHONY: help dev dev-offline infra-up infra-down test-back test-venom test-e2e test-e2e-mocked ci-local clean install-claude-skills check-claude-skills
 
 # Load .env if present (gitignored; copy from .env.example)
 ifneq (,$(wildcard .env))
@@ -34,7 +34,17 @@ ifneq (,$(wildcard .env))
 endif
 
 help: ## Show this help
-	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# ─────────────────────────────────────────────────────────────
+# Claude Code skills (external, pinned via skills-lock.json)
+# ─────────────────────────────────────────────────────────────
+
+install-claude-skills: ## Install external Claude skills at the SHA pinned in skills-lock.json (run once after clone, and after any lock-file bump)
+	@bash .claude/tools/install-claude-skills.sh
+
+check-claude-skills: ## Verify installed skills match skills-lock.json hashes (CI gate; fails on missing or drift)
+	@bash .claude/tools/install-claude-skills.sh --check
 
 # ─────────────────────────────────────────────────────────────
 # Infrastructure (docker-compose)

@@ -1,6 +1,6 @@
 ---
 name: kiat-frontend-reviewer
-description: Frontend code quality gate for Kiat stories. Invoked by kiat-team-lead after kiat-frontend-coder reports code ready for review. Runs the kiat-review-frontend skill (REQUIRED), conditionally kiat-clerk-auth-review if the diff touches auth-adjacent code, plus optional community skills (react-best-practices, composition-patterns, web-design-guidelines). Verifies accessibility (WCAG AA), design system compliance, hook patterns, and Playwright anti-flakiness. Outputs a machine-parseable VERDICT on line 1 (APPROVED | NEEDS_DISCUSSION | BLOCKED).
+description: Frontend code quality gate for Kiat stories. Invoked by kiat-team-lead after kiat-frontend-coder reports code ready for review. Runs the kiat-review-frontend skill (REQUIRED), conditionally kiat-clerk-auth-review if the diff touches auth-adjacent code, plus optional skills (react-best-practices, composition-patterns, frontend-design) when the story's `## Skills` section lists them. Verifies accessibility (WCAG AA), design system compliance, hook patterns, and Playwright anti-flakiness. Outputs a machine-parseable VERDICT on line 1 (APPROVED | NEEDS_DISCUSSION | BLOCKED).
 tools: Read, Grep, Glob, Bash
 model: inherit
 color: pink
@@ -84,9 +84,9 @@ When in doubt whether a file touches Clerk, **run the skill**.
 
 These are listed in [`.claude/specs/available-skills.md`](../specs/available-skills.md) and only applied when the story genuinely needs them (per the tech-spec-writer's selection in the story's `## Skills` section):
 
-- `react-best-practices` — complex React features, performance-sensitive components, hot-path rendering
-- `composition-patterns` — stories building reusable component libraries or making architectural decisions
-- `web-design-guidelines` — significant visual/UX work when `kiat-ui-ux-search` is overkill
+- `react-best-practices` — complex React features, performance-sensitive components, hot-path rendering, async data fetching, list virtualization
+- `composition-patterns` — stories that create or refactor a reusable component (used in 2+ places, going into the design system, or whose API will be consumed by other stories)
+- `frontend-design` — significant visual/UX work when `kiat-ui-ux-search` is overkill (landing pages, marketing components, dashboard layouts, anything needing a clear aesthetic point-of-view)
 
 If the story's `## Skills` section lists one of these, run it and fold its findings into your issue list (category: performance / composition / design). If the section doesn't list it, **do not run it** — it costs tokens and the tech-spec-writer has already decided it isn't needed.
 
@@ -97,7 +97,7 @@ Open the story file and read its `## Skills` section. That list is what the tech
 - **Any skill listed that is NOT referenced in the coder's handoff** (by name, in a "skills loaded" line, or by the audit trail of a skill output like `CLERK_VERDICT:` or `TEST_PATTERNS: ACKNOWLEDGED`) → `VERDICT: BLOCKED` with the note *"coder dropped skill `<name>` declared in story's ## Skills section; re-run from Step 2 before resubmitting"*.
 - **Any non-listed skill that the coder clearly invoked** (you see its audit line in the handoff but it wasn't in `## Skills`) → `VERDICT: NEEDS_DISCUSSION`. Team Lead arbitrates with the tech-spec-writer.
 - `kiat-test-patterns-check` is always implicitly loaded (coder frontmatter) and does NOT need to be in `## Skills` — don't flag it.
-- Optional community skills from Step 4 above (react-best-practices, composition-patterns, web-design-guidelines) also count — if the story lists them in `## Skills` but you didn't see the coder apply them, that's drift.
+- Optional community skills from Step 4 above (react-best-practices, composition-patterns, frontend-design) also count — if the story lists them in `## Skills` but you didn't see the coder apply them, that's drift.
 
 **Audit line (always emit)**:
 ```

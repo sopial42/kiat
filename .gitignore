@@ -37,6 +37,18 @@ frontend/node_modules/
 backend/bin/
 backend/tmp/
 
+# External Claude Code skills installed by `make install-claude-skills`.
+# Source-of-truth is skills-lock.json; the installed copies are reproducible
+# from the pinned SHAs. Never commit them — the lock file's computedHash
+# guarantees integrity, and ignoring them keeps the repo tidy + lets the
+# install script overwrite cleanly without merge conflicts.
+.claude/.skills-cache/
+.claude/skills/differential-review/
+.claude/skills/sharp-edges/
+.claude/skills/frontend-design/
+.claude/skills/react-best-practices/
+.claude/skills/composition-patterns/
+
 # Test coverage
 coverage/
 *.out
