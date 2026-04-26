@@ -128,10 +128,16 @@ Everything already listed in "What does NOT go here" above still holds — in pa
 BMad's Review mode covers two cadences, each implemented by an existing
 BMad skill:
 
-| Cadence | Trigger | BMad skill | Output |
-|---|---|---|---|
-| **Per-story** | After Team Lead emits `RECONCILIATION_NEEDED:` at Phase 5d, or any time a `✅ Done` story has a populated `## Post-Delivery Notes` | `/bmad-correct-course` | `story-NN-<slug>.reconcile.md` (companion file) |
-| **Per-epic** | After the final story in an epic moves to `✅ Done` | `/bmad-retrospective` | `_epic.reconcile.md` (epic root) |
+| Cadence | Trigger | BMad skill | Reads | Writes |
+|---|---|---|---|---|
+| **Per-story** | After Team Lead emits `RECONCILIATION_NEEDED:` at Phase 5d (i.e., when a `.reconcile.md` companion exists) | `/bmad-correct-course` | `story-NN-<slug>.reconcile.md` §`## Deviations` | Same `.reconcile.md`: appends `## Reconciliation` section + `RECONCILE_DONE` marker, applies L1, queues L2, escalates L3 |
+| **Per-epic** | After the final story in an epic moves to `✅ Done` | `/bmad-retrospective` | All `*.reconcile.md` + queue | `_epic.reconcile.md` (new file at epic root) + force-closes OPEN queue entries |
+
+**Key file model**: the story spec file (`story-NN-<slug>.md`) is
+**never modified** by Review mode. Deviations and reconciliation live
+entirely in the companion `.reconcile.md`. This keeps the spec
+focused on "what we intended" and confines "what actually happened"
+to its own file.
 
 **Authoritative protocol**:
 [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md)
@@ -151,28 +157,38 @@ restate them — one source of truth per rule.
 #### Quick orientation (the high-level flow)
 
 1. **Coder** ships story, emits `Business Deviations:` block in handoff.
-2. **Team Lead Phase 5c** aggregates into `## Post-Delivery Notes`
-   following the strict bullet schema (Tag, Severity, Summary, File,
-   SpecRef, Status, Why). The validator hook
-   `check-post-delivery-schema.sh` enforces.
-3. **Team Lead Phase 5d** detects deviations and emits
-   `RECONCILIATION_NEEDED:` telling the human to run
-   `/bmad-correct-course` on the story.
+2. **Team Lead Phase 5c**:
+   - If all coders reported NONE → no `.reconcile.md` is created
+     (story shipped as specified).
+   - If any deviations → CREATES the companion file
+     `story-NN-<slug>.reconcile.md` with:
+     - `## Deviations` section populated (strict bullet schema:
+       Tag, Severity, Summary, File, SpecRef, Status, Why) — validated
+       by `check-post-delivery-schema.sh` hook.
+     - `## Reconciliation` section with placeholder `_(awaiting
+       reconciliation — run /bmad-correct-course)_`.
+3. **Team Lead Phase 5d** (only if Phase 5c created a companion file):
+   emits `RECONCILIATION_NEEDED:` notification telling the human to
+   run `/bmad-correct-course` on the story.
 4. **Human** runs `/bmad-correct-course <story-path>` when convenient.
-   The BMad session triages each deviation by L1/L2/L3 severity:
+   The BMad session reads the companion file's `## Deviations`
+   section and triages each entry by L1/L2/L3 severity:
    - **L1** → applied directly (typically `delivery/business/` or
      `delivery/specs/`, one-bullet additions, reversible)
    - **L2** → appended to `delivery/_queue/needs-human-review.md`
      (humans triage async; force-closed at epic retro)
    - **L3** → `epic_block` event in `delivery/metrics/events.jsonl`
      (refuses next story launch until human signoff)
-5. **Companion file** `story-NN-<slug>.reconcile.md` is created with
-   the L1/L2/L3 audit and a `RECONCILE_DONE` marker. Without it, Team
-   Lead's reconciliation guard at Phase 6 refuses to flip the epic to
-   `✅ Done`.
+
+   The skill REPLACES the `## Reconciliation` placeholder in the
+   SAME companion file with the L1/L2/L3 outcome and ends with
+   `<!-- RECONCILE_DONE: ... -->`. It does NOT modify the
+   `## Deviations` section (immutable from Phase 5c).
+5. **Reconciliation guard** at Team Lead's Phase 6 enforces: epic
+   stays open until every `.reconcile.md` carries `RECONCILE_DONE`.
 6. **At epic close** the human runs `/bmad-retrospective` on the epic,
-   producing `_epic.reconcile.md` with `EPIC_RECONCILE_DONE`. Required
-   for the epic itself to flip to `✅ Done`.
+   producing `_epic.reconcile.md` with `EPIC_RECONCILE_DONE`.
+   Required for the epic itself to flip to `✅ Done`.
 
 #### Things BMad does NOT do during reconciliation
 
@@ -188,7 +204,15 @@ restate them — one source of truth per rule.
 
 #### Legacy marker (backward compat)
 
-Pre-protocol stories carry an inline `_Reconciled by BMad on <date>_`
-line in their `## Post-Delivery Notes`. The reconciliation guard
-accepts both the legacy line AND the new `.reconcile.md` + `RECONCILE_DONE`
-form as proof of done. New stories should use the companion-file form.
+Pre-protocol stories carry an inline `## Post-Delivery Notes` section
+INSIDE the story spec file, with a `_Reconciled by BMad on <date>_`
+line as the done-signal. The reconciliation guard accepts both:
+
+- **Legacy form**: story spec has `## Post-Delivery Notes` with
+  `_Reconciled by BMad_` line
+- **New form**: companion `story-NN-<slug>.reconcile.md` exists with
+  `RECONCILE_DONE` marker
+
+New stories use the new form exclusively. The story spec file
+(`story-NN-<slug>.md`) of new stories has NO `## Post-Delivery
+Notes` section at all.

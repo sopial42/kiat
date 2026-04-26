@@ -383,73 +383,91 @@ Team Lead replaces this placeholder after executing Phase 7, per the protocol in
 
 ---
 
-## Post-Delivery Notes
+## Deviations & Reconciliation (companion `.reconcile.md` files)
 
-Stories that go through the pipeline may accumulate a `## Post-Delivery Notes` section **below `## Review Log` and above `## Prod Validation`**. Team Lead writes it at Phase 5c by aggregating the `Business Deviations:` sections from each coder's handoff. Append-only — once written, the section is never rewritten.
+Stories that produce coder deviations get a **companion file** at the
+same directory level:
 
-### Why this section exists
-
-During implementation, coders regularly make decisions that deviate from the spec: an acceptance criterion is implemented differently due to technical constraints, a new domain concept is introduced that isn't in the glossary, a judgment call is made on something the spec was silent about. Without a structured place to capture these deviations, the business layer (`delivery/business/`) silently diverges from what was actually shipped — and the PO/PM never knows.
-
-### Template pre-scaffold
-
-Every story file ships with this section pre-created:
-
-```markdown
-## Post-Delivery Notes
-
-> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
-> Review mode to reconcile `delivery/business/` with what was actually shipped.
-
-_(no deviations)_
+```
+delivery/epics/epic-X/
+├── story-NN-<slug>.md             ← spec (read-only after Phase 0)
+└── story-NN-<slug>.reconcile.md   ← deviations + reconciliation
+                                       (only when deviations exist)
 ```
 
-If all coders reported `Business Deviations: NONE`, Team Lead leaves the placeholder untouched. If any coder reported deviations, Team Lead replaces `_(no deviations)_` with the aggregated content.
+**The story spec file itself never carries deviation data.** All
+deviations and reconciliation outcomes live in the companion. Stories
+that ship as specified do NOT get a `.reconcile.md` — its absence is
+the signal "no deviations".
 
-### Populated format
+The companion file holds two sections:
 
-```markdown
-## Post-Delivery Notes
+1. **`## Deviations`** — created by **Team Lead at Phase 5c**,
+   aggregating `Business Deviations:` blocks from each coder's
+   handoff. Strict bullet schema (Tag, Severity, Summary, File,
+   SpecRef, Status, Why) enforced by
+   `.claude/tools/hooks/check-post-delivery-schema.sh`.
+2. **`## Reconciliation`** — filled by **`/bmad-correct-course`**
+   (human-invoked) with the L1/L2/L3 triage outcome, ending with the
+   `<!-- RECONCILE_DONE: ... -->` marker that the Phase 6
+   reconciliation guard greps for.
 
-> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by BMad in
-> Review mode to reconcile `delivery/business/` with what was actually shipped.
+### Why deviation data lives outside the story file
 
-### Backend deviations
-- AC-3: "User can delete in bulk" → async job queue, not synchronous. Reason: timeout above 50 items.
-- SPEC_GAP: "soft delete" concept introduced for GDPR compliance — not in glossary.
+During implementation, coders regularly make decisions that deviate
+from the spec: an acceptance criterion implemented differently due to
+technical constraints, a new domain concept introduced, a judgment
+call on something the spec was silent about. Without a structured
+place to capture these, the business layer silently diverges from
+what shipped.
 
-### Frontend deviations
-- DECISION: Mobile breakpoint set to 480px (spec said "mobile-friendly" without a number).
-```
+Putting deviations + reconciliation into a separate companion file
+(rather than into the story spec) keeps the spec focused on "what we
+intended to build" and confines the "what actually happened beyond
+the spec" narrative to its own file. Symmetric to `_epic.md` ↔
+`_epic.reconcile.md` at the epic level.
 
-### Deviation categories
+### Deviation categories (the "what kind") and severities (the "how to react")
 
-| Prefix | Meaning |
+The schema combines two orthogonal dimensions:
+
+| Category prefix | Meaning |
 |---|---|
 | `AC-N` | Acceptance criterion N implemented differently than specified |
 | `SPEC_GAP` | New concept/behavior introduced that the spec and `delivery/business/` don't mention |
 | `DECISION` | Judgment call on something the spec was silent about |
+| `OUT-OF-SCOPE` | Coder touched something the story didn't ask for, justified |
+| `SKILL_GAP` | A contextual skill listed in `## Skills` was unavailable, with substitution |
 
-### How `/bmad-correct-course` consumes this section (per story, human-invoked)
+| Severity | Reaction |
+|---|---|
+| `L1` | Auto-applied by `/bmad-correct-course` to the canonical doc |
+| `L2` | Queued in `delivery/_queue/needs-human-review.md` for async triage |
+| `L3` | `epic_block` event refuses the next story until human signoff |
 
-After Team Lead's Phase 5d emits a `RECONCILIATION_NEEDED:` notification, the **human** invokes `/bmad-correct-course` on the story when convenient. Team Lead does NOT auto-spawn it — the BMad skill is human-driven by design ("propose before writing"). The full protocol is in [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md); short version:
+Authoritative protocol:
+[`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md).
 
-1. **Severity layer** — every deviation gets classified L1 (auto-apply), L2 (queue for human triage), or L3 (block next story). The coder hints at severity in the bullet's `**Severity**` field; `/bmad-correct-course` may re-classify based on broader context.
-2. **L1** changes are applied directly to `delivery/business/` or `delivery/specs/` and recorded in the companion file `story-NN-<slug>.reconcile.md`.
-3. **L2** proposals are appended to `delivery/_queue/needs-human-review.md` with a `Q-NNN` ID, and tracked in the companion file. Humans triage asynchronously (or batch-close at epic retro).
-4. **L3** escalations write an `epic_block` event to `delivery/metrics/events.jsonl`. Team Lead's pre-launch Phase 0 check refuses the next story until a human resolves the block.
+### How `/bmad-correct-course` consumes the companion (per story, human-invoked)
 
-The companion `.reconcile.md` file ends with `<!-- RECONCILE_DONE: ISO-8601 -->`. The reconciliation guard at Phase 6 reads this marker (in addition to the legacy `_Reconciled by BMad on <date>_` form for backward compat) to determine whether the epic can flip to `✅ Done`.
+After Team Lead's Phase 5d emits a `RECONCILIATION_NEEDED:` notification, the **human** invokes `/bmad-correct-course` on the story when convenient. Team Lead does NOT auto-spawn it — the BMad skill is human-driven by design ("propose before writing"). The skill:
+
+1. Reads the `.reconcile.md` companion's `## Deviations` section
+2. Triages each entry by L1/L2/L3 (re-classifies if the coder's hint was wrong)
+3. **L1** changes applied directly to `delivery/business/` or `delivery/specs/`, summarized in the companion's `## Reconciliation` section
+4. **L2** proposals appended to `delivery/_queue/needs-human-review.md` with a `Q-NNN` ID, also linked in the companion
+5. **L3** escalations write an `epic_block` event to `delivery/metrics/events.jsonl` (refuses the next story until human signoff)
+6. Replaces the `## Reconciliation` placeholder with the audit table and ends with `<!-- RECONCILE_DONE: ISO-8601 -->`
 
 The Kiat contract for what `/bmad-correct-course` must produce when invoked on a Kiat story: [`../../.claude/specs/bmad-reconcile-contract.md`](../../.claude/specs/bmad-reconcile-contract.md).
 
-### How `bmad-retrospective` consumes this section (per epic, on demand)
+### How `/bmad-retrospective` consumes the companions (per epic, human-invoked)
 
-When the final story in an epic moves to `✅ Done`, the human triggers `bmad-retrospective`. It reads every story's `.reconcile.md` plus the queue file, force-closes any remaining OPEN queue entries, detects cross-story patterns, and produces `_epic.reconcile.md` at the epic root with `<!-- EPIC_RECONCILE_DONE: ... -->` marker — required for the epic to flip to `✅ Done`.
+When the final story in an epic moves to `✅ Done`, the human triggers `/bmad-retrospective`. It reads every story's `.reconcile.md` plus the queue file, force-closes any remaining OPEN queue entries, detects cross-story patterns, and produces `_epic.reconcile.md` at the epic root with `<!-- EPIC_RECONCILE_DONE: ... -->` marker — required for the epic to flip to `✅ Done`.
 
 ### Legacy BMad Review mode (still accepted during migration)
 
-The pre-protocol BMad reconciliation flow is documented in [`../business/README.md#review-mode--post-delivery-reconciliation`](../business/README.md#review-mode--post-delivery-reconciliation). It writes the inline `_Reconciled by BMad on <date>_` line into the story's `## Post-Delivery Notes` section. The reconciliation guard accepts both the legacy line AND the new `RECONCILE_DONE` marker as proof of done — but new stories should use the companion-file form.
+The pre-protocol BMad reconciliation flow is documented in [`../business/README.md#review-mode--post-delivery-reconciliation`](../business/README.md#review-mode--post-delivery-reconciliation). Pre-protocol stories carried the deviations inline in a `## Post-Delivery Notes` section in the story file, with a `_Reconciled by BMad on <date>_` line as the done-signal. The reconciliation guard accepts both forms during migration. New stories use the companion-file form.
 
 ---
 

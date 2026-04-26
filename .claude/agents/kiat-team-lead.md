@@ -499,50 +499,39 @@ If the story consumed **> 15 minutes of fix budget on test-related issues** (fla
 
 **When the pitfall already exists:** If the coder's fix matches an existing pitfall entry, do NOT create a duplicate. Instead, note in your audit line: `Pitfall already documented: VP04 — no new entry needed`. If the existing entry is incomplete or wrong, update it in place.
 
-### Phase 5c — Business Reconciliation (after review, before rollup)
+### Phase 5c — Create deviations companion file (after review, before rollup)
 
-After both reviewers return `APPROVED` and Phase 5b is done, **aggregate the Business Deviations from both coders** into the story file. This is the data that closes the feedback loop between implementation and the business layer.
+After both reviewers return `APPROVED` and Phase 5b is done, **aggregate the Business Deviations from both coders into a companion `.reconcile.md` file** next to the story spec. The story spec file itself is NEVER modified — all deviation data lives in the companion.
 
 **Procedure:**
 
 1. **Collect** the `Business Deviations:` section from each coder's handoff (backend and/or frontend).
-2. **If ALL coders reported `NONE`**: no action needed — the story shipped as specified. Emit the audit line and proceed to Phase 6.
-3. **If ANY coder reported deviations**: write a `## Post-Delivery Notes` section in the story file (replacing the `_(no deviations)_` placeholder), aggregating deviations from both coders with their source labeled:
-
-   ```markdown
-   ## Post-Delivery Notes
-
-   > Aggregated by Team Lead from coder handoffs. Consumed by BMad in Review
-   > mode to reconcile `delivery/business/` with what was actually shipped.
-
-   ### Backend deviations
-   - AC-3: "User can delete in bulk" → async job queue, not synchronous. Reason: timeout above 50 items.
-   - SPEC_GAP: "soft delete" concept introduced for GDPR compliance — not in glossary.
-
-   ### Frontend deviations
-   - NONE
-   ```
-
-4. **Include a `business_deviations` count in the rollup event** (Phase 6) — see [`metrics-events.md`](../specs/metrics-events.md) for the field.
+2. **If ALL coders reported `NONE`**: no action needed — the story shipped as specified, no companion file is created. Emit the audit line and proceed to Phase 6.
+3. **If ANY coder reported deviations**: create the companion file at `delivery/epics/epic-X/story-NN-<slug>.reconcile.md`, following the canonical template at [`delivery/epics/epic-template/story-NN-slug.reconcile.md`](../../delivery/epics/epic-template/story-NN-slug.reconcile.md). The file MUST have:
+   - A `## Deviations` section between `<!-- POST_DELIVERY_BLOCK_BEGIN -->` and `<!-- POST_DELIVERY_BLOCK_END -->` markers, with one bullet per deviation following the strict schema (Tag, Severity, Summary, File, SpecRef, Status, Why) — see [`reconciliation-protocol.md`](../specs/reconciliation-protocol.md) §"The `story-NN-<slug>.reconcile.md` schema".
+   - A `## Reconciliation` section containing the placeholder `_(awaiting reconciliation — run /bmad-correct-course on this story)_` — `/bmad-correct-course` will replace this with the L1/L2/L3 outcome when the human invokes it.
+4. **The validator hook `check-post-delivery-schema.sh`** runs on your `SubagentStop` and validates the `## Deviations` schema in the new companion file. If it fails, fix the schema and re-edit.
+5. **Include a `business_deviations` count in the rollup event** (Phase 6) — see [`metrics-events.md`](../specs/metrics-events.md) for the field.
 
 **Audit line (always emit)**:
 ```
-Business reconciliation: 0 deviations — story shipped as specified ✓
+Business reconciliation: 0 deviations — story shipped as specified, no companion file created ✓
 ```
 or
 ```
-Business reconciliation: 3 deviations aggregated into ## Post-Delivery Notes (2 backend, 1 frontend) ✓
+Business reconciliation: 3 deviations aggregated into story-NN-<slug>.reconcile.md §Deviations (2 backend, 1 frontend) — awaiting /bmad-correct-course ✓
 ```
 
-**Why this phase exists**: without it, business-impacting decisions made during coding die in the Git diff. The PO/PM never learns that AC-3 was implemented differently, or that a new domain concept was introduced. BMad's Review mode consumes `## Post-Delivery Notes` to update `delivery/business/` — but the data must exist first. This phase creates the data.
+**Why this phase exists**: without it, business-impacting decisions made during coding die in the Git diff. The PO/PM never learns that AC-3 was implemented differently, or that a new domain concept was introduced. `/bmad-correct-course` consumes the `## Deviations` section to update `delivery/business/` and the queue — but the data must exist first. This phase creates the data, in a file separate from the story spec so the spec stays focused.
 
 ### Phase 5d — Notify human that reconciliation is needed (if deviations exist)
 
-Once `## Post-Delivery Notes` is populated AND the `check-post-delivery-schema.sh`
-hook has passed, you do NOT spawn a reconciliation sub-agent. Per-story
-reconciliation is **human-invoked** via `/bmad-correct-course` — that's
-BMad's existing mode for "significant changes during sprint execution",
-which is exactly what a populated Post-Delivery Notes section represents.
+Once the `.reconcile.md` companion file exists AND the
+`check-post-delivery-schema.sh` hook has passed, you do NOT spawn a
+reconciliation sub-agent. Per-story reconciliation is **human-invoked**
+via `/bmad-correct-course` — that's BMad's existing mode for
+"significant changes during sprint execution", which is exactly what
+a populated `## Deviations` section in the companion file represents.
 
 Your job at Phase 5d: **emit a clear notification** so the human knows
 reconciliation is needed before the next story can safely launch (or
@@ -561,10 +550,11 @@ your final output, before the rollup):
 
 ```
 RECONCILIATION_NEEDED: story-NN-<slug>
-  Source: delivery/epics/epic-X/story-NN-<slug>.md §Post-Delivery Notes
+  Source: delivery/epics/epic-X/story-NN-<slug>.reconcile.md §Deviations
   Deviations: N backend, M frontend
   Action: run `/bmad-correct-course` on this story to triage L1/L2/L3
-          and produce delivery/epics/epic-X/story-NN-<slug>.reconcile.md
+          and update the SAME .reconcile.md with the Reconciliation
+          section + RECONCILE_DONE marker
   Reference: .claude/specs/reconciliation-protocol.md
              .claude/specs/bmad-reconcile-contract.md (the contract
              /bmad-correct-course must honor when used in Kiat context)
@@ -577,12 +567,13 @@ Reconciliation: human invocation needed (/bmad-correct-course) — 3 deviations 
 
 **What `/bmad-correct-course` does in Kiat context** (the contract):
 
-When invoked on a story with deviations, `/bmad-correct-course` MUST
-produce the artifacts described in
+When invoked on a story with a populated `.reconcile.md` companion,
+`/bmad-correct-course` MUST produce the artifacts described in
 [`.claude/specs/bmad-reconcile-contract.md`](../specs/bmad-reconcile-contract.md):
 
-- A companion file `story-NN-<slug>.reconcile.md` carrying L1/L2/L3
-  triage and a `RECONCILE_DONE` marker
+- Replaces the `## Reconciliation` placeholder in the SAME
+  `.reconcile.md` file with the L1/L2/L3 triage and a `RECONCILE_DONE`
+  marker (does NOT modify the `## Deviations` section)
 - Applied L1 changes (landed directly in `delivery/business/` or
   `delivery/specs/`)
 - Appended L2 entries to `delivery/_queue/needs-human-review.md`
@@ -651,13 +642,13 @@ In the **same edit pass**, update the epic's `_epic.md` aggregate status per the
 
 #### Reconciliation guard (epic closure gate)
 
-**When all stories in an epic are `✅ Done` and the epic is about to become `✅ Done`**, scan every story's `## Post-Delivery Notes` section AND every `.reconcile.md` companion file before flipping the epic status. The protocol details are in [`.claude/specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md); short version:
+**When all stories in an epic are `✅ Done` and the epic is about to become `✅ Done`**, scan every story's directory for `.reconcile.md` companion files before flipping the epic status. The protocol details are in [`.claude/specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md); short version:
 
-1. For each story in the epic directory, grep for `## Post-Delivery Notes`.
-2. **No deviations** — section contains placeholder `_(no deviations)_` → story shipped as specified, no reconciliation needed.
-3. **Deviations + new-form reconcile** — a companion `story-NN-<slug>.reconcile.md` exists in the same directory AND it contains a `<!-- RECONCILE_DONE: ... -->` marker → reconciled by `/bmad-correct-course`, done.
-4. **Deviations + legacy marker** (pre-protocol stories) — section contains a line matching `_Reconciled by BMad on .* —` → reconciled by BMad Review mode in legacy form, done.
-5. **Deviations but neither** → **unreconciled**.
+1. For each story in the epic directory, check if `story-NN-<slug>.reconcile.md` exists.
+2. **No companion file** → story shipped as specified, no reconciliation needed (Phase 5c didn't create one).
+3. **Companion file exists with `<!-- RECONCILE_DONE: ... -->` marker** → reconciled by `/bmad-correct-course`, done.
+4. **Companion file exists WITHOUT `RECONCILE_DONE` marker** → **unreconciled** — `/bmad-correct-course` was not run yet (or did not complete).
+5. **Legacy form** (pre-protocol stories): the story file's `## Post-Delivery Notes` section contains a line matching `_Reconciled by BMad on .* —` → reconciled by BMad Review mode in legacy form, done. (No new stories should land in legacy form — but they're accepted during migration.)
 
 Additionally, the epic-level retrospective MUST have run: an `_epic.reconcile.md` file exists at the epic root AND it contains an `<!-- EPIC_RECONCILE_DONE: ... -->` marker. Without this file, the epic CANNOT close even if all stories individually pass.
 
@@ -665,9 +656,9 @@ Additionally, the epic-level retrospective MUST have run: an `_epic.reconcile.md
 
 | Story-level scan | Epic-level retro | Action |
 |---|---|---|
-| All stories: no deviations or reconciled | `_epic.reconcile.md` present with `EPIC_RECONCILE_DONE` | Epic → `✅ Done` |
-| All stories reconciled | `_epic.reconcile.md` missing or no marker | Epic stays `🚧 In Progress`. Emit warning: "Run `bmad-retrospective` to close the epic." |
-| Any story unreconciled | (irrelevant) | Epic stays `🚧 In Progress`. Emit warning listing unreconciled stories. |
+| All stories: no companion file or `RECONCILE_DONE` present | `_epic.reconcile.md` present with `EPIC_RECONCILE_DONE` | Epic → `✅ Done` |
+| All stories reconciled | `_epic.reconcile.md` missing or no marker | Epic stays `🚧 In Progress`. Emit warning: "Run `/bmad-retrospective` to close the epic." |
+| Any story has `.reconcile.md` without `RECONCILE_DONE` | (irrelevant) | Epic stays `🚧 In Progress`. Emit warning listing unreconciled stories. |
 | Any L3 `epic_block` event unresolved (check via Phase 0 protocol) | (irrelevant) | Epic stays `🛑 Blocked`. |
 
 **Audit line:**
@@ -818,8 +809,8 @@ A story is done when:
 - ✅ Both reviewers returned `VERDICT: APPROVED` (or their last `NEEDS_DISCUSSION` was arbitrated and documented in `## Review Log`)
 - ✅ No outstanding security findings
 - ✅ Every reviewer cycle (including the final APPROVED one) has been appended to the story's `## Review Log` section
-- ✅ Business Deviations from all coders aggregated into `## Post-Delivery Notes` (or confirmed all `NONE`)
-- ✅ If deviations existed: Team Lead emitted the `RECONCILIATION_NEEDED:` notification at Phase 5d so the human knows to run `/bmad-correct-course`. (The actual `.reconcile.md` is created when the human runs the skill — not before; the reconciliation guard at Phase 6 enforces it before the epic can close, but does NOT block the current story's rollup.)
+- ✅ Business Deviations from all coders aggregated: if any → companion `.reconcile.md` file created at Phase 5c with the `## Deviations` section populated; if all NONE → no companion file, audit "shipped as specified" emitted
+- ✅ If a `.reconcile.md` was created: Team Lead emitted the `RECONCILIATION_NEEDED:` notification at Phase 5d so the human knows to run `/bmad-correct-course`. (The reconciliation guard at Phase 6 enforces this before the epic can close, but does NOT block the current story's rollup.)
 - ✅ Rollup event written to `delivery/metrics/events.jsonl` **AND verified via `tail -n 1 | json.tool`** (success path)
 - ✅ Final message contains the `Rollup event: written and verified ✓` audit line
 - ✅ Story `**Status**` line flipped to `✅ Done` and epic `_epic.md` aggregate recomputed in the same edit
@@ -856,17 +847,17 @@ A story is done when:
 - [ ] Fix budget exhausted with remaining issues → flip story to `🛑 Blocked`, escalate
 - [ ] Before escalating, consult `failure-patterns.md` (match or create FP-NNN)
 - [ ] **Phase 5b — Pitfall capture**: if fix budget > 15 min on test issues → ask coder for root cause, append to `testing-pitfalls-backend.md` or `testing-pitfalls-frontend.md`, emit audit line
-- [ ] **Phase 5c — Business Reconciliation aggregation**:
+- [ ] **Phase 5c — Create deviations companion file**:
     - [ ] Collect `Business Deviations:` from each coder's handoff
-    - [ ] If all `NONE` → emit audit line, skip Phase 5d, jump to Phase 6
-    - [ ] If any deviations → aggregate into story's `## Post-Delivery Notes` section (replace placeholder, follow strict bullet schema with Tag/Severity/Summary/File/SpecRef/Status/Why fields)
-    - [ ] `check-post-delivery-schema.sh` hook validates on Team Lead `SubagentStop` — if it fails, fix the schema and re-edit
-    - [ ] Emit `Business reconciliation:` audit line with deviation count
-- [ ] **Phase 5d — Notify human if reconciliation needed** (skip if Phase 5c found no deviations):
+    - [ ] If all `NONE` → emit audit line "shipped as specified", skip Phase 5d, jump to Phase 6 (no companion file is created)
+    - [ ] If any deviations → CREATE the companion file `delivery/epics/epic-X/story-NN-<slug>.reconcile.md` with a `## Deviations` section (strict bullet schema, POST_DELIVERY_BLOCK_BEGIN/END markers) + a `## Reconciliation` placeholder. Use the canonical template at `delivery/epics/epic-template/story-NN-slug.reconcile.md`.
+    - [ ] `check-post-delivery-schema.sh` hook validates on Team Lead `SubagentStop` — if it fails, fix the schema and re-edit the companion file
+    - [ ] Emit `Business reconciliation:` audit line with deviation count and companion path
+- [ ] **Phase 5d — Notify human if reconciliation needed** (skip if Phase 5c created no companion file):
     - [ ] Emit `RECONCILIATION_NEEDED: story-NN` block telling the human to run `/bmad-correct-course` on the story
     - [ ] Emit `Reconciliation:` audit line confirming the notification
     - [ ] Do NOT spawn any sub-agent — reconciliation is human-invoked via `/bmad-correct-course`
-    - [ ] The reconciliation guard at Phase 6 enforces this: the epic stays open until the `.reconcile.md` companion file exists with `RECONCILE_DONE` marker
+    - [ ] The reconciliation guard at Phase 6 enforces this: the epic stays open until the `.reconcile.md` carries `RECONCILE_DONE`
 - [ ] **Phase 6 — Rollup write (hard exit gate)**:
     - [ ] Build the JSON object as a single line, cross-checked against `metrics-events.md` schema
     - [ ] Append via Bash heredoc (`<<'EOF'`) to `delivery/metrics/events.jsonl`

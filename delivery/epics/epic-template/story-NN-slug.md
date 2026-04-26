@@ -308,52 +308,26 @@ _(no cycles run yet)_
 
 ---
 
-## Post-Delivery Notes
+## Deviations & Reconciliation
 
-> Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by
-> `/bmad-correct-course` (per story) and `bmad-retrospective` (per epic) to
-> produce companion `.reconcile.md` files. **Schema is enforced** by
-> `.claude/tools/hooks/check-post-delivery-schema.sh` — see the full
-> protocol in [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).
+> The story spec file (this file) is **never modified** to record
+> coder deviations or BMad reconciliation outcome. If any coder
+> reports a deviation, Team Lead at Phase 5c creates the companion
+> file `story-NN-<slug>.reconcile.md` next to this one. The companion
+> holds both the `## Deviations` section (Team Lead Phase 5c, validated
+> by `check-post-delivery-schema.sh`) and the `## Reconciliation`
+> section (filled by `/bmad-correct-course` when the human invokes it).
 >
-> **Two valid forms** — pick whichever applies:
+> **No companion file = no deviations** (story shipped as specified —
+> nothing to reconcile).
+> **Companion file with `RECONCILE_DONE` marker** = fully reconciled.
+> **Companion file without the marker** = blocks epic close (Phase 6
+> reconciliation guard).
 >
-> 1. **No deviations** → leave the placeholder `_(no deviations)_` below.
->    The hook accepts the placeholder verbatim and skips the schema check.
-> 2. **One or more deviations** → replace the placeholder with one or
->    more bullets between the `<!-- POST_DELIVERY_BLOCK_BEGIN -->` and
->    `<!-- POST_DELIVERY_BLOCK_END -->` markers, following the schema:
->
-> ```markdown
-> <!-- POST_DELIVERY_BLOCK_BEGIN -->
-> ### Backend deviations
->
-> - **Tag**: AC-3 | **Severity**: L1
->   **Summary**: <one-line, non-jargon, readable by a non-coder>
->   **File**: <path:line — what was changed>
->   **SpecRef**: <story-NN.md:line for AC-N tags, or "none" for gaps>
->   **Status**: RESOLVED | NEEDS_PROMOTION | BLOCKING
->   **Why**: <one or two sentences — the business or technical reason>
->
-> ### Frontend deviations
->
-> - _(none)_
-> <!-- POST_DELIVERY_BLOCK_END -->
-> ```
->
-> **Tags** (the "what kind"): `AC-N` | `SPEC_GAP` | `DECISION` |
-> `OUT-OF-SCOPE` | `SKILL_GAP`
->
-> **Severities** (the "how reconcile reacts"): `L1` (auto-apply) | `L2`
-> (queue for human) | `L3` (block next story). The coder's initial
-> severity is a hint — `/bmad-correct-course` may re-classify based on cross-
-> story scope.
->
-> Once `/bmad-correct-course` has processed this section, a companion file
-> `story-NN-<slug>.reconcile.md` is created in this directory with the
-> per-deviation outcome (L1 audit, L2 queue refs, L3 escalations).
-
-_(no deviations)_
+> Authoritative protocol:
+> [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).
+> Companion template:
+> [`../epic-template/story-NN-slug.reconcile.md`](../epic-template/story-NN-slug.reconcile.md).
 
 ---
 

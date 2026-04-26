@@ -10,9 +10,10 @@
 > `/bmad-correct-course` is the right BMad tool; this file pins the
 > Kiat-side expectations on its output.
 >
-> When a human runs `/bmad-correct-course` on a Kiat story file with a
-> populated `## Post-Delivery Notes`, the BMad session MUST satisfy
-> what's specified below to integrate cleanly with the Kiat pipeline.
+> When a human runs `/bmad-correct-course` on a Kiat story whose
+> companion file `story-NN-<slug>.reconcile.md` has a populated
+> `## Deviations` section, the BMad session MUST satisfy what's
+> specified below to integrate cleanly with the Kiat pipeline.
 > Kiat agents (Team Lead at Phase 6, tech-spec-writer at Phase -1,
 > coders at scope reading) are entitled to assume the contract holds.
 
@@ -36,22 +37,28 @@ different outputs.
 ## Trigger and invocation flow
 
 1. **Coder** ships story, emits `Business Deviations:` block in handoff.
-2. **Team Lead Phase 5c** aggregates into the story's
-   `## Post-Delivery Notes` section using the strict bullet schema.
-   Validator hook (`check-post-delivery-schema.sh`) enforces.
-3. **Team Lead Phase 5d** detects deviations and emits a
-   `RECONCILIATION_NEEDED:` notification block telling the human which
-   story needs `/bmad-correct-course`.
-4. **Team Lead Phase 6** writes the rollup and ships the story. The
-   reconciliation guard at Phase 6 (extended) refuses to flip the epic
-   to `✅ Done` until every story with deviations has a `.reconcile.md`
-   companion file with `RECONCILE_DONE` marker.
-5. **Human** invokes `/bmad-correct-course <story-path>` when convenient
-   (immediately if the next story's scope might overlap; can defer
-   otherwise).
-6. **BMad session** running `/bmad-correct-course` reads the story's
-   `## Post-Delivery Notes`, triages each deviation by L1/L2/L3
-   severity, and produces the artifacts below.
+2. **Team Lead Phase 5c** aggregates the deviations into the companion
+   file `story-NN-<slug>.reconcile.md` (creating it) under the
+   `## Deviations` section using the strict bullet schema. The
+   validator hook (`check-post-delivery-schema.sh`) enforces.
+3. **Team Lead Phase 5c** creates the companion file
+   `story-NN-<slug>.reconcile.md` with a `## Deviations` section
+   populated from coder handoffs. The story spec file itself is NOT
+   modified — it never carries a deviations section.
+4. **Team Lead Phase 5d** detects the companion file's existence and
+   emits a `RECONCILIATION_NEEDED:` notification block telling the
+   human which story needs `/bmad-correct-course`.
+5. **Team Lead Phase 6** writes the rollup and ships the story. The
+   reconciliation guard at Phase 6 refuses to flip the epic to `✅
+   Done` until every story with a `.reconcile.md` companion file
+   carries the `RECONCILE_DONE` marker.
+6. **Human** invokes `/bmad-correct-course <story-path>` when
+   convenient (immediately if the next story's scope might overlap;
+   can defer otherwise — but Team Lead's Phase 0c will auto-promote on
+   overlap if too long).
+7. **BMad session** running `/bmad-correct-course` reads the
+   `.reconcile.md` companion file's `## Deviations` section, triages
+   each entry by L1/L2/L3 severity, and produces the artifacts below.
 
 `/bmad-correct-course` MUST NOT be invoked by Team Lead or any Kiat
 sub-agent — it is a human-driven skill. Team Lead notifies; the human
@@ -63,14 +70,15 @@ decides when.
 
 | Input | Path | Why |
 |---|---|---|
-| Coder deviations, aggregated | `delivery/epics/epic-X/story-NN-<slug>.md` §`## Post-Delivery Notes` between `POST_DELIVERY_BLOCK_BEGIN/END` markers | The work item — every entry in this section requires triage |
+| Coder deviations, aggregated | `delivery/epics/epic-X/story-NN-<slug>.reconcile.md` §`## Deviations` between `POST_DELIVERY_BLOCK_BEGIN/END` markers | The work item — every entry in this section requires triage |
+| The story spec (read-only context) | `delivery/epics/epic-X/story-NN-<slug>.md` | To resolve `SpecRef` pointers (`story-NN.md:line`) and understand original AC text |
 | Existing business knowledge | `delivery/business/*.md` (read-only) | To grade severity (an entry that contradicts an existing rule is L3) and to identify candidate landing locations for L1/L2 promotions |
 | Existing technical conventions | `delivery/specs/*.md` (read-only) | Same — for technical DECISION entries that should land in conventions, not business |
 | Open queue entries | `delivery/_queue/needs-human-review.md` | To check whether a similar proposal already exists (avoid duplicates) and to allocate the next `Q-NNN` ID |
 | Recent metrics events | `delivery/metrics/events.jsonl` (read-only, last ~50 lines) | To understand what happened in the immediately preceding stories — context for severity grading |
 
 `/bmad-correct-course` MUST NOT read:
-- Other stories' Post-Delivery Notes (that's the retrospective's job)
+- Other stories' `.reconcile.md` files (that's the retrospective's job)
 - Source code files beyond what's referenced in the deviation entries
 - The story's `## Review Log` (closed cycle, not relevant to deviations)
 
@@ -81,22 +89,29 @@ decides when.
 For every story it processes, the BMad session MUST produce ALL of the
 following:
 
-### 1. The companion file `story-NN-<slug>.reconcile.md`
+### 1. Append the `## Reconciliation` section to the SAME `.reconcile.md` file
 
-Mandatory whenever the story's `## Post-Delivery Notes` contains at
-least one deviation. Schema and template:
-[`reconciliation-protocol.md`](reconciliation-protocol.md) §"The
-`story-NN.reconcile.md` schema" + the canonical template at
+The companion file `story-NN-<slug>.reconcile.md` already exists when
+`/bmad-correct-course` runs (it was created by Team Lead at Phase 5c
+with the `## Deviations` section). `/bmad-correct-course` updates the
+SAME file in place — it does NOT create a new file. Specifically:
+
+- **Replace the `## Reconciliation` placeholder** (`_(awaiting
+  reconciliation — run /bmad-correct-course on this story)_`) with the
+  L1/L2/L3 sub-sections + Outcome (schema in
+  [`reconciliation-protocol.md`](reconciliation-protocol.md) §"The
+  `story-NN-<slug>.reconcile.md` schema").
+- **Do NOT modify the `## Deviations` section** — that's Team Lead's
+  output, immutable from this point forward.
+- **End with the marker**:
+  ```html
+  <!-- RECONCILE_DONE: <ISO-8601 UTC timestamp> -->
+  ```
+  Without this marker, Team Lead's reconciliation guard treats the
+  story as unreconciled and refuses to flip the epic to `✅ Done`.
+
+Canonical template:
 `delivery/epics/epic-template/story-NN-slug.reconcile.md`.
-
-The file MUST end with the marker:
-
-```html
-<!-- RECONCILE_DONE: <ISO-8601 UTC timestamp> -->
-```
-
-Without this marker, Team Lead's reconciliation guard treats the story
-as unreconciled and refuses to flip the epic to `✅ Done`.
 
 ### 2. L1 changes — applied directly
 
@@ -153,7 +168,7 @@ counts (L1 applied, L2 queued, L3 blocked) and is what
 
 ## Severity classification rules
 
-The coder hints at L1/L2/L3 in the `## Post-Delivery Notes` bullet.
+The coder hints at L1/L2/L3 in the `## Deviations` bullet.
 `/bmad-correct-course` MAY override the hint based on broader context.
 The authoritative rules:
 
@@ -200,9 +215,9 @@ catching a Phase 5c aggregation bug. Don't double-act.
 
 ## Failure handling
 
-If `/bmad-correct-course` cannot produce a valid `.reconcile.md` (e.g.,
-the `## Post-Delivery Notes` section is malformed and somehow bypassed
-the validator hook), it MUST:
+If `/bmad-correct-course` cannot produce a valid `## Reconciliation`
+section (e.g., the `## Deviations` section is malformed and somehow
+bypassed the validator hook), it MUST:
 
 1. Write a single-line `.reconcile.md` with `<!-- RECONCILE_FAILED:
    <reason> -->` instead of the success marker
@@ -220,10 +235,11 @@ A failed reconcile blocks epic closure exactly as a missing
 - ❌ Edit code (`backend/`, `frontend/`, `infra/`) — code changes
   belong to the next coder, not to reconcile
 - ❌ Edit `.claude/` (framework machinery)
-- ❌ Modify the story file's `## Business Context`, `## Acceptance
-  Criteria`, or any section other than `## Post-Delivery Notes` itself
-  (and even there, only to add the `_Reconciled by BMad on <date>_`
-  legacy line if running in legacy-marker mode for backward compat)
+- ❌ Modify the story spec file (`story-NN-<slug>.md`) at all — it is
+  read-only from `/bmad-correct-course`'s perspective. All output goes
+  into the companion `.reconcile.md`.
+- ❌ Modify the `## Deviations` section of the companion file — that's
+  Team Lead's output, immutable.
 - ❌ Delete entries from the queue
 - ❌ Re-classify a previously-applied L1 (the change is already in the
   doc; re-classifying breaks the audit trail)
@@ -261,5 +277,6 @@ Without `_epic.reconcile.md`, the epic CANNOT close. See
   5c (aggregation), Phase 5d (`RECONCILIATION_NEEDED` notification),
   Phase 6 (reconciliation guard)
 - [`../../delivery/business/README.md`](../../delivery/business/README.md) §"Review mode" —
-  the pre-protocol BMad reconciliation flow (still accepted in
-  legacy-marker mode for backward compat)
+  BMad's writing protocol; references this contract as the
+  authoritative spec for what `/bmad-correct-course` must produce in
+  Kiat context.
