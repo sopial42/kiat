@@ -130,6 +130,36 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 
 **Audit line pattern**: `composition-patterns: applied <category>/<rule-name> from skills/composition-patterns/rules/`
 
+### postgresql-table-design
+
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json))
+- **Source**: [`wshobson/agents`](https://github.com/wshobson/agents) → `plugins/database-design/skills/postgresql`
+- **Size**: ~6k tokens (single SKILL.md, no references)
+- **Purpose**: vendor-neutral PostgreSQL schema design reference — data type rules (DO-USE / DO-NOT-USE lists for `text` vs `varchar(n)`, `bigint generated as identity` vs `serial`, `timestamptz` vs `timestamp`, `numeric` vs `money`), indexing (B-tree, composite, partial, expression, covering, GIN, GiST, BRIN), partitioning (RANGE/LIST/HASH), constraints (UNIQUE `NULLS NOT DISTINCT`, EXCLUDE), update-heavy table tuning (HOT updates, fillfactor, separating hot/cold columns), JSONB design, MVCC awareness, sequence-gap behavior
+
+**When to use** (tech-spec-writer adds this to stories matching any of these):
+- Creating a new migration that introduces a table or non-trivial schema change
+- Designing indexes for a known query pattern (composite, partial, expression, covering, BRIN for time-series)
+- Designing a JSONB column or semi-structured attribute
+- Partitioning a large table (time-series, list, hash)
+- Choosing data types for money (`numeric`), identifiers (`bigint generated as identity` vs `uuid`), full-text search (`tsvector`), ranges (`tstzrange`), or geometry
+- Performance review on an update-heavy or write-heavy table
+
+**When to skip**:
+- Story modifies existing handlers / usecases without any schema change
+- Story is frontend-only
+- Trivial migration (rename a column, add a single index on a foreign key) where the existing `database-conventions.md` is enough
+
+**Loaded by**:
+- `kiat-backend-coder` — at Step 1 / Step 2, when the story's `## Skills` lists it (build-time guidance during migration design)
+- `kiat-backend-reviewer` — at Step 4, when the story's `## Skills` lists it (review-time check that the migration follows the skill's data-type and indexing recommendations)
+
+**Caveat — relationship with `database-conventions.md`**: the skill's RLS section uses `current_user_id()` (Hasura-flavor) in its example. **Our project uses vanilla PostgreSQL with `current_setting('request.jwt.claim.sub', true)::uuid`** — see [`../../delivery/specs/database-conventions.md`](../../delivery/specs/database-conventions.md) §"Row-Level Security (RLS)" for the canonical wiring (ENABLE + FORCE, idempotent policies via `DROP POLICY IF EXISTS`, the `app_user` role, the per-request `withRLSTx` transaction wrapper). On RLS specifically, `database-conventions.md` overrides the skill. Use the skill for the parts it does well: data types, indexing, partitioning, JSONB, MVCC, constraint design.
+
+**Source-vetting note**: `wshobson/agents` is a personal-account GitHub repository, which conflicts with the user-recorded preference *"prefer `anthropics/skills` first; refuse personal-account repos"*. Justification accepted at pin time: as of SHA `27a7ed9`, `anthropics/skills` publishes no PostgreSQL or database skill (only design / office / API / testing skills); the wshobson skill content is vendor-neutral, technical, and matches what a project on vanilla Postgres needs. If `anthropics/skills` later ships a PostgreSQL skill, replace this entry and re-pin.
+
+**Audit line pattern**: `postgresql-table-design: applied <topic> from skills/postgresql-table-design/SKILL.md` (e.g. `postgresql-table-design: applied composite-index ordering rule for (user_id, created_at) hot path`)
+
 ### clerk-nextjs-patterns
 
 - **Source**: [clerk/skills](https://github.com/clerk/skills) (official Clerk AI skill)

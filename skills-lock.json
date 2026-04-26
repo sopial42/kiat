@@ -1,25 +1,86 @@
 {
   "version": 1,
+  "_doc": "Pinned external Claude Code skills. Installed by `make install-claude-skills` (script at .claude/tools/install-claude-skills.sh). See README.md → Phase A.5 and delivery/specs/available-skills.md.",
   "skills": {
     "clerk-backend-api": {
       "source": "clerk/skills",
       "sourceType": "github",
-      "computedHash": "b550d2d1c5d41d4820268c4faa4a23fa966fe98221c068327b19760bf4937961"
+      "ref": null,
+      "path": "skills/clerk-backend-api",
+      "computedHash": "b550d2d1c5d41d4820268c4faa4a23fa966fe98221c068327b19760bf4937961",
+      "_note": "Currently committed in .claude/skills/. Hash recorded for tamper-detection. To migrate to install-on-demand, set ref to a pinned SHA, remove dir from git, and re-run install."
     },
     "clerk-custom-ui": {
       "source": "clerk/skills",
       "sourceType": "github",
-      "computedHash": "72dcda42d3755a468049e828180b66c25fb2ac66fd99bd1514699404445924c6"
+      "ref": null,
+      "path": "skills/clerk-custom-ui",
+      "computedHash": "72dcda42d3755a468049e828180b66c25fb2ac66fd99bd1514699404445924c6",
+      "_note": "Currently committed in .claude/skills/. See clerk-backend-api note."
     },
     "clerk-nextjs-patterns": {
       "source": "clerk/skills",
       "sourceType": "github",
-      "computedHash": "722d79f7610ff60878d5b73b8f53faa51aff729c43b44222faedc7fa926e332f"
+      "ref": null,
+      "path": "skills/clerk-nextjs-patterns",
+      "computedHash": "722d79f7610ff60878d5b73b8f53faa51aff729c43b44222faedc7fa926e332f",
+      "_note": "Currently committed in .claude/skills/. See clerk-backend-api note."
     },
     "clerk-testing": {
       "source": "clerk/skills",
       "sourceType": "github",
-      "computedHash": "3655e0e561d99e41ec06fea0ca39736c3ecbce8e6fb703f0a09373297e56bc82"
+      "ref": null,
+      "path": "skills/clerk-testing",
+      "computedHash": "3655e0e561d99e41ec06fea0ca39736c3ecbce8e6fb703f0a09373297e56bc82",
+      "_note": "Currently committed in .claude/skills/. See clerk-backend-api note."
+    },
+    "differential-review": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "ref": "e8cc5baf9329ccb491bfa200e82eacbac83b1ead",
+      "path": "plugins/differential-review/skills/differential-review",
+      "computedHash": "4c9bb4dbc2d5378d1d4f6d76dd543894322b3a4dcdc0d3207c30224733cd6fa8",
+      "_note": "Adversarial security review skill. Installed on-demand, not committed (see .gitignore). Loaded conditionally by kiat-backend-reviewer when diff touches security-critical paths (auth, crypto, RLS, payments)."
+    },
+    "sharp-edges": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "ref": "e8cc5baf9329ccb491bfa200e82eacbac83b1ead",
+      "path": "plugins/sharp-edges/skills/sharp-edges",
+      "computedHash": "8a23dc147426ae9d7fb534cf8eb7c4de1d47e8403cba95baf1bfde836f77703e",
+      "_note": "Cross-language security pitfalls. Installed on-demand, not committed."
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "ref": "5128e1865d670f5d6c9cef000e6dfc4e951fb5b9",
+      "path": "skills/frontend-design",
+      "computedHash": "260c93d88d7102acb9749b0a3117bb4d267f437e64e2829d1d5ff0427df5e379",
+      "_note": "Official Anthropic skill — production-grade frontend design language with bold aesthetic direction, anti-AI-slop guidance, accessibility. Replaces the placeholder `web-design-guidelines` entry from the original Kiat available-skills.md write-up. Loaded conditionally by kiat-frontend-reviewer for stories with significant visual/UX work where kiat-ui-ux-search would be overkill."
+    },
+    "react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "ref": "ce3e64e468f8fa09a2d075d102771838061fdac0",
+      "path": "skills/react-best-practices",
+      "computedHash": "99c51ec5786b76eb4690ba47a2b0e06ff7a7be43057f21036fc5025f038debd9",
+      "_note": "Vercel Engineering's React/Next.js performance optimization skill — 45 rules across 8 categories (rendering, re-renders, bundle, async, client, etc.) prioritized by impact. MIT-licensed, maintained on the official vercel-labs org. Loaded conditionally by kiat-frontend-reviewer for performance-sensitive React stories. Caution: ~10k tokens — don't pull on trivial UI changes."
+    },
+    "composition-patterns": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "ref": "ce3e64e468f8fa09a2d075d102771838061fdac0",
+      "path": "skills/composition-patterns",
+      "computedHash": "d493cd1038581ca5fbb841f1dbc86274febc36c251fb416548201999b1bfbb1e",
+      "_note": "Vercel Engineering's React composition architecture skill — compound components, state lifting, render-props-over-children, React 19 patterns (no forwardRef). MIT-licensed, same upstream + SHA as react-best-practices for atomic version bumps. Loaded conditionally by kiat-frontend-reviewer ONLY when the story creates/refactors a reusable component (used in 2+ places or going into the design system) — skip for one-off pages, trivial UI, or stories that just consume Shadcn primitives unchanged."
+    },
+    "postgresql-table-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "ref": "27a7ed95755a5c3a2948694343a8e2cd7a7ef6fb",
+      "path": "plugins/database-design/skills/postgresql",
+      "computedHash": "e150653fb6fc4799d80ff270abb6f98666e21f0419e8673c54eac26018ca80f8",
+      "_note": "Vendor-neutral PostgreSQL schema design reference — data type rules, indexing, partitioning, JSONB, MVCC, constraint design. Loaded conditionally by kiat-backend-coder (build-time) and kiat-backend-reviewer (review-time) when the story's `## Skills` lists it. Tech-spec-writer adds it for stories that create/modify migrations or design indexes. CAVEAT: the skill's RLS example uses Hasura-flavor current_user_id(); our project uses vanilla PostgreSQL with current_setting('request.jwt.claim.sub', true)::uuid — see delivery/specs/database-conventions.md §RLS for the canonical override on that one point. SOURCE-VETTING NOTE: wshobson is a personal-account GitHub repo, which conflicts with the user-recorded preference 'prefer anthropics/skills first; refuse personal-account repos'. Accepted at pin time because anthropics/skills publishes no PostgreSQL or database skill as of this SHA, and the content is vendor-neutral and high-quality. If anthropics/skills later ships a PG skill, replace this entry and re-pin. computedHash will be filled by `make install-claude-skills` on first install."
     }
   }
 }
