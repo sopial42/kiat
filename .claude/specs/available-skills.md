@@ -65,50 +65,70 @@ These skills must be **explicitly listed** in a story's `## Skills` section to b
 
 ---
 
-## Community skills available in the wider Claude Code ecosystem
+## Community skills installed at pinned versions
 
-These skills are not Kiat-owned — they're part of the broader Claude Code skill community. Kiat agents can invoke them but Kiat does not guarantee their behavior. Listed here as a reference so the tech-spec-writer knows what's available.
+These skills are **not Kiat-owned and not committed** to the repo. They're pulled from upstream at the exact commit SHA pinned in [`/skills-lock.json`](../../skills-lock.json) by `make install-claude-skills` (see the README's Phase A.5). The install script verifies a SHA-256 directory hash against the lock file on every run, so a tampered upstream is detected immediately.
+
+If a skill below shows status `PENDING`, its upstream source has not been identified yet — it cannot be added to a story's `## Skills` section until somebody fills the lock file's `source`/`ref`/`path` and runs `make install-claude-skills` to record the `computedHash`.
 
 ### differential-review
 
-- **Source**: community
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json))
+- **Source**: [`trailofbits/skills`](https://github.com/trailofbits/skills) → `plugins/differential-review/skills/differential-review`
 - **Size**: ~3k tokens
-- **Purpose**: adversarial security analysis (attacker models, exploit scenarios) that complements the standard review skills
-- **When to use**: stories touching authentication, payments, user data with security implications, RLS changes, crypto
-- **Loaded by**: `kiat-backend-reviewer` (optional, conditionally)
-
-### react-best-practices
-
-- **Source**: community
-- **Size**: ~10k tokens
-- **Purpose**: performance-oriented React patterns (memoization, re-render avoidance, bundle optimization, hydration)
-- **When to use**: stories with complex React features, performance-sensitive components, hot-path rendering
-- **Loaded by**: `kiat-frontend-reviewer` (optional, conditionally)
-- **Caution**: 10k tokens is significant — don't use on trivial React stories
-
-### composition-patterns
-
-- **Source**: community
-- **Size**: ~5k tokens
-- **Purpose**: React component architecture best practices (compound components, children over render props, avoiding boolean props)
-- **When to use**: stories that build reusable component library pieces or make architecture decisions
-- **Loaded by**: `kiat-frontend-reviewer` (optional)
-
-### web-design-guidelines
-
-- **Source**: community
-- **Size**: ~4k tokens
-- **Purpose**: design language consistency, visual hierarchy, UX patterns
-- **When to use**: stories with significant visual/UX work, when `kiat-ui-ux-search` is overkill
-- **Loaded by**: `kiat-frontend-reviewer` (optional)
+- **Purpose**: adversarial security analysis (attacker models, exploit scenarios, blast-radius from call-graphs, regression detection via git blame) that complements the standard review skills
+- **When to use**: stories touching authentication, payments, user data with security implications, RLS changes, crypto, deserialization, file uploads, anything whose failure is exploitable
+- **Loaded by**: `kiat-backend-reviewer` — dynamically invoked at Step 3.5 when the diff hits security-critical paths. Triggers and audit-line format are defined inline in the agent file.
 
 ### sharp-edges
 
-- **Source**: community
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json))
+- **Source**: [`trailofbits/skills`](https://github.com/trailofbits/skills) → `plugins/sharp-edges/skills/sharp-edges`
 - **Size**: ~6k tokens
-- **Purpose**: security pitfalls and sharp edges across multiple languages
-- **When to use**: stories touching security-sensitive code paths
-- **Loaded by**: `kiat-backend-coder` or `kiat-backend-reviewer` (optional)
+- **Purpose**: cross-language security pitfalls — error-prone APIs, dangerous defaults, footgun designs, "secure-by-default" review
+- **When to use**: stories evaluating new dependencies, configuration schemas, cryptographic library choices, production-environment guards, or reviewing whether existing code follows pit-of-success principles
+- **Loaded by**: `kiat-backend-coder` (build-time, when story's `## Skills` lists it). The reviewer does not invoke it directly — `differential-review` covers the review-time security angle.
+
+**How coders use it**: at Step 2, when the story's `## Skills` lists `sharp-edges`, read `.claude/skills/sharp-edges/SKILL.md` and the relevant `references/*.md` for the pattern at hand (e.g. config-schema design, dangerous-defaults review). Apply its checklist to the code being written, especially around error-prone API boundaries and security-sensitive guards. The skill is reference material — there is no protocol to "run" — you read it like a spec and let it shape your implementation.
+
+**Audit line pattern**: `sharp-edges: applied <reference-file> for <concern>` (e.g. `sharp-edges: applied references/secure-defaults.md for production env guard`)
+
+### react-best-practices
+
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json))
+- **Source**: [`vercel-labs/agent-skills`](https://github.com/vercel-labs/agent-skills) → `skills/react-best-practices` (Vercel Engineering, MIT)
+- **Size**: ~10k tokens (SKILL.md + 45 rule files across 8 categories)
+- **Purpose**: React/Next.js performance optimization — re-render avoidance, memoization, bundle splitting, async patterns, hydration, client-side caching, JS micro-optimizations
+- **When to use**: stories with complex React features, performance-sensitive components, hot-path rendering, large list virtualization, async data flows
+- **When to skip**: trivial UI changes (label edits, color swaps), backend-only stories, stories already passing performance review with no regression risk
+- **Loaded by**: `kiat-frontend-reviewer` — dynamically invoked at Step 4 when the story's `## Skills` lists it.
+
+**Audit line pattern**: `react-best-practices: applied <category>/<rule-name> from skills/react-best-practices/rules/`
+
+### frontend-design
+
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json)) — replaces the legacy placeholder `web-design-guidelines` from earlier drafts
+- **Source**: [`anthropics/skills`](https://github.com/anthropics/skills) → `skills/frontend-design` (official Anthropic library)
+- **Size**: ~5k tokens
+- **Purpose**: production-grade frontend design language — bold aesthetic direction, anti-AI-slop guidance, accessibility, typography, layout, color, motion
+- **When to use**: stories with significant visual/UX work where `kiat-ui-ux-search` would be overkill — landing pages, dashboards, marketing components, anything needing a clear aesthetic point-of-view
+- **When to skip**: stories using existing design-system primitives without visual changes, backend-only stories, trivial label/copy updates
+- **Loaded by**: `kiat-frontend-reviewer` — dynamically invoked at Step 4 when the story's `## Skills` lists it.
+
+**Audit line pattern**: `frontend-design: applied <aesthetic-direction> per skills/frontend-design/SKILL.md`
+
+### composition-patterns
+
+- **Status**: ✅ PINNED ([`skills-lock.json`](../../skills-lock.json))
+- **Source**: [`vercel-labs/agent-skills`](https://github.com/vercel-labs/agent-skills) → `skills/composition-patterns` (Vercel Engineering, MIT, same SHA as `react-best-practices`)
+- **Size**: ~3k tokens (SKILL.md + 8 rule files: architecture, state, patterns, react19)
+- **Purpose**: React component architecture — avoid boolean-prop proliferation, compound components, state lifting, render-props vs children, context interfaces, React 19 patterns (no forwardRef)
+- **When to use**: stories that **create or refactor a reusable component** — going into the design system, used in 2+ places, or whose API will be consumed by other agents
+- **When to skip**: one-off page implementations, trivial UI work, stories that consume Shadcn primitives unchanged (the primitives already follow these patterns), backend-only stories
+- **Loaded by**: `kiat-frontend-reviewer` — dynamically invoked at Step 4 when the story's `## Skills` lists it.
+- **Complements**: `react-best-practices` (perf) and `frontend-design` (visual) — these three together cover the major axes of frontend review without overlap.
+
+**Audit line pattern**: `composition-patterns: applied <category>/<rule-name> from skills/composition-patterns/rules/`
 
 ### clerk-nextjs-patterns
 

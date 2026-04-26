@@ -24,13 +24,14 @@ If you only have 2 minutes, keep reading below.
 
 This is intentional: each fork gets **fresh code produced by the same pipeline the forker will use for every subsequent feature**. Running EPIC 00 on day 1 validates that the pipeline works end-to-end in your environment (your Clerk instance, your GCP, your CI). If the agents can't ship EPIC 00, they can't ship EPIC 02 either — better to discover that on day 1.
 
-## Quick start — the 4 phases
+## Quick start — the 5 phases
 
 ```
-Phase A — Fork & clone                    (~2 min)
-Phase B — Credentials setup               (~30–45 min, human only)
-Phase C — Run Team Lead on EPIC 00        (~2–4 hours of pipeline, mostly automated)
-Phase D — Run Team Lead on EPIC 01        (~30–60 min, walkthrough of the full loop)
+Phase A   — Fork & clone                    (~2 min)
+Phase A.5 — Install pinned Claude skills    (~30 sec — REQUIRED before any agent run)
+Phase B   — Credentials setup               (~30–45 min, human only)
+Phase C   — Run Team Lead on EPIC 00        (~2–4 hours of pipeline, mostly automated)
+Phase D   — Run Team Lead on EPIC 01        (~30–60 min, walkthrough of the full loop)
    → after D, you're ready for real EPIC 02+ business stories via BMad
 ```
 
@@ -39,6 +40,25 @@ Phase D — Run Team Lead on EPIC 01        (~30–60 min, walkthrough of the fu
 ```bash
 git clone git@github.com:<you>/kiat.git && cd kiat
 ```
+
+### Phase A.5 — Install pinned Claude Code skills
+
+Some agent skills are **not committed** to this repo — they live upstream (Trail of Bits, Clerk, etc.) and are pulled at the exact SHA pinned in `skills-lock.json`. This keeps Kiat clear of vendored third-party code while still guaranteeing reproducibility: the lock file records both the source SHA *and* a SHA-256 hash of the resulting directory, so any tampered upstream is caught at install time.
+
+```bash
+make install-claude-skills
+```
+
+**What it does**: reads `skills-lock.json`, fetches each declared skill at the pinned commit, copies the relevant subpath into `.claude/skills/<name>/`, and verifies the SHA-256 of the installed dir matches the lock. Idempotent — safe to re-run.
+
+**Run it**:
+- Once after every fresh clone (before launching any Kiat agent — coders and reviewers expect these skills to be present).
+- After every `git pull` that bumps `skills-lock.json`.
+- Before opening a PR locally — `make check-claude-skills` is the CI-equivalent gate that fails on missing or drifted skills.
+
+**Currently pinned** (see `skills-lock.json` for the authoritative list): `differential-review` and `sharp-edges` from [trailofbits/skills](https://github.com/trailofbits/skills) — security-focused skills. `differential-review` is loaded conditionally by `kiat-backend-reviewer` at review time (Step 3.5); `sharp-edges` is loaded by `kiat-backend-coder` at build time when the story's `## Skills` section lists it. The Clerk skills (`clerk-backend-api`, `clerk-custom-ui`, `clerk-nextjs-patterns`, `clerk-testing`) are still committed for now; their lock-file entries record an integrity hash but no `ref` — they will migrate to install-on-demand in a future change.
+
+**Adding a new external skill**: append an entry to `skills-lock.json` with `source`, `ref` (full 40-char SHA), `path` (subdir within the source repo), and a `_note` explaining why. Run `make install-claude-skills` once to record the `computedHash`. Add the install path to `.gitignore`. Document the skill in [`delivery/specs/available-skills.md`](delivery/specs/available-skills.md). Commit lock + gitignore + registry update together.
 
 ### Phase B — Credentials setup (follow `kiat-getting-started.md`)
 
