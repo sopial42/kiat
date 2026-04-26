@@ -1,6 +1,6 @@
 # Needs Human Review
 
-> Append-only queue of L2 reconciliation proposals from `bmad-reconcile`.
+> Append-only queue of L2 reconciliation proposals from `/bmad-correct-course`.
 > Schema, lifecycle, and consumer rules:
 > [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md).
 > Folder contract: [`README.md`](README.md).

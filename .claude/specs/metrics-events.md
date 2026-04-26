@@ -193,7 +193,7 @@ Everything in `story_rollup` PLUS:
 These event types support the per-story reconciliation protocol
 introduced in v1.2. Full semantics live in
 [`reconciliation-protocol.md`](reconciliation-protocol.md). The events
-are written by **`bmad-reconcile`** (per story) and **tech-spec-writer**
+are written by **`/bmad-correct-course`** (per story) and **tech-spec-writer**
 (when its Phase -1 queue scan auto-promotes an L2 to L3).
 
 These events are additive — they don't replace any v1.1 event. A
@@ -204,7 +204,7 @@ or more `epic_block` events.
 
 ### `reconcile_complete` (v1.2)
 
-Emitted by `bmad-reconcile` once per story it processes, AFTER it has
+Emitted by `/bmad-correct-course` once per story it processes, AFTER it has
 written the `.reconcile.md` companion file and applied L1 changes /
 queued L2 entries / written L3 escalations. This event is what
 `bmad-retrospective` reads to discover which stories had reconciles.
@@ -247,7 +247,7 @@ If reconcile failed entirely (could not produce a valid
 
 ### `reconcile_failed` (v1.2)
 
-Emitted by `bmad-reconcile` when it cannot complete (typically because
+Emitted by `/bmad-correct-course` when it cannot complete (typically because
 the `## Post-Delivery Notes` section is malformed and somehow bypassed
 the validator hook). A failure here blocks epic closure exactly as a
 missing reconcile would — the reconciliation guard at Team Lead Phase 6
@@ -276,7 +276,7 @@ greps for `RECONCILE_DONE` markers, and a failed reconcile produces a
 
 ### `epic_block` (v1.2)
 
-Emitted by `bmad-reconcile` (when it classifies a deviation as L3) OR
+Emitted by `/bmad-correct-course` (when it classifies a deviation as L3) OR
 by tech-spec-writer (when its Phase -1 queue scan auto-promotes an L2
 to L3 due to scope overlap with the new story). Team Lead reads
 `events.jsonl` for unresolved `epic_block` events at every story
@@ -288,7 +288,7 @@ pre-launch — an unresolved event refuses the next story.
   "story": "story-05",
   "epic": "epic-2",
   "event": "epic_block",
-  "source": "bmad-reconcile",
+  "source": "bmad-correct-course",
   "deviation_tag": "SPEC_GAP",
   "summary": "RLS contract break — 401 returned where AC-4 spec'd 404",
   "blocked_until": "human_signoff",
@@ -299,7 +299,7 @@ pre-launch — an unresolved event refuses the next story.
 
 **Field semantics:**
 
-- `source` (enum): `"bmad-reconcile"` (deviation classified as L3 at
+- `source` (enum): `"bmad-correct-course"` (deviation classified as L3 at
   reconcile time) | `"tech-spec-writer"` (L2 auto-promoted via Phase
   -1 scope-overlap)
 - `deviation_tag` (enum): `AC-N` | `SPEC_GAP` | `DECISION` |
@@ -309,7 +309,7 @@ pre-launch — an unresolved event refuses the next story.
 - `blocked_until` (enum): `"human_signoff"` (current spec) — future
   values may include `"timeout"`, `"automatic_promotion"`, etc.
 - `reconcile_path` (string): pointer to the `.reconcile.md` (when
-  `source` is `bmad-reconcile`) — null when `source` is
+  `source` is `/bmad-correct-course`) — null when `source` is
   `tech-spec-writer` and the block came from a queue overlap
 - `queue_id` (string or null): `Q-NNN` ID of the queue entry that was
   promoted (only set when `source` is `tech-spec-writer`)

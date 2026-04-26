@@ -655,7 +655,7 @@ In the **same edit pass**, update the epic's `_epic.md` aggregate status per the
 
 1. For each story in the epic directory, grep for `## Post-Delivery Notes`.
 2. **No deviations** — section contains placeholder `_(no deviations)_` → story shipped as specified, no reconciliation needed.
-3. **Deviations + new-form reconcile** — a companion `story-NN-<slug>.reconcile.md` exists in the same directory AND it contains a `<!-- RECONCILE_DONE: ... -->` marker → reconciled by `bmad-reconcile`, done.
+3. **Deviations + new-form reconcile** — a companion `story-NN-<slug>.reconcile.md` exists in the same directory AND it contains a `<!-- RECONCILE_DONE: ... -->` marker → reconciled by `/bmad-correct-course`, done.
 4. **Deviations + legacy marker** (pre-protocol stories) — section contains a line matching `_Reconciled by BMad on .* —` → reconciled by BMad Review mode in legacy form, done.
 5. **Deviations but neither** → **unreconciled**.
 
@@ -819,7 +819,7 @@ A story is done when:
 - ✅ No outstanding security findings
 - ✅ Every reviewer cycle (including the final APPROVED one) has been appended to the story's `## Review Log` section
 - ✅ Business Deviations from all coders aggregated into `## Post-Delivery Notes` (or confirmed all `NONE`)
-- ✅ If deviations existed: `bmad-reconcile` ran, produced `story-NN-<slug>.reconcile.md` with `RECONCILE_DONE` marker, and any L3 escalation acknowledged in the rollup
+- ✅ If deviations existed: Team Lead emitted the `RECONCILIATION_NEEDED:` notification at Phase 5d so the human knows to run `/bmad-correct-course`. (The actual `.reconcile.md` is created when the human runs the skill — not before; the reconciliation guard at Phase 6 enforces it before the epic can close, but does NOT block the current story's rollup.)
 - ✅ Rollup event written to `delivery/metrics/events.jsonl` **AND verified via `tail -n 1 | json.tool`** (success path)
 - ✅ Final message contains the `Rollup event: written and verified ✓` audit line
 - ✅ Story `**Status**` line flipped to `✅ Done` and epic `_epic.md` aggregate recomputed in the same edit

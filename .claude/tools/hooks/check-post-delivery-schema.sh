@@ -4,7 +4,7 @@
 # Validates the schema of the `## Post-Delivery Notes` section in any
 # story file Team Lead modified during this run. Triggered after Team
 # Lead's Phase 5c edits. The reconciliation pipeline downstream
-# (bmad-reconcile, scope-overlap checks, retrospective) all assume the
+# (/bmad-correct-course, scope-overlap checks at Team Lead Phase 0c, /bmad-retrospective) all assume the
 # schema defined in:
 #   .claude/specs/reconciliation-protocol.md
 #

@@ -123,40 +123,72 @@ Everything already listed in "What does NOT go here" above still holds — in pa
 
 ---
 
-### Review mode — Post-Delivery Reconciliation
+### Review mode — Post-Delivery Reconciliation (per story + per epic)
 
-When the PO/PM invokes BMad in **Review mode** on a delivered story (status `✅ Done`), BMad performs a **reconciliation check** — reading the story's `## Post-Delivery Notes` section to discover any deviations between what the spec planned and what the coders actually shipped.
+BMad's Review mode covers two cadences, each implemented by an existing
+BMad skill:
 
-#### When to trigger
+| Cadence | Trigger | BMad skill | Output |
+|---|---|---|---|
+| **Per-story** | After Team Lead emits `RECONCILIATION_NEEDED:` at Phase 5d, or any time a `✅ Done` story has a populated `## Post-Delivery Notes` | `/bmad-correct-course` | `story-NN-<slug>.reconcile.md` (companion file) |
+| **Per-epic** | After the final story in an epic moves to `✅ Done` | `/bmad-retrospective` | `_epic.reconcile.md` (epic root) |
 
-- **Periodically**: the PO/PM can ask BMad to scan all `✅ Done` stories in an epic for unreconciled `## Post-Delivery Notes`. BMad lists the stories that have non-placeholder content.
-- **Per-story**: the PO/PM points BMad at a specific delivered story file.
-- **In `/loop`**: BMad can be set up via `/loop` to periodically scan for unreconciled stories across all epics.
+**Authoritative protocol**:
+[`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md)
+defines the L1/L2/L3 severity model, the `.reconcile.md` schemas, the
+queue mechanism (`delivery/_queue/needs-human-review.md`), the
+auto-promotion rule, and Team Lead's enforcement gates.
 
-#### Reconciliation protocol
+**`/bmad-correct-course` Kiat contract**:
+[`../../.claude/specs/bmad-reconcile-contract.md`](../../.claude/specs/bmad-reconcile-contract.md)
+specifies what `/bmad-correct-course` MUST produce when used in Kiat
+context (companion file with `RECONCILE_DONE` marker, L1 changes
+applied, L2 entries queued, L3 escalations as `epic_block` events).
 
-1. **Read** the story's `## Post-Delivery Notes`. If the placeholder `_(no deviations)_` is present, the story shipped as specified — report "no reconciliation needed" and stop.
+**Read both before invoking either skill.** This README does not
+restate them — one source of truth per rule.
 
-2. **For each deviation**, classify the business impact:
+#### Quick orientation (the high-level flow)
 
-   | Deviation prefix | BMad action |
-   |---|---|
-   | `AC-N` (acceptance criterion changed) | Read the original AC in `## Business Context`. Assess whether the difference is cosmetic (e.g., toast instead of modal — same UX outcome) or material (e.g., async instead of sync — different user experience). If material: propose an update to the `## Business Context` acceptance criterion and, if applicable, to the relevant `delivery/business/` file. |
-   | `SPEC_GAP` (new concept introduced) | Check if the concept exists in `delivery/business/glossary.md` or `domain-model.md`. If not: switch to **Capture mode** and propose adding it. If it exists but the definition doesn't match: propose an update. |
-   | `DECISION` (judgment call on silence) | Assess whether the decision should become a **business rule** (e.g., "rate limit is 100 req/min" → belongs in `business-rules.md` if it's a product decision, not just a technical default). If yes: switch to **Capture mode** and propose. If it's purely technical: note it and move on — it belongs in `delivery/specs/project-memory.md`, not here. |
+1. **Coder** ships story, emits `Business Deviations:` block in handoff.
+2. **Team Lead Phase 5c** aggregates into `## Post-Delivery Notes`
+   following the strict bullet schema (Tag, Severity, Summary, File,
+   SpecRef, Status, Why). The validator hook
+   `check-post-delivery-schema.sh` enforces.
+3. **Team Lead Phase 5d** detects deviations and emits
+   `RECONCILIATION_NEEDED:` telling the human to run
+   `/bmad-correct-course` on the story.
+4. **Human** runs `/bmad-correct-course <story-path>` when convenient.
+   The BMad session triages each deviation by L1/L2/L3 severity:
+   - **L1** → applied directly (typically `delivery/business/` or
+     `delivery/specs/`, one-bullet additions, reversible)
+   - **L2** → appended to `delivery/_queue/needs-human-review.md`
+     (humans triage async; force-closed at epic retro)
+   - **L3** → `epic_block` event in `delivery/metrics/events.jsonl`
+     (refuses next story launch until human signoff)
+5. **Companion file** `story-NN-<slug>.reconcile.md` is created with
+   the L1/L2/L3 audit and a `RECONCILE_DONE` marker. Without it, Team
+   Lead's reconciliation guard at Phase 6 refuses to flip the epic to
+   `✅ Done`.
+6. **At epic close** the human runs `/bmad-retrospective` on the epic,
+   producing `_epic.reconcile.md` with `EPIC_RECONCILE_DONE`. Required
+   for the epic itself to flip to `✅ Done`.
 
-3. **Propose before writing** — same rule as Capture mode. BMad announces each update it intends to make and waits for green light before writing.
+#### Things BMad does NOT do during reconciliation
 
-4. **Mark as reconciled**. After all deviations in a story are processed, BMad appends a line to the story's `## Post-Delivery Notes`:
+- **No technical changes.** BMad never edits `delivery/specs/`, code,
+  or `.claude/` files. If a deviation is purely technical, BMad notes
+  it in the `.reconcile.md` and moves on.
+- **No retroactive story edits.** BMad does not modify the `## Business
+  Context` of a `✅ Done` story. The `.reconcile.md` is the historical
+  record of what changed.
+- **No new stories from deviations alone.** If a deviation reveals a
+  bigger gap, BMad flags it in the `.reconcile.md` Process lessons
+  section — it does not create the story unilaterally.
 
-   ```markdown
-   _Reconciled by BMad on 2026-04-22 — 2 items updated in delivery/business/, 1 noted as technical-only._
-   ```
+#### Legacy marker (backward compat)
 
-   This line is the signal that the story's deviations have been reviewed by the PO/PM and the business layer is up to date.
-
-#### What BMad does NOT do during reconciliation
-
-- **No technical changes.** BMad never edits `delivery/specs/`, code, or `.claude/` files. If a deviation is purely technical (e.g., "used async job queue" with no business impact), BMad notes it and moves on.
-- **No retroactive story edits.** BMad does not modify the `## Business Context` of a `✅ Done` story to pretend the spec was always right. The `## Post-Delivery Notes` section is the historical record of what changed. If BMad updates an acceptance criterion, it adds a note explaining the update was post-delivery.
-- **No new stories from deviations alone.** If a deviation reveals a bigger gap (e.g., "we introduced soft delete but have no GDPR retention policy"), BMad flags it to the PO/PM as a potential future story — it does not create the story unilaterally.
+Pre-protocol stories carry an inline `_Reconciled by BMad on <date>_`
+line in their `## Post-Delivery Notes`. The reconciliation guard
+accepts both the legacy line AND the new `.reconcile.md` + `RECONCILE_DONE`
+form as proof of done. New stories should use the companion-file form.

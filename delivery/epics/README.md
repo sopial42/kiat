@@ -430,16 +430,18 @@ If all coders reported `Business Deviations: NONE`, Team Lead leaves the placeho
 | `SPEC_GAP` | New concept/behavior introduced that the spec and `delivery/business/` don't mention |
 | `DECISION` | Judgment call on something the spec was silent about |
 
-### How `bmad-reconcile` consumes this section (per story, automatic)
+### How `/bmad-correct-course` consumes this section (per story, human-invoked)
 
-After Team Lead's Phase 5d, `bmad-reconcile` is spawned automatically as a sub-agent to triage every deviation in `## Post-Delivery Notes`. The full protocol is in [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md); short version:
+After Team Lead's Phase 5d emits a `RECONCILIATION_NEEDED:` notification, the **human** invokes `/bmad-correct-course` on the story when convenient. Team Lead does NOT auto-spawn it — the BMad skill is human-driven by design ("propose before writing"). The full protocol is in [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md); short version:
 
-1. **Severity layer** — every deviation gets classified L1 (auto-apply), L2 (queue for human triage), or L3 (block next story). The coder hints at severity in the bullet's `**Severity**` field; reconcile may re-classify based on broader context.
+1. **Severity layer** — every deviation gets classified L1 (auto-apply), L2 (queue for human triage), or L3 (block next story). The coder hints at severity in the bullet's `**Severity**` field; `/bmad-correct-course` may re-classify based on broader context.
 2. **L1** changes are applied directly to `delivery/business/` or `delivery/specs/` and recorded in the companion file `story-NN-<slug>.reconcile.md`.
-3. **L2** proposals are appended to `delivery/_queue/needs-human-review.md` with a `Q-NNN` ID, and tracked in the companion file. Humans triage asynchronously.
+3. **L2** proposals are appended to `delivery/_queue/needs-human-review.md` with a `Q-NNN` ID, and tracked in the companion file. Humans triage asynchronously (or batch-close at epic retro).
 4. **L3** escalations write an `epic_block` event to `delivery/metrics/events.jsonl`. Team Lead's pre-launch Phase 0 check refuses the next story until a human resolves the block.
 
 The companion `.reconcile.md` file ends with `<!-- RECONCILE_DONE: ISO-8601 -->`. The reconciliation guard at Phase 6 reads this marker (in addition to the legacy `_Reconciled by BMad on <date>_` form for backward compat) to determine whether the epic can flip to `✅ Done`.
+
+The Kiat contract for what `/bmad-correct-course` must produce when invoked on a Kiat story: [`../../.claude/specs/bmad-reconcile-contract.md`](../../.claude/specs/bmad-reconcile-contract.md).
 
 ### How `bmad-retrospective` consumes this section (per epic, on demand)
 

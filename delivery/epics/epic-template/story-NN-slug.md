@@ -311,7 +311,7 @@ _(no cycles run yet)_
 ## Post-Delivery Notes
 
 > Aggregated by Team Lead at Phase 5c from coder handoffs. Consumed by
-> `bmad-reconcile` (per story) and `bmad-retrospective` (per epic) to
+> `/bmad-correct-course` (per story) and `bmad-retrospective` (per epic) to
 > produce companion `.reconcile.md` files. **Schema is enforced** by
 > `.claude/tools/hooks/check-post-delivery-schema.sh` — see the full
 > protocol in [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).
@@ -346,10 +346,10 @@ _(no cycles run yet)_
 >
 > **Severities** (the "how reconcile reacts"): `L1` (auto-apply) | `L2`
 > (queue for human) | `L3` (block next story). The coder's initial
-> severity is a hint — `bmad-reconcile` may re-classify based on cross-
+> severity is a hint — `/bmad-correct-course` may re-classify based on cross-
 > story scope.
 >
-> Once `bmad-reconcile` has processed this section, a companion file
+> Once `/bmad-correct-course` has processed this section, a companion file
 > `story-NN-<slug>.reconcile.md` is created in this directory with the
 > per-deviation outcome (L1 audit, L2 queue refs, L3 escalations).
 

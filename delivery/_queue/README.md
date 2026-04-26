@@ -1,7 +1,7 @@
 # Reconciliation Queue
 
 Asynchronous human-triage queue for L2 reconciliation proposals raised
-by `bmad-reconcile`. The full protocol — including who writes, who
+by `/bmad-correct-course`. The full protocol — including who writes, who
 reads, and when entries get force-closed — lives in
 [`../../.claude/specs/reconciliation-protocol.md`](../../.claude/specs/reconciliation-protocol.md).
 
@@ -23,13 +23,14 @@ first — the directory's structure is part of the contract.
 
 ## How entries flow
 
-1. **Append** — `bmad-reconcile` writes a new `## Q-NNN — [OPEN]` entry
+1. **Append** — `/bmad-correct-course` writes a new `## Q-NNN — [OPEN]` entry
    when it triages an L2 deviation that needs a human judgment call.
-2. **Scope-overlap check** — every new story's tech-spec-writer scans
-   this file at Phase -1. An OPEN entry whose `Affects` overlaps the
-   new story's scope auto-promotes from L2 to L3 (status becomes
-   `PROMOTED`, an `epic_block` event is written, the new story handoff
-   fails until the human resolves).
+2. **Scope-overlap check** — Team Lead scans this file at Phase 0c
+   (between spec validation and context-budget check) for every new
+   story. An OPEN entry whose `Affects` overlaps the new story's scope
+   auto-promotes from L2 to L3 (status becomes `PROMOTED`, an
+   `epic_block` event is written, the new story is refused until the
+   human resolves).
 3. **Human triage** — humans read open entries asynchronously, decide
    ACCEPT / REJECT, edit the entry's status from `OPEN` to `RESOLVED` or
    `REJECTED` and fill the `Decision` field. Entries are **never
@@ -45,10 +46,9 @@ first — the directory's structure is part of the contract.
 | Role | When | What you're looking for |
 |---|---|---|
 | Human (PO / Tech Lead) | Anytime, on push notification, or weekly | OPEN entries; triage them |
-| `bmad-reconcile` | Never reads — only appends | n/a |
-| Tech-spec-writer | Phase -1 of every new story | OPEN entries whose `Affects` overlaps the new story |
-| `bmad-retrospective` | Once per epic, at retro | OPEN entries from this epic, to force-close |
-| Team Lead | Never reads the queue directly — reads `events.jsonl` for L3 escalations instead | n/a |
+| `/bmad-correct-course` | Never reads — only appends | n/a |
+| Team Lead | Phase 0c of every new story | OPEN entries whose `Affects` overlaps the new story (auto-promote on hit); also reads `events.jsonl` for unresolved L3 escalations at Phase 0 |
+| `/bmad-retrospective` | Once per epic, at retro | OPEN entries from this epic, to force-close |
 
 ---
 
@@ -69,7 +69,7 @@ first — the directory's structure is part of the contract.
   the audit trail.
 - ❌ **Don't reuse `Q-NNN` IDs**. New entries always increment.
 - ❌ **Don't write entries by hand** under normal flow — let
-  `bmad-reconcile` do it. Manual entries break the auto-promotion check
+  `/bmad-correct-course` do it. Manual entries break the auto-promotion check
   unless they follow the schema exactly.
 - ❌ **Don't put L3 escalations here**. L3 goes to `events.jsonl` so
   Team Lead's pre-launch check can find it.
