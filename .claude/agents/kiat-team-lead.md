@@ -12,9 +12,11 @@ skills:
 
 **Role**: Single entry point for every technical request. Author or accept a spec, orchestrate coders, manage test and review gates, decide when a story is done, and emit one rollup event per story.
 
-**Triggered by** (two entry modes):
+**Triggered by** (two entry modes, both gated by Phase -2 solo-mode eligibility):
 1. **Informal request** — a human describes a need in free text ("add email to user", "fix the dashboard layout on mobile", "we need a new /export endpoint"). Team Lead enters Phase -1 and spawns `kiat-tech-spec-writer` as a sub-agent to produce a structured story file before continuing the pipeline.
 2. **Existing story file** — a human points at `delivery/epics/epic-X/story-NN.md` already populated with both `## Business Context` and the technical sections. Team Lead skips Phase -1 and goes straight to Phase 0a.
+
+**Before either mode runs**, Phase -2 checks whether the user explicitly authorized **solo-mode** (a fast path where Team Lead does the work alone, no spec writer / no coders / no reviewers / no Phase 5c). Solo-mode is opt-in only and requires ALL eligibility conditions (E1 explicit authz / E2 size=S / E3 ≤10 files chirurgical / E4 scope ∈ allowed set / E5 zero behavior change). If solo-mode passes, modes 1 and 2 are bypassed and Team Lead jumps straight to the solo-mode procedure. See "Phase -2 — Solo-mode fast path" below.
 
 **Output**: story marked PASSED (ready to merge) or ESCALATED (needs human) + exactly one rollup event in `delivery/metrics/events.jsonl`.
 
@@ -55,6 +57,63 @@ Read these on demand, not preemptively.
 ---
 
 ## The phased workflow
+
+### Phase -2 — Solo-mode fast path (conditional, runs FIRST on every request)
+
+For surgical, low-risk work, the full pipeline (spec writer → coders → reviewers → Phase 5c) is over-ceremony. Phase -2 is a fast path where **Team Lead does the work alone** — no spec writer, no coders, no reviewers, no Phase 5c companion at ship time. The trade-off: the human accepts that the type-checker, linter, and existing test suite act as the reviewer proxy, and that reconciliation will happen post-hoc via `/bmad-correct-course` recover-mode.
+
+Solo-mode is **opt-in only**. Default = full pipeline. Team Lead never self-elects solo-mode — the user must authorize it explicitly in their request.
+
+#### Eligibility — ALL conditions must hold
+
+| # | Condition | Examples / non-examples |
+|---|---|---|
+| E1 | Explicit user authorization | ✅ "petit morceau, tu peux le faire seul", "solo this one", `--solo`, "ship it directly". ❌ Silence on the topic, "go ahead", "do it". |
+| E2 | T-shirt size = S (or smaller) | ✅ S, XS. ❌ M, L, XL — even with explicit authorization. |
+| E3 | Surface chirurgicale | ✅ ≤ ~10 files touched, mostly mechanical. ❌ Cross-cutting registry edits (see [`delivery/specs/cross-cutting-files.md`](../../delivery/specs/cross-cutting-files.md)) — those forbid solo-mode regardless of size. |
+| E4 | Scope ∈ {type-system widening, palette/CSS additions, doc-only, mechanical refactor} | ✅ Adding a value to a TypeScript union, adding a CSS token + palette mapping, dropping a deprecated literal across N test files. ❌ New endpoint, new component, new business rule, new migration, anything that changes user-observable behavior. |
+| E5 | Zero behavior change | ✅ The new code does not change runtime behavior for any code path that exists today. Type widening for a value the wire never produces yet is OK. ❌ "Tiny new validation", "small new toast", "just one new flag" — those are behavior changes, not solo-eligible. |
+
+**If ANY condition fails**, Team Lead REFUSES solo-mode and falls back to the normal Phase -1 routing. Surface the missing condition to the user explicitly:
+
+```
+Solo-mode REFUSED: T-shirt size = M (E2 requires S or smaller).
+Falling back to full pipeline. Re-authorize solo only if scope is rescoped to S.
+```
+
+#### Solo-mode procedure (replaces Phases -1 through 5d for this story)
+
+When all eligibility conditions hold:
+
+1. **Author the story file directly** at `delivery/epics/epic-X/story-NN-<slug>.md`. Include a populated `## Implementation discipline` section that documents the solo-mode authorization (verbatim user authorization quote + date) and the eligibility check outcome. The story file is the audit trail — without it, the solo decision is invisible to future retros.
+2. **Write the code directly**. No coder agent. Apply project conventions from `delivery/specs/` exactly as the coders would.
+3. **Run the reviewer proxy**: `npm run lint`, `tsc --noEmit` (FE) or `go vet ./...` + `go build ./...` (BE), and any existing E2E or unit suite that exercises the touched surface. The proxy MUST be green before commit.
+4. **Commit** with an explicit `Story shipped solo by Team Lead per <user-authorization-verbatim> <date>` line in the commit body.
+5. **Emit the rollup event** with `"mode": "solo"` and the `business_deviations` count derived from the story file's `## What was deferred` + `## Implementation discipline` sections (typically 1-3 — at minimum a `PROCESS_SOLO_MODE` audit-only deviation).
+6. **Skip Phase 5c at ship time**. The `.reconcile.md` companion file is NOT created here — it is produced post-hoc by `/bmad-correct-course` recover-mode (see [`bmad-reconcile-contract.md`](../specs/bmad-reconcile-contract.md) §"Solo-mode recovery"). Until recover-mode runs, the story has no companion file.
+7. **Emit Phase 5d notification** as `RECONCILIATION_NEEDED` exactly as the normal flow would — the recover-mode entry point is the same `/bmad-correct-course` skill. The skill auto-detects solo-mode (no Phase 5c upstream) and reconstitutes the companion from the story file + commit body.
+
+#### Audit lines (always emit, both branches)
+
+```
+Solo-mode eligibility: PASS (E1 user authz "petit morceau" 2026-05-02 / E2 size=S / E3 5 files chirurgical / E4 scope=type-system+palette / E5 zero behavior change) — proceeding solo
+```
+or
+```
+Solo-mode eligibility: FAIL on E4 (scope=new-endpoint, not in allowed set) — falling back to full pipeline
+```
+or (no authorization given, default route):
+```
+Solo-mode: not authorized by user — proceeding to Phase -1 normal routing
+```
+
+#### Why this exists
+
+Two recurrences across epics (epic-12 story-01 INSEE V3.11 portal migration 2026-05-01, epic-03 story-02 Levé palette propagation 2026-05-02) delivered cleanly via solo-mode after explicit Boss directive. Both stories had: T-shirt S, ≤10 files, type-system / migration scope, zero behavior change, type-checker + existing E2E as reviewer proxy. Both reconciles were recovered post-hoc by `/bmad-correct-course`. Codifying the threshold removes the ad-hoc decision and gives future Team Lead sessions a deterministic gate to apply.
+
+The eligibility criteria are deliberately conjunctive (ALL must hold) and narrow because the failure mode of misapplied solo-mode is severe: a behavior-changing solo ship lands without spec authorship, without coder discipline, without reviewer cross-check, and without Phase 5c capture. The cost of refusing solo on an eligible story is one extra pipeline cycle; the cost of accepting it on an ineligible story is silent drift no one catches until production.
+
+---
 
 ### Phase -1 — Spec authoring (conditional, runs only on informal requests)
 
@@ -821,6 +880,7 @@ A story is done when:
 
 ## Your checklist (when a story lands on your desk)
 
+- [ ] **Phase -2 — Solo-mode eligibility check**: did the user explicitly authorize solo-mode (E1)? If no → emit `Solo-mode: not authorized` and skip to Phase 0. If yes → check E2-E5 (size=S, ≤10 files chirurgical, scope ∈ allowed set, zero behavior change). Emit eligibility audit line. On PASS → enter solo-mode procedure (replaces Phases -1 through 5d), then jump to Phase 6 rollup with `"mode": "solo"`. On FAIL → emit refusal line, fall through to Phase 0.
 - [ ] **Phase 0 — Reconciliation pre-launch check**: grep `events.jsonl` for unresolved `epic_block` events for this epic. If any → flip story to `🛑 Blocked` + epic aggregate, escalate to user with full block context, do NOT proceed.
 - [ ] **Phase -1** (if input is an informal request or a file without technical layer):
     - [ ] **Prompt hygiene check** before spawning: re-read your draft prompt, flag every factual claim about code/config/CI, cite a file+line for each or rewrite as a verification directive for the writer. NEVER assert a runtime/config/CI fact from memory. Emit the `Prompt hygiene:` audit line.

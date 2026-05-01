@@ -66,6 +66,46 @@ decides when.
 
 ---
 
+## Solo-mode recovery (no Phase 5c upstream)
+
+When Team Lead ships a story via Phase -2 solo-mode (see [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Phase -2 — Solo-mode fast path"), there is **no Phase 5c upstream** — the `.reconcile.md` companion file does NOT exist when `/bmad-correct-course` is invoked. The skill detects this and switches to **recover-mode**.
+
+### Detection
+
+`/bmad-correct-course` is in recover-mode when ALL of:
+
+- The companion file `delivery/epics/epic-X/story-NN-<slug>.reconcile.md` does NOT exist
+- The story file's `## Implementation discipline` section (or equivalent solo-mode marker) is populated
+- The most recent `story_rollup` event for this story in `events.jsonl` carries `"mode": "solo"`
+
+If the companion file is missing for any other reason (e.g., human deleted it, file system issue), do NOT enter recover-mode — surface the inconsistency and halt. Recover-mode is reserved for the documented solo-mode case.
+
+### Sources of truth (in priority order) for the reconstructed `## Deviations`
+
+1. **The story file's `## What was deferred` section** — explicit deferrals listed by Team Lead at solo-ship time. Each deferral becomes one deviation bullet (typically tagged `SCOPE_*_DEFERRED`).
+2. **The story file's `## Implementation discipline` section** — process choices (solo-mode authorization, Phase 5c skip, reviewer proxy used). At minimum produces one `PROCESS_SOLO_MODE` deviation and one `PROCESS_RECONCILE_RECOVERY` deviation, both L1 audit-only.
+3. **The commit body** (`git show <story_commit_sha> --no-patch`) — Team Lead's solo authorization quote, additional rationale, and any "shipped solo" markers required by Phase -2 step 4.
+4. **The story spec text itself** (read-only) — for `SpecRef` pointers to acceptance criteria the solo ship absorbed or deferred.
+
+### Procedure
+
+1. Create the `.reconcile.md` companion file from scratch using the canonical template at [`../../delivery/epics/epic-template/story-NN-slug.reconcile.md`](../../delivery/epics/epic-template/story-NN-slug.reconcile.md).
+2. Add a header note in the file's intro explaining it was created by recover-mode (not Team Lead Phase 5c). Cite the Phase 5c skip authorization (verbatim user quote + date from the commit body) so the audit trail names the human who authorized the bypass.
+3. Populate `## Deviations` from the priority-ordered sources above, following the strict bullet schema (Tag, Severity, Summary, File, SpecRef, Status, Why) — same as the normal Phase 5c output.
+4. Continue with the standard reconcile flow (L1/L2/L3 triage, queue closures, `RECONCILE_DONE` marker, `reconcile_complete` event). The output is indistinguishable from a normal reconcile — only the `## Deviations` provenance differs, and that's documented in the header.
+
+### When NOT to enter recover-mode
+
+- The companion file already exists — even if `## Deviations` is empty (`<!-- POST_DELIVERY_BLOCK_BEGIN -->\n_(no deviations)_\n<!-- POST_DELIVERY_BLOCK_END -->`). Empty deviations is a legitimate Phase 5c outcome ("story shipped exactly as specified"); do not overwrite.
+- The story rollup event does NOT carry `"mode": "solo"`. Without that flag, the missing companion is a Phase 5c bug, not a solo-mode bypass — surface to the human and halt.
+- The story file lacks an `## Implementation discipline` section AND the commit body lacks a solo-mode marker. Recover-mode without provenance is unsafe.
+
+### Why recover-mode exists (for the framework port reviewer)
+
+Two recurrences validated the pattern: epic-12 story-01 (INSEE V3.11 portal migration 2026-05-01) and epic-03 story-02 (Levé palette propagation 2026-05-02). Both shipped solo, both were recovered cleanly post-hoc by `/bmad-correct-course` reading the story file + commit body. Codifying recover-mode pairs with [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Phase -2 — Solo-mode fast path" — without recover-mode, solo-mode stories would orphan their reconciliation and break the epic close guard.
+
+---
+
 ## Inputs `/bmad-correct-course` MUST read
 
 | Input | Path | Why |
@@ -170,7 +210,31 @@ counts (L1 applied, L2 queued, L3 blocked) and is what
 
 The coder hints at L1/L2/L3 in the `## Deviations` bullet.
 `/bmad-correct-course` MAY override the hint based on broader context.
-The authoritative rules:
+
+**Re-apply the producer-pays gate at triage time.** Before honoring any
+L2 hint from the coder, re-run the **Q1/Q2/Q3 gate** from
+[`reconciliation-protocol.md` §"The producer-pays severity gate"](reconciliation-protocol.md):
+
+- **Q1 — Observable?** Does the `Why` field name a concrete observable
+  (log line, metric, UI surface, API contract, CI test, security
+  scanner)? If no, **demote to "DROPPED"** — do NOT append to the
+  queue. Note in the `.reconcile.md` summary why the entry was dropped.
+- **Q2 — > 10 min?** If the fix is ≤10 min and the canonical landing
+  spot is obvious, **demote to L1** and apply inline (preserves the
+  existing demotion path below).
+- **Q3 — Boy Scout opportunity?** If a near-term planned story (visible
+  in the current or next epic's `## Stories` list) edits one of the
+  same files, **append a one-line note to that story's `## Notes`
+  section instead of queuing**. Do NOT append to the queue. Log the
+  piggyback in the `.reconcile.md` summary.
+
+Only deviations that survive Q1+Q2+Q3 (observable + >10min + no
+piggyback) become L2 queue entries. The historical bias "prefer L2
+over L1 in doubt" is **superseded** — that bias was the root cause of
+the queue-as-feature-backlog drift the gate was designed to prevent.
+
+The authoritative classification rules below still apply on top of
+the gate:
 
 | Promote to L3 if… | Even if coder said L1 or L2 |
 |---|---|
@@ -189,9 +253,18 @@ The authoritative rules:
 | The change is a one-bullet addition to a doc whose section is unambiguous | yes (but log the reasoning in the `.reconcile.md` summary) |
 | The change is purely cosmetic (typo, formatting, spec text canonicalization that the coder already started) | yes |
 
-When in doubt, prefer L2 over L1 (humans reading the queue are cheap;
-applying a wrong change is expensive) and L2 over L3 (don't block the
-pipeline unless you're sure).
+When in doubt on **L1 vs L2**: re-run Q1 of the gate. If the deviation
+has no concrete observable, prefer DROP. If it does, prefer L1 inline
+when the landing spot is unambiguous and ≤10 min; only escalate to L2
+when there is real judgment to make (multiple landing spots, new
+domain rule, behavior change in future story). The historical
+"humans reading the queue are cheap" framing is wrong — humans
+triaging cheap items at scale is exactly how the queue becomes a
+parallel feature backlog.
+
+When in doubt on **L2 vs L3**: prefer L2 (don't block the pipeline
+unless you're sure the deviation contradicts an already-shipped
+behavior or a `delivery/business/` rule).
 
 ---
 
