@@ -127,6 +127,11 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
   - `count` (int): total number of deviations across all coders (0 if all reported `NONE`)
   - `backend` (array of strings): one-line summaries of backend deviations (empty array if `NONE`)
   - `frontend` (array of strings): one-line summaries of frontend deviations (empty array if `NONE`)
+- `mode` (enum, optional, default `"pipeline"`): `"pipeline"` | `"solo"`. Set to `"solo"` when the story shipped via Phase -2 solo-mode (Track A or Track B). Omitted = `"pipeline"`.
+- `solo_track` (enum, optional, REQUIRED when `mode == "solo"`): `"A"` | `"B"`.
+  - `"A"` = XS solo (≤5 files + ≤1 test, standing user authz, no cross-cutting, spec CLEAR — see [`kiat-team-lead.md` Phase -2 Track A](../agents/kiat-team-lead.md#track-a--xs-solo-lightweight-gate))
+  - `"B"` = S solo (≤10 files chirurgical, per-story explicit authz, scope ∈ allowed set, zero behavior change — see [`kiat-team-lead.md` Phase -2 Track B](../agents/kiat-team-lead.md#track-b--s-solo-full-5-rule-gate-unchanged))
+  - When `mode == "pipeline"`, this field MUST be absent (not `null`).
 
 **On precision of timestamps:** Team Lead does NOT have a reliable system clock. The `ts`, `fix_budget_used_min`, and `total_elapsed_min` fields are best-effort estimates based on the conversation context. Acceptable precision: ±5 minutes. If Team Lead cannot estimate, set the minute fields to `null` — `report.py` will handle it gracefully.
 
