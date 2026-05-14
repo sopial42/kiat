@@ -215,12 +215,15 @@ This split is intentional: the audit produces high-bandwidth analysis; the story
 
 The first complete run of this protocol was executed on the Robia project (May 2026) — see commit `430036c` on branch `chore/ultra-review-followup` for the epic + 6 story stubs produced from a 7-axis audit + 3 plans + 2 meta-reviews. The full set of artefacts is documented under `_bmad-output/ultra-review/` in that branch (gitignored — not visible after merge).
 
-Key numbers from the worked example:
-- 7 audits — ~1.5h cumulative agent time, ~750k tokens
-- 3 plans — ~25 min cumulative, ~270k tokens
-- 2 meta-reviews — ~12 min, ~200k tokens
-- Final synthesis — orchestrator session, no sub-agent
-- 6 stories produced (1 originale déjà mergée hors-protocole — pas re-spec'd)
+Key numbers from the worked example (durations are wall-clock; sub-agents run in parallel within each phase):
+
+- **Phase 1** (7 audits, parallel) — ~5 min wall, ~885k input tokens cumulative
+- **Phase 2** (3 plans, parallel) — ~4 min wall, ~275k tokens
+- **Phase 3** (2 meta-reviews, parallel) — ~3 min wall, ~200k tokens
+- **Phase 4** (synthesis) — orchestrator session, no sub-agent, ~5 min wall, output ~250 lines
+- **Output**: 6 Kiat story stubs produced (the 7th item was already in a parallel infra-TF commit and skipped story-spec re-authoring)
+
+Total wall time end-to-end including the orchestrator's read-and-decide moments: ~30 min. The cost is in tokens, not in latency.
 
 ## Anti-patterns
 
