@@ -57,6 +57,20 @@ Read [`references/checklist.md`](references/checklist.md) and work through each 
 
 Load the checklist once at the start of the phase, not item by item. As you work through the code diff, keep the checklist open and check each category rather than trying to memorize 80 items.
 
+### Phase 3.5 — Cross-check the Business Deviations gate (light content check)
+
+The coder is required to apply the **producer-pays severity gate** ([`reconciliation-protocol.md` §"The producer-pays severity gate"](../../specs/reconciliation-protocol.md)) before classifying any deviation as L2. Your role here is **narrow**: you do NOT judge whether the deviation makes business sense (that's Team Lead / BMad downstream). You judge whether the gate was applied honestly, by checking that each L2 entry's `Why` field names a **concrete observable** — a log line, a metric, a UI surface, an API contract, a CI test, a security scanner.
+
+Flag any L2 entry whose justification reads as one of these weak patterns:
+- "for clarity" / "for readability" / "for consistency"
+- "future maintainers will be confused"
+- "good practice" / "convention" without naming the concrete surface where the convention is checked
+- silence on what would change if the deviation went unaddressed
+
+If you find a weakly-justified L2 entry, return `NEEDS_DISCUSSION` (not `BLOCKED`) with a one-line note: *"L2 entry `<tag>` lacks concrete observable in Q1 justification — should be inlined as L1, piggybacked on a near-term story, or DROPPED, not queued."* Team Lead arbitrates: re-classify or accept.
+
+This phase does NOT touch L1 or L3 entries (their gate logic is different) and does NOT count L2 entries whose Q1 cites a concrete observable. It is purely a check against the queue-as-feature-backlog drift pattern.
+
 ### Phase 4 — Decide the verdict
 
 Apply the decision logic below, then emit the output in the format below.

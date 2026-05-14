@@ -58,6 +58,20 @@ Read [`references/checklist.md`](references/checklist.md) and work through each 
 
 Trust the toolchain on anything the toolchain catches (`tsc --noEmit`, `eslint`, `prettier`, test runners). Your value in a review is in judgment items — architecture, accessibility, design compliance, drift from acknowledged rules — not in restating what the linter already said.
 
+### Phase 3.5 — Cross-check the Business Deviations gate (light content check)
+
+The coder is required to apply the **producer-pays severity gate** ([`reconciliation-protocol.md` §"The producer-pays severity gate"](../../specs/reconciliation-protocol.md)) before classifying any deviation as L2. Your role here is **narrow**: you do NOT judge whether the deviation makes business sense (that's Team Lead / BMad downstream). You judge whether the gate was applied honestly, by checking that each L2 entry's `Why` field names a **concrete observable** — a log line, a metric, a UI surface a user actually sees, an API contract, a Playwright test, an accessibility scanner, a visual regression check.
+
+Flag any L2 entry whose justification reads as one of these weak patterns:
+- "for clarity" / "for readability" / "for consistency"
+- "future maintainers will be confused"
+- "design-system convention" without naming the concrete check (token usage in Tailwind config, audit script, etc.)
+- silence on what would change if the deviation went unaddressed
+
+If you find a weakly-justified L2 entry, return `NEEDS_DISCUSSION` (not `BLOCKED`) with a one-line note: *"L2 entry `<tag>` lacks concrete observable in Q1 justification — should be inlined as L1, piggybacked on a near-term story, or DROPPED, not queued."* Team Lead arbitrates: re-classify or accept.
+
+This phase does NOT touch L1 or L3 entries (their gate logic is different) and does NOT count L2 entries whose Q1 cites a concrete observable. It is purely a check against the queue-as-feature-backlog drift pattern.
+
 ### Phase 4 — Decide the verdict
 
 Apply the decision logic below and emit the output in the format below.

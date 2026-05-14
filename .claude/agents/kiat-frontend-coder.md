@@ -223,4 +223,16 @@ Use these categories:
 
 If nothing deviates, write `NONE` — this is an **explicit declaration**, not a default. The reviewer checks for the section's presence; Team Lead and BMad consume the content downstream to keep `delivery/business/` aligned with reality.
 
+#### Apply the producer-pays gate BEFORE writing any deviation
+
+For every candidate deviation, run the **Q1/Q2/Q3 gate** from [`reconciliation-protocol.md` §"The producer-pays severity gate"](../specs/reconciliation-protocol.md). Most deviations should NOT become queue entries — they should be either applied inline in your PR (L1, ≤10 min) or simply not written if they have no observable surface (DROPPED).
+
+- **Q1 — Observable?** Would a user (notary, operator), an operator reading prod logs/metrics, or an automated check (Playwright in CI, accessibility scanner, visual regression) see a different state if you didn't address this? "A future maintainer might be confused" does **NOT** count. If no → don't write the deviation. If yes → continue.
+- **Q2 — > 10 min?** If the fix is ≤10 min combined coder + reviewer (small Playwright test, sub-30-line rename, one-bullet doc, design-token alignment), **apply it inline in this PR** and report it as L1 in the deviation block. The producer pays the cost while the file is warm.
+- **Q3 — Boy Scout opportunity?** If a near-term planned story (visible in the current or next epic's `## Stories` list) edits one of the same files, append a one-line note to that story's `## Notes` section instead of queuing. Don't write a deviation entry.
+
+Only deviations that are observable + >10 min + no piggyback become L2 queue entries. If your `Business Deviations:` block is filling with token-naming, missing-test, or copy-staleness items classified as L2, the gate is being misapplied — re-run it. The reviewer will flag weakly-justified L2 entries.
+
+L3 dominates the gate: any deviation that contradicts `delivery/business/` or breaks an already-shipped story is L3 regardless of Q1/Q2/Q3 — escalate immediately.
+
 Your scope: **implement the spec in React. Make tests pass. Hand off to reviewer with the acknowledgment block intact.**

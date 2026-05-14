@@ -155,6 +155,172 @@ contradicts a rule already in `delivery/business/`).
 
 ---
 
+## The producer-pays severity gate (apply BEFORE writing any L2 entry)
+
+The biggest failure mode of any async-queue model is **frictionless
+production / expensive consumption**: producers (coders during
+reconciliation) emit entries at zero cost; consumers (humans triaging,
+future Team Lead pipelines drafting cleanup stories) pay the full
+cost. Left unchecked, this turns the queue into a parallel feature
+backlog, where each closing epic spawns a significant fraction of the
+next epic's stories from its own reconciliation residue — and no
+actual user-facing feature is delivered between cycles.
+
+**Pattern signature**: at epic close-out, you observe N small L2
+entries (a missing test case, residual naming after a rename, a stale
+README listing, comment cleanup). The "obvious" next move is to bundle
+them into a "tech-debt cleanup" story for the next epic. That story is
+itself a full pipeline cycle (coder + reviewer + rollup) that produces
+zero user-observable change. Compounded across N epics, this is the
+infinite-loop pattern Kiat must prevent at the source.
+
+The gate inverts the burden: **a deviation becomes L2 only if it
+survives three questions in order**. Otherwise it is L1 (applied
+inline, in the originating PR) or DROPPED (no entry, no trace). The
+coder runs the gate at handoff, the reviewer cross-checks it at review,
+`/bmad-correct-course` re-applies it during triage. Three layers of
+defense, no new framework machinery — the existing review cycle is
+the enforcement layer.
+
+### Q1 — Observable
+
+> Would a user (the project's primary persona), an operator reading
+> prod logs / dashboards / metrics, or an automated system (CI test,
+> security scanner, monitoring alert) **observe a different state** if
+> this deviation were never addressed?
+
+"Observable" means appears in: a UI / API response, a log line, a
+dashboard panel, a metric, a test failure, a security scanner output, a
+public contract. **It explicitly does NOT mean** "a future maintainer
+reading the code might be confused" — admitting that route re-opens the
+floodgates and is out of scope for this gate.
+
+- **Yes** → continue to Q2.
+- **No** → **DROPPED**. No entry written. If the deviation later
+  acquires observability (someone hits the bug, a log appears, a
+  contract changes), it can be raised at that moment; it is not lost
+  forever, just not actively tracked.
+
+### Q2 — Cost to apply now
+
+> Is the fix more than ~10 minutes of combined coder + reviewer work?
+
+The 10-minute threshold is a Schelling point, not a precise budget. A
+new test of <20 LOC, a sub-30-line rename, a one-bullet doc addition
+all sit comfortably below. A new domain rule with multiple candidate
+locations, a cross-cutting refactor, anything requiring spec rewrites
+sits comfortably above.
+
+- **No** (≤ 10 min) → **L1 inline**. The originating PR includes the
+  fix. No queue entry, no separate story, no follow-up cycle. Producer
+  absorbs the cost in the same context where it was discovered, while
+  the file is still warm.
+- **Yes** (> 10 min) → continue to Q3.
+
+### Q3 — Boy Scout opportunity
+
+> Does any in-flight or near-term planned story (within ~30 days, i.e.
+> visible in the current epic's `## Stories` list or the next epic's)
+> naturally edit one of the same files?
+
+The Boy Scout rule: **if you touch a file, you clean what's broken in
+it**. This is what prevents "DROPPED today" from compounding into
+"rename-hell tomorrow". A cosmetic incoherence in a file that someone
+will open next sprint, for unrelated reasons, gets fixed naturally as
+part of that sprint's work — without ever entering the queue. The
+original incoherence is not lost: it is delegated to the next coder
+who has independent reason to be in that file.
+
+- **Yes** → **piggyback**. Append a one-line note to that future
+  story's `## Notes` section pointing to the deviation (file + what to
+  fix while-here). No queue entry. The coder of that story applies it
+  in their PR as part of normal work.
+- **No** → **L2 (queue)**. The deviation is observable, expensive, and
+  has no natural cleanup vector. This is exactly what the queue is
+  for, and it should be a small fraction of all deviations — not the
+  default landing zone.
+
+### What survives the gate (worked examples)
+
+After the gate, only deviations that are **(a) observable AND (b) > 10
+min AND (c) no piggyback** become L2 queue entries. This is much
+narrower than the historical default. Worked examples on the kind of
+deviations the gate routes:
+
+| Deviation example | Q1 (observable?) | Q2 (>10 min?) | Q3 (piggyback?) | Outcome |
+|---|---|---|---|---|
+| Missing test for a code path | Yes (silent regression risk in CI) | Usually No (~10-20 LOC) | — | **L1 inline** by the originating coder |
+| Log event names misaligned with package after a rename | Yes (dashboards filter on event name) | Usually No (~few lines per file) | — | **L1 inline** in the rename PR |
+| README dir listing stale after a rename | Yes (any reader of the README) | No (~1 line) | — | **L1 inline** in the rename PR |
+| Stale identifier strings in callsites across other packages | Mixed (slog yes, comments no) | Mixed | Often Yes (next story may edit some files) | **Slog: L1 inline. Comments: piggyback note** in next story |
+| Internal test fixture identifiers (no external surface) | No (zero observability — test data names) | — | — | **DROPPED** |
+| New domain concept introduced in code, not in glossary | Yes (next coder won't know the rule) | Usually Yes (multiple candidate landing spots in `delivery/business/`) | Probably No | **L2 queued** for human triage |
+| Architectural choice that contradicts an existing `delivery/business/` rule | Yes | (irrelevant) | (irrelevant) | **L3 — block** regardless of gate |
+
+**The rule of thumb**: most deviations should NOT become L2 queue
+entries. If your queue is filling with cosmetic-naming, missing-test,
+or doc-staleness items, the gate is being misapplied at the producer
+side and should be re-tightened.
+
+### Coder severity hint (now subordinate to the gate)
+
+The coder is the closest observer of a deviation, so their initial
+severity is taken as a hint, not as final classification.
+`/bmad-correct-course` may downgrade or upgrade. Hints to use **after**
+the gate has classified the deviation:
+
+- **L2** is the default for what survives the gate (observable + >10
+  min + no piggyback).
+- **L3** if your change conflicts with something in `delivery/business/`
+  or breaks behavior already shipped in an earlier story — **regardless
+  of the gate's other answers**. L3 dominates: a contradiction with the
+  business layer is always blocking, even if it's "only" 5 lines.
+- **L1** is reserved for the gate's Q2-No path (≤10 min, applied
+  inline by the originating coder). After the gate, an L1 deviation
+  has already been resolved by the time the deviation block is
+  written; the entry exists for audit, not for action.
+
+### Gate failure modes and how the review cycle catches them
+
+Two ways the gate can be misused, both controllable by reviewer
+discipline (no new framework machinery needed — the existing review
+cycle is the enforcement layer):
+
+1. **Permissive Q1** — coder rationalizes "a future reader might be
+   confused" as observable. Reviewer pushes back: observable means a
+   concrete surface (log, UI, metric, test). Maintainer cognitive load
+   is not in scope. The reviewer's `kiat-review-*` skill should flag
+   any L2 entry whose Q1 justification reads as "for clarity" or
+   "for future maintenance" without naming a concrete observable.
+2. **Inflated Q2** — coder declares "this is 11 minutes" to push work
+   to L2 instead of doing it inline. Reviewer override: if the diff is
+   mechanical and bounded, it goes inline regardless of the estimate.
+
+Neither failure mode is unique to this gate — they are general
+code-review discipline. The gate adds no new attack surface; it just
+narrows the default landing zone for deviations.
+
+### What the gate explicitly does NOT do (anti-overreach)
+
+This gate is the minimal change that closes the producer/consumer
+asymmetry. It does NOT introduce:
+
+- A separate "polish backlog" file (would split attention without
+  closing the leak at the source).
+- A cap on queue size (treats the symptom, not the cause).
+- A ban on cleanup-only stories (the gate already prevents most of
+  them by routing items to L1/piggyback/DROPPED before they can
+  aggregate into a story).
+- Auto-expiration of OPEN queue entries (the existing
+  `/bmad-retrospective` force-close at epic end already handles
+  abandoned items).
+
+Any of these may become useful later if observed gate misapplication
+persists across multiple epics — but adding them preemptively is
+YAGNI on framework machinery. Re-evaluate after one quarter of usage.
+
+---
+
 ## The `story-NN-<slug>.reconcile.md` schema (one file, two sections)
 
 Created by **Team Lead at Phase 5c** (Deviations section) and updated by
@@ -280,16 +446,11 @@ Phase 6 greps for to determine "this story has been fully reconciled".
 
 ### Severity hints for the coder
 
-The coder is the closest observer of the deviation, so their initial
-severity is taken as a hint, not as final. `/bmad-correct-course` may
-downgrade or upgrade. Hints:
-
-- **L1** if you fixed the spec yourself (e.g., updated AC text inline)
-  or the change is a one-bullet addition to a doc that already exists.
-- **L2** if you don't know which file should hold the new rule, or the
-  rule could change behavior in a future story.
-- **L3** if your change conflicts with something in `delivery/business/`
-  or breaks behavior shipped in an earlier story.
+Severity is decided by the **producer-pays gate** (see section above).
+Run Q1/Q2/Q3 first; that gate determines whether the deviation is
+DROPPED, L1 inline, piggybacked on a future story, or L2 queued. Use
+the "Coder severity hint" sub-block of the gate section for the L1/L2/L3
+naming convention once the gate has classified the deviation.
 
 ### Migration from the old inline marker
 
@@ -455,6 +616,7 @@ file.
 | Epic closes with proposals still OPEN | reconciliation guard requires `EPIC_RECONCILE_DONE` marker, retro must force-close every OPEN entry |
 | Reconcile incorrectly applies L1 (wrong content, wrong file) | Doc-state audit at retro re-checks every claimed L1 landing |
 | Reconcile output drifts from a stale schema version | Validator hook checks `POST_DELIVERY_BLOCK_BEGIN/END` markers; schema bump = protocol revision (this file) |
+| Queue grows into a parallel feature backlog (each closing epic spawns a significant fraction of next epic's stories from its own residue) | Producer-pays severity gate (Q1/Q2/Q3) — only observable + >10min + no-piggyback deviations become L2. Cosmetic / clarity-only / cheap-to-inline items are DROPPED, applied L1, or piggybacked on the next story to touch the file. |
 
 ---
 
