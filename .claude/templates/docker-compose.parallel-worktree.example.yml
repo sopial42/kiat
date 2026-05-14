@@ -1,0 +1,117 @@
+# ───────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — Kiat parallel-worktree reference template
+#
+# Copy this into your project, then ADAPT to your service set (add/remove
+# services, set images, configure healthchecks). The four rules from
+# .claude/specs/parallel-worktree-protocol.md §6 MUST be preserved:
+#
+#   R1  Top-level `name:` derived from COMPOSE_PROJECT_NAME (set by .worktree.env).
+#   R2  Backing services use `expose:`, never `ports:` (no host-port footprint).
+#   R3  App binaries publish ONE host port each, env-driven with default fallback.
+#   R4  Named volumes + single network are namespaced by KIAT_WORKTREE_ID.
+#
+# In main-checkout mode (no .worktree.env), all env vars fall back to defaults
+# and the stack behaves like a normal single-instance dev stack.
+# ───────────────────────────────────────────────────────────────────────────
+
+# R1 — compose project name is the worktree's identity.
+# COMPOSE_PROJECT_NAME is also picked up automatically by `docker compose`
+# from .worktree.env; declaring it here makes the dependency explicit.
+name: ${COMPOSE_PROJECT_NAME:-kiat-default}
+
+services:
+
+  # ─── Backing service: Postgres ───────────────────────────────────────────
+  # R2 — internal only. Reachable from other containers via DNS `postgres:5432`.
+  # NO `ports:` clause. Tests connect via `docker compose exec` or Testcontainers.
+  postgres:
+    image: postgres:16-alpine
+    expose: ["5432"]
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 2s
+      timeout: 1s
+      retries: 30
+
+  # ─── Backing service: Smocker (HTTP mock) ────────────────────────────────
+  # R2 — internal only. Backend reaches it via DNS `smocker:8082`.
+  # Admin UI deliberately NOT exposed by default — opt in via the commented
+  # block below (sets KIAT_SMOCKER_ADMIN_PORT in .worktree.env).
+  smocker:
+    image: thiht/smocker:0.18.5
+    expose: ["8080", "8081"]
+    # Uncomment ONE port mapping to expose the admin UI in worktree mode:
+    # ports: ["${KIAT_SMOCKER_ADMIN_PORT:-8082}:8081"]
+
+  # ─── App binary: Backend ─────────────────────────────────────────────────
+  # R3 — publishes exactly one host port, env-driven, default 8080.
+  # In worktree mode KIAT_BACKEND_PORT comes from .worktree.env (e.g. 18017).
+  # The container's INTERNAL port stays 8080 — Cloud Run / prod parity intact.
+  #
+  # NOTE on .worktree.env: that file feeds compose VARIABLE SUBSTITUTION
+  # (the `${KIAT_BACKEND_PORT}` expansion above), NOT the container's
+  # runtime env. It is passed via `docker compose --env-file .worktree.env`
+  # by the `kiat-worktree up` wrapper; we deliberately do NOT list it in
+  # the per-service env_file: below because (a) it has no value to the
+  # binary process and (b) putting it in env_file would fail in main-
+  # checkout mode where the file doesn't exist.
+  backend:
+    build:
+      context: ./backend
+      target: dev  # dev stage with hot-reload tooling (air / nodemon / etc.)
+    ports: ["${KIAT_BACKEND_PORT:-8080}:8080"]
+    env_file:
+      - .env       # project secrets — passed into the container's runtime env
+    environment:
+      # Service DNS, not host loopback — works regardless of host-port mapping.
+      DATABASE_URL: postgres://app:app@postgres:5432/app?sslmode=disable
+      SMOCKER_URL: http://smocker:8080
+    volumes:
+      - ./backend:/app  # bind-mount source for hot reload
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  # ─── App binary: Frontend ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports: ["${KIAT_FRONTEND_PORT:-3000}:3000"]
+    env_file:
+      - .env
+    environment:
+      # Frontend reaches backend via DNS inside the network. Browser still hits
+      # the host port via http://localhost:${KIAT_FRONTEND_PORT}, but server-side
+      # rendering / Next.js rewrites use service DNS.
+      BACKEND_URL_INTERNAL: http://backend:8080
+      BACKEND_URL_PUBLIC: http://localhost:${KIAT_BACKEND_PORT:-8080}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # anonymous volume so host node_modules doesn't shadow container's
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# R4 — named volumes namespaced by worktree-id. Two worktrees never share data.
+# The ${KIAT_WORKTREE_ID:-default} suffix means main-checkout uses `_default`,
+# every worktree uses its own id.
+volumes:
+  postgres_data:
+    name: postgres_data_${KIAT_WORKTREE_ID:-default}
+
+# R4 — single isolated network per worktree.
+networks:
+  default:
+    name: kiat-${KIAT_WORKTREE_ID:-default}_default
