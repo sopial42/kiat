@@ -211,11 +211,11 @@ COMPOSE_PROJECT_NAME=kiat-abc123
 
 | Consumer | Mechanism |
 |---|---|
-| `docker compose` | `env_file: .worktree.env` in the top-level `docker-compose.yml`, plus `COMPOSE_PROJECT_NAME` picked up automatically. |
-| Project Makefile | `include .worktree.env` at the top, or `export $(shell cat .worktree.env xargs)`. |
-| Playwright config | `process.env.KIAT_FRONTEND_PORT` — config file reads it, falls back to `3000`. |
-| Backend / frontend dev binary | The binary doesn't read `.worktree.env` directly — it reads `PORT` / `DATABASE_URL` etc., which compose has substituted from the env file before launching the container. |
-| Agent prompts (Team Lead, coders) | Agents read `.worktree.env` at session start to set `BASE_URL` for any HTTP smoke test. |
+| `docker compose` (variable substitution at parse time) | Loaded via `docker compose --env-file .worktree.env <cmd>` — the `kiat-worktree up`/`down` wrappers pass this flag automatically. Substitutes `${KIAT_BACKEND_PORT}`, `${KIAT_WORKTREE_ID}`, `${COMPOSE_PROJECT_NAME}` in the compose file. Do **not** list `.worktree.env` in any service's per-service `env_file:` — it has no value to the binary process and would fail-parse in main-checkout mode where the file doesn't exist. |
+| Project Makefile | `include .worktree.env` at the top, or `export $(shell cat .worktree.env \| xargs)`. Wrap behind `ifneq ($(wildcard .worktree.env),)` to no-op in main mode. |
+| Playwright config | `process.env.KIAT_FRONTEND_PORT` — config file reads it, falls back to `3000`. The env is exported by the dev shell (`eval $(kiat-worktree env)`) or by the wrapping Makefile target. |
+| Backend / frontend dev binary | The binary does NOT read `.worktree.env` directly. It reads `PORT` / `DATABASE_URL` / project secrets from its container env, which comes from per-service `environment:` and per-service `env_file: [.env]` in the compose file — entirely separate from `.worktree.env`. |
+| Agent prompts (Team Lead, coders) | Agents read `.worktree.env` at session start to set `BASE_URL` for any HTTP smoke test. Loaded by parsing the file directly (single-purpose env loader, no shell injection). |
 
 ### 5.4 What it is NOT
 
@@ -288,6 +288,7 @@ A stdlib-only Python script at `.claude/tools/worktree.py`. Invoked via wrapper 
 | `kiat-worktree exec <cmd...>` | Shorthand for `docker compose exec <primary-service> <cmd>`. Primary service name is read from `.kiat-worktree-config.toml` if present, defaults to `backend`. |
 | `kiat-worktree env` | Prints the current `.worktree.env` content to stdout (for sourcing: `eval $(kiat-worktree env)`). |
 | `kiat-worktree remove` | Combines `kiat-worktree down --volumes` + `git worktree remove --force`. Single-command teardown. |
+| `kiat-worktree lint [--strict]` | Validates the project's `docker-compose.yml` against the four rules from §6 (env-driven name, no-host-port on backing services, env-driven ports on app services, namespaced volumes/networks). Exits 0 with warnings by default; `--strict` makes any violation a non-zero exit (suitable for CI). |
 
 ### 7.2 Lifecycle integration with agents
 
@@ -513,11 +514,11 @@ Backend + frontend run natively (`go run`, `npm run dev`) on 8080 / 3000, reachi
      backend:                          # new — backend is now in-stack
        build: ./backend
        ports: ["${KIAT_BACKEND_PORT:-8080}:8080"]
-       env_file: [".env", ".worktree.env"]
+       env_file: [".env"]              # .worktree.env is NOT here — see §5.3
      frontend:                         # new — frontend is now in-stack
        build: ./frontend
        ports: ["${KIAT_FRONTEND_PORT:-3000}:3000"]
-       env_file: [".env", ".worktree.env"]
+       env_file: [".env"]              # .worktree.env is NOT here — see §5.3
    volumes:
      postgres_data:
        name: postgres_data_${KIAT_WORKTREE_ID:-default}

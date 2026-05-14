@@ -53,15 +53,21 @@ services:
   # R3 — publishes exactly one host port, env-driven, default 8080.
   # In worktree mode KIAT_BACKEND_PORT comes from .worktree.env (e.g. 18017).
   # The container's INTERNAL port stays 8080 — Cloud Run / prod parity intact.
+  #
+  # NOTE on .worktree.env: that file feeds compose VARIABLE SUBSTITUTION
+  # (the `${KIAT_BACKEND_PORT}` expansion above), NOT the container's
+  # runtime env. It is passed via `docker compose --env-file .worktree.env`
+  # by the `kiat-worktree up` wrapper; we deliberately do NOT list it in
+  # the per-service env_file: below because (a) it has no value to the
+  # binary process and (b) putting it in env_file would fail in main-
+  # checkout mode where the file doesn't exist.
   backend:
     build:
       context: ./backend
       target: dev  # dev stage with hot-reload tooling (air / nodemon / etc.)
     ports: ["${KIAT_BACKEND_PORT:-8080}:8080"]
     env_file:
-      - .env
-      - .worktree.env  # may not exist in main mode — compose tolerates missing files? NO.
-                       # Use --env-file=.worktree.env on `up` instead (see below).
+      - .env       # project secrets — passed into the container's runtime env
     environment:
       # Service DNS, not host loopback — works regardless of host-port mapping.
       DATABASE_URL: postgres://app:app@postgres:5432/app?sslmode=disable
