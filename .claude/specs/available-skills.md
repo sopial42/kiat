@@ -211,6 +211,30 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 
 **Audit line pattern**: `clerk-custom-ui: applied <core-2|core-3> <custom-sign-in|custom-sign-up|appearance> pattern`
 
+### kiat-ultra-review
+
+- **Type**: Kiat-owned (framework)
+- **Size**: ~3k tokens (SKILL.md)
+- **Location**: `.claude/skills/kiat-ultra-review/SKILL.md`
+- **Purpose**: orchestrate a pre-prod / pre-cutover multi-phase audit — Phase 1 parallel 7-axis audit (backend / frontend / infra / CI / DB / docs / ops), Phase 2 three competing remediation plans (minimal / defensive / belt-and-suspenders), Phase 3 two adversarial meta-reviews (cynical + edge-case-hunter), Phase 4 synthesis to a final plan with non-negotiable gates. Distinct from per-PR review skills.
+
+**When to use** (orchestrator session's trigger criteria — this skill is NOT invoked by stories, it's invoked by a top-level session before stories exist):
+- Project approaching its first production cutover
+- Major epic just closed that changed the operational surface (auth, persistence, deployment, RLS, IAM)
+- External compliance / regulatory review scheduled (LCB-FT, RGPD, SOC2)
+- Human asks for "ultra review", "pre-prod audit", or "cutover readiness check"
+
+**When to skip**:
+- Reviewing a single PR or diff (use `kiat-review-backend` / `kiat-review-frontend` / `differential-review`)
+- Reviewing a single story spec (use `kiat-validate-spec`)
+- Reviewing one specific dimension only (spawn a single audit sub-agent, Phase 1 only, don't run the full protocol)
+
+**Output**: artefacts under `_bmad-output/ultra-review/` (gitignored — drafts), then transcribed into a Kiat epic + stories under `delivery/epics/epic-NN-pre-prod-cutover-followup/` for the standard per-story flow to take over.
+
+**Loaded by**: any top-level orchestrator session (not by a Kiat agent). The skill itself spawns audit sub-agents in parallel via the `Agent` tool.
+
+**Audit line pattern**: `kiat-ultra-review: phase <1|2|3|4> complete, <N> findings / <M> S0 / <P> S1`
+
 ---
 
 ## How to add a new skill to this registry
