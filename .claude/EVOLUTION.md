@@ -449,6 +449,66 @@ The 8 prefixes were chosen empirically from the audit's top-of-distribution, not
 
 ---
 
+## EV-0009 — Bridge BMad architecture into `project-memory.md`
+
+```yaml
+id: EV-0009
+date: 2026-05-17
+type: addition
+status: active
+touches:
+  - .claude/skills/kiat-seed-project-memory/SKILL.md
+  - .claude/skills/bmad-create-architecture/steps/step-08-complete.md
+  - .claude/specs/available-skills.md
+  - CLAUDE.md:bmad-role-section
+  - delivery/specs/project-memory.md:entry-template
+  - delivery/specs/project-memory.md:cap-and-promotion-mechanics
+triggered_by:
+  - pilot:nova-notariat/lgt (greenfield project using BMad + Kiat)
+  - gap:cross-story technical decisions in _bmad-output/planning-artifacts/architecture.md never reach Kiat agents
+key_metrics:
+  - "LGT pilot architecture.md: 838 lines, ~15 cross-story technical decisions identified for seeding"
+  - "project-memory.md template default size: 65 lines (empty of project content)"
+  - "Adversarial review: 4 agents (architect / tech-writer / cynical / dev), unanimous rejection of distributed-overrides design (Proposal B)"
+decided_by: claude-sonnet-4-6 + Boss
+```
+
+### Context
+Greenfield projects using both BMad (product/architecture planning) and Kiat (implementation pipeline) hit a structural handoff gap. BMad produces a comprehensive `architecture.md` at `_bmad-output/planning-artifacts/`, full of cross-story technical decisions (calc engine choice, data regime separation, auth posture at M1, integration adapters, canonical endpoint names). But Kiat agents — `kiat-tech-spec-writer`, `kiat-backend-coder`, `kiat-frontend-coder` — never read `_bmad-output/`. Without a deliberate bridge: coders rediscover decisions story by story (badly), implementations drift, `/bmad-correct-course` is invoked repeatedly to mop up cross-story inconsistencies. The framework's "BMad never writes to `delivery/specs/`" rule (CLAUDE.md §40-42) is sound but leaves the gap unaddressed — closing it requires a human-invoked bridge, not a relaxation of the rule.
+
+### Decision
+Introduce a human-invoked skill `kiat-seed-project-memory` that extracts cross-story technical decisions from a BMad architecture document and proposes **structured entries** (`PM-NNN` stable IDs, `Status`, `Touches:` topic index, `Canonical ref`, `Rationale`, `Deviations allowed when`) for `delivery/specs/project-memory.md`. The skill defaults to dry-run; writing requires explicit `--apply` confirmation. The human writes — BMad does not — so the existing "BMad never writes to `delivery/specs/`" rule stands.
+
+Update `project-memory.md` template (`delivery/specs/project-memory.md`) with:
+- Structured entry schema (PM-NNN IDs, Status, Touches, etc.)
+- Hard cap of **25 single-topic entries OR 400 lines** as forcing function
+- Promotion mechanics: when cap is hit, single-topic clusters (≥3 entries sharing one `Touches:` topic) move to **new project-owned `delivery/specs/<topic>.md` files** (never edits to framework-owned files)
+- Cross-topic entries (`Touches:` lists ≥2 topics) are exempt from the cap and stay in `project-memory.md` indefinitely — splitting them would fragment the rule
+
+Update `CLAUDE.md` BMad section with a paragraph documenting the bridge. Update `bmad-create-architecture/steps/step-08-complete.md` to suggest running the bridge after architecture completes (Kiat-conditional, detected by presence of `delivery/specs/project-memory.md`). Register the skill in `.claude/specs/available-skills.md`.
+
+### Alternatives rejected
+- **A — Distributed overrides into framework-owned files** (`## Project-specific overrides` section appended to `backend-conventions.md`, `clerk-patterns.md`, etc.): rejected unanimously by 4 adversarial reviewers. Concrete reasons: (a) **merge hell** when upstream Kiat pushes a new version of a framework file with reorganized sections, (b) **routing ambiguity** — a decision like "PDF stream-and-forget" has 2+ plausible homes (`backend-conventions.md` / `database-conventions.md` / `deployment.md` / a new `pdf-generation.md`); search cost becomes N× instead of 1×, (c) **cross-topic decisions silently fragment** — "three-regime RLS data isolation" touches database + auth + security, whichever file you write it in, the other two coders miss it, (d) **tech-spec-writer routing table doubles** — every "load `backend-conventions.md`" becomes "load `backend-conventions.md` AND `backend-conventions.project.md` if exists".
+- **B — Sibling `.project.md` files** (e.g., `backend-conventions.project.md` next to the framework file): rejected — recreates the same routing complexity as A. Requires conditional loading by the tech-spec-writer on every story.
+- **C — Status quo (no bridge)**: rejected — leaves the gap that motivated this entry. Boss observed in the LGT pilot that without a bridge, the coders needed `project-memory.md` seeding before story 1 to avoid wasting cycles on architectural rediscovery.
+- **D — Autonomous BMad seeding directly into `delivery/specs/`**: rejected — violates the "BMad never writes to `delivery/specs/`" rule and removes the human-in-the-loop check that catches mis-extractions (the dry-run + `--apply` flow).
+- **E — Skill writes directly to `delivery/specs/` on every invocation without dry-run**: rejected — Cynical Reviewer flagged this as a loophole; any autonomous BMad session could run the skill end-to-end and bypass the human. The dry-run default closes the loophole.
+
+### Re-evaluate if
+- After 10 shipped stories on a pilot project, the load-rate of `project-memory.md` by `kiat-tech-spec-writer` is **<30 % per story** (instrument it via the agent's read events) — means the file is dead weight and the one-file design needs reconsideration. **This is the empirical validation criterion from the Cynical Reviewer; it must be answered with data, not debate.**
+- The load-rate is ≥50 % — means the design is validated; consider documenting it as a Kiat default for greenfield projects.
+- A single-topic cluster of ≥3 entries forms before the cap is reached on any project — means the cap threshold (25/400) is too lax; tighten it.
+- A merge conflict on `project-memory.md` recurs across ≥3 PRs within a 30-day window on the same project — means the file is becoming a coordination hotspot; promotion to topical files should be accelerated rather than gated by the cap.
+- A new project chooses NOT to invoke the skill but later complains of coder drift on architectural decisions — means the skill is insufficiently discoverable or its onboarding is missing. Promote its mention from a paragraph in CLAUDE.md to a Phase 0 check in `kiat-team-lead`.
+- An autonomous BMad session is observed to run the skill without `--apply` confirmation actually happening — means the dry-run default was bypassable; the contract needs hardening (e.g., enforce the gate in the tool, not just in the prose).
+
+### Links
+- PR #4 on `github.com/sopial42/kiat` — full design rationale and adversarial review transcript in the PR comment
+- <!-- [LGT pilot architecture.md](../../../nova-notariat/bmad_thinking/_bmad-output/planning-artifacts/architecture.md) -->
+- Planned follow-up: `kiat-promote-project-memory` (cap-triggered promotion skill), `kiat-validate-project-memory` CI check (cap / staleness / ref rot), LGT pilot instrumentation
+
+---
+
 ## Retroactive entries (EV-0100..EV-0199)
 
 > Decisions or observations from before this log existed, documented retroactively on 2026-05-16. These entries preserve wisdom that lived only in commit messages, reconcile notes, or contributors' memory.

@@ -32,7 +32,7 @@ This skill is the deliberate handoff. The human runs it once, the skill **propos
 
 ## Design constraints (from adversarial review)
 
-This skill was designed after a 4-agent adversarial review of two competing proposals. The shipped design (this one) emerged from the synthesis. The constraints below are load-bearing — do not relax them without rerunning the review.
+This skill was designed after a 4-agent adversarial review of two competing proposals. The shipped design (this one) emerged from the synthesis. The constraints below are load-bearing — do not relax them without rerunning the review. **Logged in [`.claude/EVOLUTION.md`](../../EVOLUTION.md) as EV-0009 — see that entry's `Alternatives rejected` and `Re-evaluate if` sections before proposing any change to this skill's design.**
 
 1. **One file, structured.** Decisions seed into a single `delivery/specs/project-memory.md`, **not** distributed across framework-owned `delivery/specs/<topic>.md` files. Distributed overrides were rejected because (a) they pollute framework files and create merge friction with upstream Kiat, (b) the "where does this decision belong?" routing is ambiguous at write time (a single decision often has 2+ plausible topical homes), (c) cross-topic decisions silently fragment, (d) the tech-spec-writer routing table doubles.
 2. **Entries have stable IDs** (`PM-NNN`) — never renumbered, never reused. The ID is the reference handle for amendments and supersession.
