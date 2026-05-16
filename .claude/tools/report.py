@@ -419,7 +419,7 @@ SCHEMA_MARKER = (
 
 # Tag prefixes eligible for FP candidate detection (Trigger C).
 # AC-T*, DECISION, BOY_* are excluded to avoid trivial noise.
-_FP_CANDIDATE_PREFIXES = re.compile(r"^(SPEC|PROCESS)_")
+_FP_CANDIDATE_ENUM_PREFIXES = {"SPEC_GAP", "PROCESS"}
 _TAG_RE = re.compile(r"\*\*Tag\*\*\s*:\s*([A-Z][A-Z0-9_]+)")
 
 
@@ -427,6 +427,20 @@ _ENUM_PREFIXES = {
     "SPEC_GAP", "DECISION", "SCOPE_CUT", "BOY_SCOUT",
     "DOMAIN_NEW", "PROCESS", "TEST_DRIFT", "UPSTREAM_MISMATCH",
 }
+
+
+def _bucket_tag(raw_tag: str) -> str:
+    """Map a raw tag to its 8-value enum prefix, or "OTHER" if no match.
+
+    Handles both single-word (DECISION, PROCESS) and multi-word
+    (SPEC_GAP, UPSTREAM_MISMATCH) enum values uniformly: match the full
+    enum value as a prefix of the tag, followed by either end-of-string
+    or "_<suffix>".
+    """
+    for prefix in _ENUM_PREFIXES:
+        if raw_tag == prefix or raw_tag.startswith(prefix + "_"):
+            return prefix
+    return "OTHER"
 
 
 def compute_tag_distribution(epics_root: Path) -> dict[str, int]:
@@ -443,13 +457,7 @@ def compute_tag_distribution(epics_root: Path) -> dict[str, int]:
         except OSError:
             continue
         for match in _TAG_RE.finditer(text):
-            raw_tag = match.group(1)
-            bucket = "OTHER"
-            for prefix in _ENUM_PREFIXES:
-                if raw_tag == prefix or raw_tag.startswith(prefix + "_"):
-                    bucket = prefix
-                    break
-            counts[bucket] += 1
+            counts[_bucket_tag(match.group(1))] += 1
     return dict(counts)
 
 
@@ -487,12 +495,9 @@ def detect_fp_candidates(
             continue
 
         for match in _TAG_RE.finditer(text):
-            raw_tag = match.group(1)
-            if _FP_CANDIDATE_PREFIXES.match(raw_tag):
-                # Extract the first two segments as the prefix key (e.g. SPEC_GAP)
-                parts = raw_tag.split("_", 2)
-                prefix = "_".join(parts[:2]) if len(parts) >= 2 else parts[0]
-                prefix_stories[prefix].add(story_id)
+            bucket = _bucket_tag(match.group(1))
+            if bucket in _FP_CANDIDATE_ENUM_PREFIXES:
+                prefix_stories[bucket].add(story_id)
 
     candidates = []
     for prefix, stories in sorted(prefix_stories.items()):
@@ -528,13 +533,7 @@ def compute_tag_distribution_by_epic(
         except OSError:
             continue
         for match in _TAG_RE.finditer(text):
-            raw_tag = match.group(1)
-            bucket = "OTHER"
-            for prefix in _ENUM_PREFIXES:
-                if raw_tag == prefix or raw_tag.startswith(prefix + "_"):
-                    bucket = prefix
-                    break
-            by_epic[epic_name][bucket] += 1
+            by_epic[epic_name][_bucket_tag(match.group(1))] += 1
     return {epic: dict(c) for epic, c in sorted(by_epic.items())}
 
 
@@ -543,7 +542,13 @@ def compute_reconciliation_latency(
 ) -> tuple[dict[str, dict[str, Any]], int]:
     """Pair `reconciliation_needed` with `reconcile_complete` events.
 
-    Pairing key: (epic, story). Latency = complete.ts - needed.ts in minutes.
+    Pairing key: (epic, story). Pairing strategy: **positional** — the
+    N-th `reconciliation_needed` for a given (epic, story) pairs with
+    the N-th `reconcile_complete` for the same key. This supports
+    legitimate re-reconcile cycles (per bmad-reconcile-contract.md
+    §"Idempotency and re-runs"). Latency = complete.ts - needed.ts
+    in minutes. Negative deltas (clock skew, mis-write) are dropped
+    from the latency stats but still counted as paired.
 
     Returns:
         (by_epic, unpaired_needed_count)
@@ -552,8 +557,8 @@ def compute_reconciliation_latency(
         unpaired_needed_count: count of `reconciliation_needed` events with no
                                matching `reconcile_complete` (stories awaiting triage).
     """
-    needed: dict[tuple[str, str], datetime] = {}
-    completed: dict[tuple[str, str], datetime] = {}
+    needed: dict[tuple[str, str], list[datetime]] = defaultdict(list)
+    completed: dict[tuple[str, str], list[datetime]] = defaultdict(list)
 
     for evt in events:
         evt_type = evt.get("event")
@@ -569,21 +574,27 @@ def compute_reconciliation_latency(
             continue
         key = (epic, story)
         if evt_type == "reconciliation_needed":
-            needed[key] = ts
+            needed[key].append(ts)
         else:
-            completed[key] = ts
+            completed[key].append(ts)
+
+    # Stabilise pairing order by ts so out-of-order writes still pair correctly.
+    for ts_list in needed.values():
+        ts_list.sort()
+    for ts_list in completed.values():
+        ts_list.sort()
 
     by_epic: dict[str, list[int]] = defaultdict(list)
     unpaired = 0
-    for key, need_ts in needed.items():
-        comp_ts = completed.get(key)
-        if comp_ts is None:
-            unpaired += 1
-            continue
-        delta_min = int((comp_ts - need_ts).total_seconds() / 60)
-        if delta_min < 0:
-            continue
-        by_epic[key[0]].append(delta_min)
+    for key, need_list in needed.items():
+        comp_list = completed.get(key, [])
+        paired = min(len(need_list), len(comp_list))
+        unpaired += len(need_list) - paired
+        for i in range(paired):
+            delta_min = int((comp_list[i] - need_list[i]).total_seconds() / 60)
+            if delta_min < 0:
+                continue
+            by_epic[key[0]].append(delta_min)
 
     out: dict[str, dict[str, Any]] = {}
     for epic, latencies in sorted(by_epic.items()):
@@ -1121,6 +1132,18 @@ def validate_events_file(path: Path) -> tuple[int, list[str]]:
                 _validate_rollup(evt, lineno, issues, escalated=False)
             elif event_type == "story_escalated":
                 _validate_rollup(evt, lineno, issues, escalated=True)
+            elif event_type == "reconciliation_needed":
+                _validate_reconciliation_needed(evt, lineno, issues)
+            elif event_type == "reconcile_complete":
+                _validate_reconcile_complete(evt, lineno, issues)
+            elif event_type == "reconcile_failed":
+                _validate_reconcile_failed(evt, lineno, issues)
+            elif event_type == "epic_block":
+                _validate_epic_block(evt, lineno, issues)
+            elif event_type == "epic_unblock":
+                _validate_epic_unblock(evt, lineno, issues)
+            elif event_type == "queue_supersede":
+                _validate_queue_supersede(evt, lineno, issues)
             elif event_type in {
                 "received", "spec_validated", "preflight", "coder_launched",
                 "coder_finished", "review", "fix_budget_started", "escalated",
@@ -1224,6 +1247,172 @@ def _validate_rollup(
                 issues.append(
                     f"L{lineno}: {name} reviews.{domain}.final_verdict {fv!r} not in {valid_verdicts}"
                 )
+
+
+# ============================================================================
+# Validators for reconciliation events (v1.2 + v2.1)
+# Lite-schema: required fields + enum/type checks, no deep field semantics.
+# Schema source of truth: .claude/specs/metrics-events.md
+# ============================================================================
+
+
+def _check_int_field(
+    evt: dict[str, Any],
+    field: str,
+    name: str,
+    lineno: int,
+    issues: list[str],
+    required: bool = True,
+) -> None:
+    if field not in evt:
+        if required:
+            issues.append(f"L{lineno}: {name} missing required field `{field}`")
+        return
+    if _as_int(evt[field]) is None:
+        issues.append(
+            f"L{lineno}: {name} `{field}` must be an int, got {type(evt[field]).__name__}"
+        )
+
+
+def _check_severity_breakdown(
+    sev: Any,
+    field_path: str,
+    name: str,
+    lineno: int,
+    issues: list[str],
+) -> None:
+    """Validate a {"L1": int, "L2": int, "L3": int} object."""
+    if not isinstance(sev, dict):
+        issues.append(
+            f"L{lineno}: {name} `{field_path}` should be an object, got {type(sev).__name__}"
+        )
+        return
+    for level in ("L1", "L2", "L3"):
+        if level in sev and _as_int(sev[level]) is None:
+            issues.append(
+                f"L{lineno}: {name} `{field_path}.{level}` must be an int, got {sev[level]!r}"
+            )
+
+
+def _validate_reconciliation_needed(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "reconciliation_needed"
+    for field in ("reconcile_path", "deviations_count", "deviations_unresolved"):
+        if field not in evt:
+            issues.append(f"L{lineno}: {name} missing required field `{field}`")
+    _check_int_field(evt, "deviations_count", name, lineno, issues, required=False)
+    _check_int_field(evt, "deviations_unresolved", name, lineno, issues, required=False)
+    if "severity_hint" in evt:
+        _check_severity_breakdown(
+            evt["severity_hint"], "severity_hint", name, lineno, issues
+        )
+
+
+def _validate_reconcile_complete(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "reconcile_complete"
+    for field in (
+        "reconcile_path", "l1_applied", "l2_queued", "l3_blocked",
+        "next_story_launchable",
+    ):
+        if field not in evt:
+            issues.append(f"L{lineno}: {name} missing required field `{field}`")
+    for cnt in ("l1_applied", "l2_queued", "l3_blocked"):
+        _check_int_field(evt, cnt, name, lineno, issues, required=False)
+    if "next_story_launchable" in evt and not isinstance(
+        evt["next_story_launchable"], bool
+    ):
+        issues.append(
+            f"L{lineno}: {name} `next_story_launchable` must be a bool, "
+            f"got {type(evt['next_story_launchable']).__name__}"
+        )
+    if "queue_ids_added" in evt and not isinstance(evt["queue_ids_added"], list):
+        issues.append(
+            f"L{lineno}: {name} `queue_ids_added` should be a list, "
+            f"got {type(evt['queue_ids_added']).__name__}"
+        )
+    # severity_by_tag (Phase 1 v2.1 additive)
+    if "severity_by_tag" in evt:
+        sbt = evt["severity_by_tag"]
+        if not isinstance(sbt, dict):
+            issues.append(
+                f"L{lineno}: {name} `severity_by_tag` should be an object, "
+                f"got {type(sbt).__name__}"
+            )
+        else:
+            for tag_prefix, sev in sbt.items():
+                if tag_prefix not in _ENUM_PREFIXES:
+                    issues.append(
+                        f"L{lineno}: {name} `severity_by_tag` key {tag_prefix!r} is not "
+                        f"in the 8-value enum ({', '.join(sorted(_ENUM_PREFIXES))})"
+                    )
+                _check_severity_breakdown(
+                    sev, f"severity_by_tag.{tag_prefix}", name, lineno, issues
+                )
+
+
+def _validate_reconcile_failed(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "reconcile_failed"
+    if "reason" not in evt:
+        issues.append(f"L{lineno}: {name} missing required field `reason`")
+        return
+    valid_reasons = {
+        "post_delivery_schema_invalid", "queue_write_failed",
+        "events_write_failed", "contradiction_with_business", "other",
+    }
+    if evt["reason"] not in valid_reasons:
+        issues.append(
+            f"L{lineno}: {name} `reason` {evt['reason']!r} is not in the valid set "
+            f"({', '.join(sorted(valid_reasons))})"
+        )
+
+
+def _validate_epic_block(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "epic_block"
+    for field in ("source", "deviation_tag", "summary", "blocked_until"):
+        if field not in evt:
+            issues.append(f"L{lineno}: {name} missing required field `{field}`")
+    valid_sources = {"bmad-correct-course", "kiat-team-lead", "tech-spec-writer"}
+    if "source" in evt and evt["source"] not in valid_sources:
+        issues.append(
+            f"L{lineno}: {name} `source` {evt['source']!r} not in "
+            f"({', '.join(sorted(valid_sources))})"
+        )
+
+
+def _validate_epic_unblock(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "epic_unblock"
+    if "blocks_cleared" not in evt:
+        issues.append(f"L{lineno}: {name} missing required field `blocks_cleared`")
+    elif not isinstance(evt["blocks_cleared"], list):
+        issues.append(
+            f"L{lineno}: {name} `blocks_cleared` should be a list, "
+            f"got {type(evt['blocks_cleared']).__name__}"
+        )
+    if "resolution" not in evt:
+        issues.append(f"L{lineno}: {name} missing required field `resolution`")
+
+
+def _validate_queue_supersede(
+    evt: dict[str, Any], lineno: int, issues: list[str]
+) -> None:
+    name = "queue_supersede"
+    for field in ("queue_id", "deviation_tag", "summary", "source"):
+        if field not in evt:
+            issues.append(f"L{lineno}: {name} missing required field `{field}`")
+    if "source" in evt and evt["source"] != "kiat-team-lead":
+        issues.append(
+            f"L{lineno}: {name} `source` must be 'kiat-team-lead' "
+            f"(Phase 0c is the only writer), got {evt['source']!r}"
+        )
 
 
 def main() -> int:
