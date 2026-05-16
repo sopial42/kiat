@@ -127,6 +127,26 @@ validate_reconcile() {
     END { if (have_chunk) print "<<<EOR>>>" }
   ')"
 
+  # Validate tag prefixes against the 8-value enum.
+  # Enum source of truth: .claude/specs/reconciliation-protocol.md §"Required fields per Deviation entry"
+  local VALID_PREFIXES="SPEC_GAP|DECISION|SCOPE_CUT|BOY_SCOUT|DOMAIN_NEW|PROCESS|TEST_DRIFT|UPSTREAM_MISMATCH"
+  local lineno=0
+  while IFS= read -r tagline; do
+    lineno=$((lineno + 1))
+    # Extract the tag value after "**Tag**: " (trim inline fields like "| **Severity**:...")
+    local tag_val
+    tag_val="$(echo "$tagline" | sed -E 's/.*\*\*Tag\*\*:[[:space:]]*//' | awk '{print $1}' | tr -d '|')"
+    if [[ -z "$tag_val" ]]; then
+      continue
+    fi
+    # Check tag starts with one of the 8 enum values (exact match or with free suffix after _).
+    # Some enum values contain underscores (SPEC_GAP, UPSTREAM_MISMATCH), so we match the
+    # full enum value as a prefix of the tag, not just the first _ segment.
+    if ! echo "$tag_val" | grep -qE "^(${VALID_PREFIXES})(_[A-Z0-9_]+)?$"; then
+      VIOLATIONS+=("INVALID_TAG_PREFIX: file=${recon}, line=${lineno}, tag=${tag_val}, expected one of: ${VALID_PREFIXES}")
+    fi
+  done < <(echo "$block" | grep -E '\*\*Tag\*\*:')
+
   # Iterate chunks (separated by <<<EOR>>>)
   local current_chunk=""
   local chunk_idx=0

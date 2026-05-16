@@ -13,6 +13,20 @@ increment recurrence counts.
 
 ## How to Use This Registry
 
+### When to create a new FP entry
+
+Trigger A (existing): a story escalates and Team Lead has no matching pattern.
+
+Trigger B (NEW): a story rollup shows `fix_budget_used_min >= 30` AND the cause is novel.
+
+Trigger C (NEW): the same `**Tag**` prefix (after the first `_` segment) appears as a deviation across ≥ 3 distinct stories within a 30-day rolling window.
+
+Trigger D (NEW, manual): a shadow pattern identified during epic retrospective, runtime audit, or by `report.py FP candidates` section.
+
+For B/C/D, the Team Lead that detects the trigger creates the FP — there is no requirement to wait for an escalation.
+
+> **Protocol note**: `PROCESS_*_NEW` style ad-hoc IDs (non-canonical) are a protocol violation. The FP registry (`FP-NNN` format) is the only canonical format for `failure_pattern_id` values in rollup events. If you find yourself inventing an inline ID, create an FP file instead.
+
 ### When a story escalates or fails
 
 1. **Team Lead searches this registry** for a matching pattern.
@@ -34,7 +48,7 @@ increment recurrence counts.
 |---|---|---|---|---|
 | _(empty — no failures documented yet)_ | | | | |
 
-*This registry will grow organically as Kiat runs real stories. Don't pre-populate it.*
+*This registry will grow organically as a project runs real stories. Don't pre-populate it.*
 
 ---
 
@@ -47,7 +61,7 @@ Create new patterns as `kiat/delivery/specs/failure-patterns/FP-NNN-short-slug.m
 
 **Discovered:** story-XX, YYYY-MM-DD
 **Category:** [spec-ambiguity | test-flakiness | context-overflow | clerk-auth | infra | other]
-**Recurrence count:** 1
+**Recurrence count:** 1  _(increment every time a story matches this pattern; if created via Trigger C, initial count = N stories where the tag appeared)_
 **Prevention status:** [none | documented | skill-enforced | structural]
 
 ---

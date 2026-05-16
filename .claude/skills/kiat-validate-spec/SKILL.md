@@ -33,6 +33,25 @@ This skill catches those ambiguities *before* any coder runs. When the tech-spec
 
 Run each category. The categories are ordered so that structural gaps (which force `BLOCKED`) surface before ambiguity questions (which resolve to `NEEDS_CLARIFICATION`).
 
+### 0. Technical layer not still at placeholder
+
+A Kiat story has a two-layer structure: `## Business Context` (written by BMad) and the technical sections (`## Acceptance Criteria (technical)`, `## Implementation Notes for Coder`) written by `kiat-tech-spec-writer` at Phase -1. If the technical sections still contain the scaffold placeholder text, the story is **not authored** — only inherited from the template. A coder accepting such a story bypasses the two-layer discipline and ships against the user-facing AC alone, which is the documented failure mode behind story-02-connecteur-sirene (epic-02, 2026-04-28) and queue entry Q-027.
+
+Check the story file content for placeholder regexes that the template ships with:
+
+| Regex (case-insensitive) | What it indicates |
+|---|---|
+| `^>\s*To be filled by\b` | Bullet-style template placeholder (most common) |
+| `_\(à remplir\)_` | French template placeholder |
+| `_\(to be filled\)_` | English template placeholder |
+| `<!--\s*TODO:\s*tech-spec-writer\s*-->` | HTML-comment scaffold marker |
+
+Mechanical rule: if **any** of these matches anywhere inside `## Acceptance Criteria (technical)`, `## Implementation Notes for Coder`, or `## Test scenarios`, emit `SPEC_VERDICT: BLOCKED` with reason **"Technical layer is placeholder — story has not been authored by tech-spec-writer"** and stop the checklist (do not run categories 1–10).
+
+This check is fast (one grep over the story file) and the only correct response is hard refusal — there is nothing for the coder to aim at, and downgrading to `NEEDS_CLARIFICATION` would invite the same bypass story-02 produced.
+
+> **Why this is Category 0 and not Category 1.** Categories 1–10 assume a written technical layer. If the layer is placeholder, every subsequent category will produce a confusing `NEEDS_CLARIFICATION` cloud (no AC found, no API contract, no edge cases, …) that hides the real failure: the story was never written. Catching it first short-circuits the noise.
+
 ### 1. Acceptance criteria completeness
 
 A coder cannot know when a story is "done" unless the spec says so. Check that:
@@ -170,6 +189,18 @@ Check:
 
 This category does NOT apply to error cases, edge cases, or validation scenarios — those may use mocked Playwright specs (`page.route`) or lower-level tests at the coder's discretion. Only the happy path of a vertical slice is gated here.
 
+### 11. Supersedes declaration (optional, when present)
+
+The `## Supersedes:` section is OPTIONAL — most stories don't supersede any queue entry. When present, it tells Phase 0c which OPEN Q-IDs the story explicitly closes, allowing Phase 0c to emit `queue_supersede` instead of `epic_block`. Full protocol: [`../../agents/kiat-team-lead.md` §Phase 0c](../../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory) and [`../../EVOLUTION.md` EV-0002](../../EVOLUTION.md).
+
+When a `## Supersedes` heading exists in the story file, check:
+
+- **11.a — Q-ID format**. Every bullet under the section must reference a `Q-NNN` ID (three-digit zero-padded). Malformed IDs (`Q-12`, `Q-1234`, free text without `Q-` prefix) → `NEEDS_CLARIFICATION`.
+- **11.b — Q-ID exists as OPEN in the queue**. Grep `delivery/_queue/needs-human-review.md` for each declared `Q-NNN`. If the ID is missing OR its heading does not contain `[OPEN]` (e.g., already `[RESOLVED]`, `[REJECTED]`, `[PROMOTED]`, `[SUPERSEDED]`), the declaration is stale → `NEEDS_CLARIFICATION` ("Q-XXX declared as superseded but not OPEN in queue; either remove the declaration or update the Q-ID").
+- **11.c — Rationale present**. Each Q-ID bullet must carry a one-line rationale (any text after the `—` or `:`). Bare `Q-NNN` with no rationale → `NEEDS_CLARIFICATION`.
+
+If the section is absent, this category is a **no-op** (most stories). Do not flag missing `## Supersedes:` as a structural anomaly — absence is the default.
+
 ## Output format
 
 The first line of your output is parsed by Team Lead to decide the next step, so it has to be one of three exact strings. The rest of the output is free-form human-readable.
@@ -195,6 +226,7 @@ Cross-layer: <consistent or "N/A">
 Edge cases: <list>
 Testability: <summary>
 Real-backend E2E: <described or "N/A (non-vertical-slice)">
+Supersedes: <list of Q-IDs declared, all verified OPEN — or "N/A (none declared)">
 
 → Safe to launch coders.
 ```
@@ -240,6 +272,7 @@ attempt.
 
 | Situation | Verdict |
 |---|---|
+| Technical layer still contains template placeholder text (Category 0 hit) | `BLOCKED` (short-circuit — do not run categories 1–10) |
 | All checklist items pass | `CLEAR` |
 | Minor ambiguities (1-4 vague verbs, missing edge cases, missing User signal field) that the tech-spec-writer can answer in a few minutes | `NEEDS_CLARIFICATION` |
 | Structural gaps (no acceptance criteria, missing API contract, cross-layer mismatch, no Figma on a new-component story, missing Scope field, unjustified non-default Scope, vertical-slice with no user-observable AC, vertical-slice + User signal=none contradiction) | `BLOCKED` |

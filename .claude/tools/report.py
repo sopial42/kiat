@@ -6,13 +6,14 @@ Reads delivery/metrics/events.jsonl (append-only JSONL event log written by
 Team Lead) and emits a markdown health report to stdout.
 
 Usage:
-    python3 kiat/.claude/tools/report.py                         # all events, all time
-    python3 kiat/.claude/tools/report.py --since 2026-04-01      # filter by date
-    python3 kiat/.claude/tools/report.py --epic epic-3           # filter by epic
-    python3 kiat/.claude/tools/report.py --events <path>         # custom input path
-    python3 kiat/.claude/tools/report.py --output report.md      # write to file
+    python3 .claude/tools/report.py                              # active file (v2 events)
+    python3 .claude/tools/report.py --scope all-time             # active + archive (legacy normalized)
+    python3 .claude/tools/report.py --since 2026-04-01           # filter by date
+    python3 .claude/tools/report.py --epic epic-3                # filter by epic
+    python3 .claude/tools/report.py --events <path>              # custom input path
+    python3 .claude/tools/report.py --output report.md           # write to file
 
-Schema: see .claude/specs/metrics-events.md
+Schema: see .claude/specs/metrics-events.md (v2)
 No external dependencies — stdlib only. Python 3.9+.
 """
 
@@ -20,15 +21,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 
 DEFAULT_EVENTS_PATH = Path("delivery/metrics/events.jsonl")
+DEFAULT_ARCHIVE_PATH = Path("delivery/metrics/events.archive-2026-05-16.jsonl")
 
 
 @dataclass
@@ -108,6 +111,60 @@ def load_events(path: Path) -> list[dict[str, Any]]:
     return events
 
 
+def normalize_legacy_event(evt: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a legacy (v1/v1.1/v1.2) story_rollup to v2 shape in-memory.
+
+    Does not mutate the input — returns a shallow-merged copy. Only applies
+    when schema field is absent (legacy). v2 events pass through unchanged.
+    """
+    if evt.get("schema") == "v2":
+        return evt
+    if evt.get("event") != "story_rollup":
+        return evt
+
+    out = dict(evt)
+
+    # business_deviations: int → object
+    bd = out.get("business_deviations")
+    if isinstance(bd, int):
+        out["business_deviations"] = {"count": bd, "backend": [], "frontend": []}
+    elif bd is None:
+        out["business_deviations"] = {"count": 0, "backend": [], "frontend": []}
+
+    # spec: flat fields → block (preserve original fields for audit)
+    if "spec" not in out:
+        out["spec"] = {
+            "verdict": out.get("spec_verdict"),
+            "byte_count": out.get("bmad_spec_bytes"),
+            "clarification_rounds": out.get("spec_clarification_rounds", 0),
+            "writer_mode": "unknown",
+        }
+
+    # reviews (dict) → review_cycles (list)
+    if "review_cycles" not in out and "reviews" in out:
+        reviews = out.get("reviews") or {}
+        cycles_list = []
+        if isinstance(reviews, dict):
+            for domain, data in reviews.items():
+                if not isinstance(data, dict):
+                    continue
+                cycles_list.append({
+                    "domain": domain,
+                    "cycles": data.get("cycles", 0),
+                    "final_verdict": data.get("final_verdict"),
+                    "clerk_skill_triggered": data.get("clerk_skill_triggered", False),
+                    "clerk_verdict": data.get("clerk_verdict"),
+                    "test_patterns_consistent": data.get("test_patterns_consistent", True),
+                    "total_issues_across_cycles": data.get("total_issues_across_cycles", 0),
+                })
+        out["review_cycles"] = cycles_list
+
+    # prod_validation: drop silently
+    out.pop("prod_validation", None)
+
+    return out
+
+
 def filter_events(
     events: list[dict[str, Any]],
     since: datetime | None,
@@ -184,13 +241,23 @@ def _apply_rollup(
     else:
         story.passed_at = ts
 
-    # Spec validation
-    spec_verdict = evt.get("spec_verdict")
-    if spec_verdict:
-        story.spec_verdict = spec_verdict
-    rounds = _as_int(evt.get("spec_clarification_rounds"))
-    if rounds is not None:
-        story.spec_clarification_rounds = rounds
+    # Spec validation — v2 uses `spec` block; legacy uses flat fields
+    spec_block = evt.get("spec")
+    if isinstance(spec_block, dict):
+        spec_verdict = spec_block.get("verdict")
+        if spec_verdict:
+            story.spec_verdict = spec_verdict
+        rounds = _as_int(spec_block.get("clarification_rounds"))
+        if rounds is not None:
+            story.spec_clarification_rounds = rounds
+    else:
+        # legacy flat fields
+        spec_verdict = evt.get("spec_verdict")
+        if spec_verdict:
+            story.spec_verdict = spec_verdict
+        rounds = _as_int(evt.get("spec_clarification_rounds"))
+        if rounds is not None:
+            story.spec_clarification_rounds = rounds
 
     # Pre-flight estimates (per agent)
     preflight = evt.get("preflight") or {}
@@ -203,33 +270,44 @@ def _apply_rollup(
             if data.get("result") == "overflow":
                 story.preflight_overflow = True
 
-    # Reviews (per domain: backend / frontend)
-    reviews = evt.get("reviews") or {}
-    if isinstance(reviews, dict):
-        for domain, data in reviews.items():
-            if not isinstance(data, dict):
+    def _apply_review_entry(domain: str, data: dict[str, Any]) -> None:
+        cycles = _as_int(data.get("cycles")) or 0
+        final_verdict = data.get("final_verdict")
+        clerk_triggered = _as_bool(data.get("clerk_skill_triggered"))
+        clerk_verdict = data.get("clerk_verdict")
+        patterns_ok = _as_bool(data.get("test_patterns_consistent"))
+        issues = _as_int(data.get("total_issues_across_cycles")) or 0
+
+        if domain == "backend":
+            story.backend_cycles = cycles
+            story.backend_final_verdict = final_verdict
+        elif domain == "frontend":
+            story.frontend_cycles = cycles
+            story.frontend_final_verdict = final_verdict
+
+        story.total_issues += issues
+        if clerk_triggered:
+            story.clerk_skill_runs += 1
+            if clerk_verdict:
+                story.clerk_verdicts.append(clerk_verdict)
+        if patterns_ok is False:
+            story.test_patterns_inconsistencies += 1
+
+    # Reviews — v2 uses `review_cycles` array; legacy uses `reviews` dict
+    review_cycles = evt.get("review_cycles")
+    if isinstance(review_cycles, list):
+        for entry in review_cycles:
+            if not isinstance(entry, dict):
                 continue
-            cycles = _as_int(data.get("cycles")) or 0
-            final_verdict = data.get("final_verdict")
-            clerk_triggered = _as_bool(data.get("clerk_skill_triggered"))
-            clerk_verdict = data.get("clerk_verdict")
-            patterns_ok = _as_bool(data.get("test_patterns_consistent"))
-            issues = _as_int(data.get("total_issues_across_cycles")) or 0
-
-            if domain == "backend":
-                story.backend_cycles = cycles
-                story.backend_final_verdict = final_verdict
-            elif domain == "frontend":
-                story.frontend_cycles = cycles
-                story.frontend_final_verdict = final_verdict
-
-            story.total_issues += issues
-            if clerk_triggered:
-                story.clerk_skill_runs += 1
-                if clerk_verdict:
-                    story.clerk_verdicts.append(clerk_verdict)
-            if patterns_ok is False:
-                story.test_patterns_inconsistencies += 1
+            domain = entry.get("domain", "")
+            _apply_review_entry(domain, entry)
+    else:
+        reviews = evt.get("reviews") or {}
+        if isinstance(reviews, dict):
+            for domain, data in reviews.items():
+                if not isinstance(data, dict):
+                    continue
+                _apply_review_entry(domain, data)
 
     # Best-effort elapsed times (may be null — that's fine)
     fix_used = _as_int(evt.get("fix_budget_used_min"))
@@ -334,11 +412,271 @@ def rollup_stories(events: list[dict[str, Any]]) -> dict[str, Story]:
     return stories
 
 
-def format_report(stories: dict[str, Story], filter_desc: str) -> str:
+SCHEMA_MARKER = (
+    "_Schema: v2 (events.jsonl), "
+    "legacy archive available at events.archive-2026-05-16.jsonl_"
+)
+
+# Tag prefixes eligible for FP candidate detection (Trigger C).
+# AC-T*, DECISION, BOY_* are excluded to avoid trivial noise.
+_FP_CANDIDATE_PREFIXES = re.compile(r"^(SPEC|PROCESS)_")
+_TAG_RE = re.compile(r"\*\*Tag\*\*\s*:\s*([A-Z][A-Z0-9_]+)")
+
+
+_ENUM_PREFIXES = {
+    "SPEC_GAP", "DECISION", "SCOPE_CUT", "BOY_SCOUT",
+    "DOMAIN_NEW", "PROCESS", "TEST_DRIFT", "UPSTREAM_MISMATCH",
+}
+
+
+def compute_tag_distribution(epics_root: Path) -> dict[str, int]:
+    """Parse **Tag**: lines from all story-*.reconcile.md files and group by enum prefix.
+
+    Matches each tag against the 8-value enum (some enum values contain underscores,
+    e.g. SPEC_GAP, UPSTREAM_MISMATCH), checking whether the tag starts with an enum
+    value followed by _ or end-of-string. Tags that don't match are bucketed as OTHER.
+    """
+    counts: Counter[str] = Counter()
+    for reconcile_file in sorted(epics_root.glob("*/story-*.reconcile.md")):
+        try:
+            text = reconcile_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in _TAG_RE.finditer(text):
+            raw_tag = match.group(1)
+            bucket = "OTHER"
+            for prefix in _ENUM_PREFIXES:
+                if raw_tag == prefix or raw_tag.startswith(prefix + "_"):
+                    bucket = prefix
+                    break
+            counts[bucket] += 1
+    return dict(counts)
+
+
+def detect_fp_candidates(
+    epics_root: Path,
+    window_days: int = 30,
+) -> list[dict[str, Any]]:
+    """Scan *.reconcile.md files for Trigger C FP candidates.
+
+    Returns a list of dicts: {prefix, story_count, stories: [str]}.
+    Only SPEC_* and PROCESS_* prefixes with ≥ 3 distinct stories in the
+    rolling window are returned. Uses file mtime as the story date proxy.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=window_days)
+
+    # prefix -> set of story_ids within the window
+    prefix_stories: dict[str, set[str]] = defaultdict(set)
+
+    for reconcile_file in sorted(epics_root.glob("*/story-*.reconcile.md")):
+        # Date proxy: file mtime
+        try:
+            mtime = datetime.fromtimestamp(
+                reconcile_file.stat().st_mtime, tz=timezone.utc
+            )
+        except OSError:
+            continue
+        if mtime < cutoff:
+            continue
+
+        story_id = reconcile_file.stem  # e.g. story-05-archive-events...
+
+        try:
+            text = reconcile_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+
+        for match in _TAG_RE.finditer(text):
+            raw_tag = match.group(1)
+            if _FP_CANDIDATE_PREFIXES.match(raw_tag):
+                # Extract the first two segments as the prefix key (e.g. SPEC_GAP)
+                parts = raw_tag.split("_", 2)
+                prefix = "_".join(parts[:2]) if len(parts) >= 2 else parts[0]
+                prefix_stories[prefix].add(story_id)
+
+    candidates = []
+    for prefix, stories in sorted(prefix_stories.items()):
+        if len(stories) >= 3:
+            candidates.append(
+                {
+                    "prefix": prefix,
+                    "story_count": len(stories),
+                    "stories": sorted(stories),
+                }
+            )
+    return candidates
+
+
+# ============================================================================
+# Phase 1 observability helpers (schema v2.1)
+# ============================================================================
+
+
+def compute_tag_distribution_by_epic(
+    epics_root: Path,
+) -> dict[str, dict[str, int]]:
+    """Per-epic version of compute_tag_distribution.
+
+    Returns: {epic_dir_name: {prefix: count}}, where epic_dir_name is the
+    directory name (e.g. "epic-16-kiat-framework-improvements").
+    """
+    by_epic: dict[str, Counter[str]] = defaultdict(Counter)
+    for reconcile_file in sorted(epics_root.glob("*/story-*.reconcile.md")):
+        epic_name = reconcile_file.parent.name
+        try:
+            text = reconcile_file.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for match in _TAG_RE.finditer(text):
+            raw_tag = match.group(1)
+            bucket = "OTHER"
+            for prefix in _ENUM_PREFIXES:
+                if raw_tag == prefix or raw_tag.startswith(prefix + "_"):
+                    bucket = prefix
+                    break
+            by_epic[epic_name][bucket] += 1
+    return {epic: dict(c) for epic, c in sorted(by_epic.items())}
+
+
+def compute_reconciliation_latency(
+    events: list[dict[str, Any]],
+) -> tuple[dict[str, dict[str, Any]], int]:
+    """Pair `reconciliation_needed` with `reconcile_complete` events.
+
+    Pairing key: (epic, story). Latency = complete.ts - needed.ts in minutes.
+
+    Returns:
+        (by_epic, unpaired_needed_count)
+
+        by_epic: {epic: {"n": int, "p50": int, "p90": int, "min": int, "max": int}}
+        unpaired_needed_count: count of `reconciliation_needed` events with no
+                               matching `reconcile_complete` (stories awaiting triage).
+    """
+    needed: dict[tuple[str, str], datetime] = {}
+    completed: dict[tuple[str, str], datetime] = {}
+
+    for evt in events:
+        evt_type = evt.get("event")
+        if evt_type not in ("reconciliation_needed", "reconcile_complete"):
+            continue
+        epic = evt.get("epic") or ""
+        story = evt.get("story") or ""
+        if not story:
+            continue
+        try:
+            ts = parse_ts(evt.get("ts", ""))
+        except (ValueError, TypeError):
+            continue
+        key = (epic, story)
+        if evt_type == "reconciliation_needed":
+            needed[key] = ts
+        else:
+            completed[key] = ts
+
+    by_epic: dict[str, list[int]] = defaultdict(list)
+    unpaired = 0
+    for key, need_ts in needed.items():
+        comp_ts = completed.get(key)
+        if comp_ts is None:
+            unpaired += 1
+            continue
+        delta_min = int((comp_ts - need_ts).total_seconds() / 60)
+        if delta_min < 0:
+            continue
+        by_epic[key[0]].append(delta_min)
+
+    out: dict[str, dict[str, Any]] = {}
+    for epic, latencies in sorted(by_epic.items()):
+        sorted_lat = sorted(latencies)
+        n = len(sorted_lat)
+        if n == 0:
+            continue
+
+        def pct(p: float, lat: list[int] = sorted_lat, count: int = n) -> int:
+            idx = min(int(count * p / 100), count - 1)
+            return lat[idx]
+
+        out[epic or "(no-epic)"] = {
+            "n": n,
+            "p50": pct(50),
+            "p90": pct(90),
+            "min": sorted_lat[0],
+            "max": sorted_lat[-1],
+        }
+    return out, unpaired
+
+
+def compute_severity_by_tag(
+    events: list[dict[str, Any]],
+) -> dict[str, dict[str, int]]:
+    """Aggregate `severity_by_tag` across all `reconcile_complete` events.
+
+    Returns: {tag_prefix: {"L1": int, "L2": int, "L3": int}}.
+    Only tag prefixes that appear in at least one event are included.
+    """
+    out: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"L1": 0, "L2": 0, "L3": 0}
+    )
+    for evt in events:
+        if evt.get("event") != "reconcile_complete":
+            continue
+        sbt = evt.get("severity_by_tag") or {}
+        if not isinstance(sbt, dict):
+            continue
+        for tag_prefix, sev_counts in sbt.items():
+            if not isinstance(sev_counts, dict):
+                continue
+            for sev in ("L1", "L2", "L3"):
+                v = _as_int(sev_counts.get(sev)) or 0
+                out[tag_prefix][sev] += v
+    return {k: dict(v) for k, v in sorted(out.items())}
+
+
+_QUEUE_ENTRY_RE = re.compile(
+    r"^##\s+Q-\d+\s+—\s+`\[(OPEN|RESOLVED|REJECTED|PROMOTED|SUPERSEDED)\]`",
+    re.MULTILINE,
+)
+
+
+def compute_l2_queue_stats(queue_path: Path) -> dict[str, int]:
+    """Parse the L2 queue file and count entries by current status.
+
+    Returns: {"total": int, "OPEN": int, "RESOLVED": int, "REJECTED": int,
+              "PROMOTED": int, "SUPERSEDED": int}.
+
+    Returns all-zero counts if the queue file doesn't exist or can't be read.
+    """
+    counts = {
+        "total": 0,
+        "OPEN": 0,
+        "RESOLVED": 0,
+        "REJECTED": 0,
+        "PROMOTED": 0,
+        "SUPERSEDED": 0,
+    }
+    if not queue_path.exists():
+        return counts
+    try:
+        text = queue_path.read_text(encoding="utf-8")
+    except OSError:
+        return counts
+    for m in _QUEUE_ENTRY_RE.finditer(text):
+        status = m.group(1)
+        counts["total"] += 1
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def format_report(
+    stories: dict[str, Story],
+    filter_desc: str,
+    events: list[dict[str, Any]] | None = None,
+) -> str:
     """Render the markdown report."""
     if not stories:
         return (
             "# Kiat Health Report\n\n"
+            f"{SCHEMA_MARKER}\n\n"
             f"{filter_desc}\n\n"
             "_No stories in scope. Run some stories through Team Lead first._\n"
         )
@@ -346,6 +684,8 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines: list[str] = []
     lines.append("# Kiat Health Report")
+    lines.append("")
+    lines.append(SCHEMA_MARKER)
     lines.append("")
     lines.append(f"_Generated {now} — {filter_desc}_")
     lines.append("")
@@ -443,17 +783,35 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
             lines.append(f"- **{cycles} cycles:** {cycles_counter[cycles]} {bar}")
         lines.append("")
 
-    # ---------- Fix budget ----------
-    exhausted = [s for s in stories.values() if s.fix_budget_exhausted]
-    if exhausted or any(s.fix_budget_started_at for s in stories.values()):
-        lines.append("## Fix Budget Utilization (45-min gate)")
+    # ---------- Fix budget distribution (retrospective; EV-0003 retired the 45-min gate) ----------
+    fix_used_values = [
+        s.fix_budget_min
+        for s in stories.values()
+        if s.fix_budget_started_at and s.fix_budget_min is not None
+    ]
+    # fix_budget_min is set to the elapsed value at rollup-apply time, so it doubles as the per-story
+    # retrospective minute count. See _apply_rollup.
+    elapsed_values: list[int] = []
+    for s in stories.values():
+        if s.fix_budget_started_at and s.passed_at:
+            delta = int((s.passed_at - s.fix_budget_started_at).total_seconds() / 60)
+            if delta >= 0:
+                elapsed_values.append(delta)
+    if elapsed_values:
+        lines.append("## Fix Budget Distribution (retrospective)")
         lines.append("")
-        lines.append(f"- **Stories that started the fix-budget clock:** "
-                     f"{sum(1 for s in stories.values() if s.fix_budget_started_at)}")
-        lines.append(f"- **Budget exhausted (escalated for time):** {len(exhausted)}")
-        if exhausted:
-            for s in exhausted:
-                lines.append(f"  - `{s.story_id}` — reason: {s.escalation_reason}")
+        lines.append(
+            f"- **Stories that entered a fix cycle:** {len(elapsed_values)} / {n_total}"
+        )
+        elapsed_sorted = sorted(elapsed_values)
+        p50 = elapsed_sorted[len(elapsed_sorted) // 2]
+        p90_idx = max(0, int(len(elapsed_sorted) * 0.9) - 1)
+        p90 = elapsed_sorted[p90_idx]
+        lines.append(f"- **min / p50 / p90 / max (min):** "
+                     f"{elapsed_sorted[0]} / {p50} / {p90} / {elapsed_sorted[-1]}")
+        lines.append("")
+        lines.append("> Field kept for retro analytics only — the 45-min escalation gate "
+                     "was retired by EV-0003 (zero firings over 80 stories).")
         lines.append("")
 
     # ---------- Clerk skill ----------
@@ -504,6 +862,178 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
             lines.append(f"- `{s.story_id}` ({s.epic or 'no-epic'}): {s.escalation_reason}{fp_note}")
         lines.append("")
 
+    # ---------- Deviation Tag Distribution (EV-0008: 8-prefix enum) ----------
+    epics_root = Path("delivery/epics")
+    tag_distribution = compute_tag_distribution(epics_root)
+    lines.append("## Deviation Tag Distribution")
+    lines.append("")
+    lines.append(
+        "_Groups `**Tag**:` prefixes from all `story-*.reconcile.md` files by the 8-value enum "
+        "(EV-0008). Unknown prefixes surface as `OTHER` — they are pre-epic-16 free-form tags or "
+        "invalid new ones the hook should have caught._"
+    )
+    lines.append("")
+    if not tag_distribution:
+        lines.append("_No `.reconcile.md` files found — no tag data._")
+    else:
+        total_tags = sum(v for v in tag_distribution.values())
+        lines.append("| Prefix | Count | % of total |")
+        lines.append("|---|---|---|")
+        for prefix, count in sorted(tag_distribution.items(), key=lambda x: -x[1]):
+            pct = 100 * count / total_tags if total_tags else 0
+            lines.append(f"| `{prefix}` | {count} | {pct:.1f}% |")
+        lines.append(f"| **Total** | **{total_tags}** | 100% |")
+    lines.append("")
+
+    # ---------- Phase 1: Per-Epic Tag Distribution ----------
+    tag_by_epic = compute_tag_distribution_by_epic(epics_root)
+    if tag_by_epic:
+        lines.append("### By epic")
+        lines.append("")
+        lines.append(
+            "_Same data, broken down per epic. Highlights which epics generated which deviation "
+            "categories — useful for spotting epic-level patterns (e.g. one epic dominated by "
+            "TEST_DRIFT signals a testing-discipline gap, one dominated by SPEC_GAP signals a "
+            "spec-clarity gap)._"
+        )
+        lines.append("")
+        # Collect the union of prefixes that appear in any epic, ordered by global frequency
+        prefixes_in_use = sorted(
+            {p for epic_data in tag_by_epic.values() for p in epic_data.keys()},
+            key=lambda p: -tag_distribution.get(p, 0),
+        )
+        header = "| Epic |" + "".join(f" `{p}` |" for p in prefixes_in_use) + " Total |"
+        sep = "|---|" + "---|" * (len(prefixes_in_use) + 1)
+        lines.append(header)
+        lines.append(sep)
+        for epic, prefix_counts in tag_by_epic.items():
+            row_total = sum(prefix_counts.values())
+            cells = [f" {prefix_counts.get(p, 0)} |" for p in prefixes_in_use]
+            lines.append(f"| `{epic}` |" + "".join(cells) + f" **{row_total}** |")
+        lines.append("")
+
+    # ---------- Phase 1: Reconciliation Latency (human-triage cost) ----------
+    if events is not None:
+        latency_by_epic, unpaired = compute_reconciliation_latency(events)
+        lines.append("## Reconciliation Latency (Phase 1)")
+        lines.append("")
+        lines.append(
+            "_Time between Team Lead emitting `reconciliation_needed` (Phase 5d) and "
+            "`/bmad-correct-course` emitting `reconcile_complete`. Measures the **human-triage "
+            "cost** per story. A growing p90 means humans are bottlenecking the pipeline._"
+        )
+        lines.append("")
+        if not latency_by_epic and unpaired == 0:
+            lines.append("_No `reconciliation_needed` / `reconcile_complete` pairs in scope._")
+        else:
+            lines.append("| Epic | N paired | p50 (min) | p90 (min) | Min | Max |")
+            lines.append("|---|---|---|---|---|---|")
+            for epic, stats in latency_by_epic.items():
+                lines.append(
+                    f"| `{epic}` | {stats['n']} | {stats['p50']} | {stats['p90']} | "
+                    f"{stats['min']} | {stats['max']} |"
+                )
+            if unpaired > 0:
+                lines.append("")
+                lines.append(
+                    f"**Unpaired:** {unpaired} `reconciliation_needed` event(s) without a "
+                    f"matching `reconcile_complete` — stories still awaiting human triage."
+                )
+        lines.append("")
+
+        # ---------- Phase 1: Severity × Tag Cross-Table ----------
+        severity_by_tag = compute_severity_by_tag(events)
+        lines.append("## Severity × Tag Cross-Table (Phase 1)")
+        lines.append("")
+        lines.append(
+            "_For each tag prefix, the final L1 / L2 / L3 breakdown post-triage by "
+            "`/bmad-correct-course`. Reads `severity_by_tag` from `reconcile_complete` events. "
+            "Surfaces which categories of deviation cluster at which severities project-wide — "
+            "e.g. a high L3 % on a given prefix means that category routinely produces blocking "
+            "drift._"
+        )
+        lines.append("")
+        if not severity_by_tag:
+            lines.append(
+                "_No `severity_by_tag` data on `reconcile_complete` events in scope. "
+                "Either no reconciles have run yet, or they predate schema v2.1._"
+            )
+        else:
+            lines.append("| Tag prefix | L1 | L2 | L3 | Total | % L3 |")
+            lines.append("|---|---|---|---|---|---|")
+            grand_l1 = 0
+            grand_l2 = 0
+            grand_l3 = 0
+            grand_total = 0
+            for prefix, sev in sorted(severity_by_tag.items()):
+                row_total = sev["L1"] + sev["L2"] + sev["L3"]
+                pct_l3 = 100 * sev["L3"] / row_total if row_total else 0
+                grand_l1 += sev["L1"]
+                grand_l2 += sev["L2"]
+                grand_l3 += sev["L3"]
+                grand_total += row_total
+                lines.append(
+                    f"| `{prefix}` | {sev['L1']} | {sev['L2']} | {sev['L3']} | "
+                    f"{row_total} | {pct_l3:.1f}% |"
+                )
+            pct_l3_overall = 100 * grand_l3 / grand_total if grand_total else 0
+            lines.append(
+                f"| **Total** | **{grand_l1}** | **{grand_l2}** | **{grand_l3}** | "
+                f"**{grand_total}** | **{pct_l3_overall:.1f}%** |"
+            )
+        lines.append("")
+
+    # ---------- Phase 1: L2 Queue Health (promotion-rate drift signal) ----------
+    queue_path = Path("delivery/_queue/needs-human-review.md")
+    queue_stats = compute_l2_queue_stats(queue_path)
+    if queue_stats["total"] > 0 or queue_path.exists():
+        lines.append("## L2 Queue Health (Phase 1)")
+        lines.append("")
+        lines.append(
+            "_Counts the L2 queue at [`delivery/_queue/needs-human-review.md`](delivery/_queue/needs-human-review.md) "
+            "by current status. **Promotion rate** = `PROMOTED / total` (L2 → L3 auto-promotions "
+            "by Team Lead Phase 0c on scope-overlap). A rising promotion rate means queue items "
+            "are not being triaged fast enough, and downstream stories keep colliding with them._"
+        )
+        lines.append("")
+        total = queue_stats["total"]
+        if total == 0:
+            lines.append("_Queue file exists but is empty._")
+        else:
+            promoted = queue_stats["PROMOTED"]
+            promotion_rate = 100 * promoted / total if total else 0
+            lines.append(f"- **Total entries ever opened:** {total}")
+            lines.append(f"- **OPEN:** {queue_stats['OPEN']}")
+            lines.append(f"- **RESOLVED:** {queue_stats['RESOLVED']}")
+            lines.append(f"- **REJECTED:** {queue_stats['REJECTED']}")
+            lines.append(
+                f"- **PROMOTED to L3:** {promoted} "
+                f"(**{promotion_rate:.1f}%** promotion rate)"
+            )
+            lines.append(f"- **SUPERSEDED:** {queue_stats['SUPERSEDED']}")
+        lines.append("")
+
+    # ---------- FP Candidates (passive detection — Trigger C) ----------
+    candidates = detect_fp_candidates(epics_root)
+    lines.append("## FP Candidates (passive detection)")
+    lines.append("")
+    lines.append(
+        "_Scans `delivery/epics/*/story-*.reconcile.md` files modified in the last 30 days "
+        "for `SPEC_*` / `PROCESS_*` tag prefixes appearing across ≥ 3 distinct stories. "
+        "Does NOT auto-create FP files — surfaces candidates for human review (Trigger C)._"
+    )
+    lines.append("")
+    if not candidates:
+        lines.append("_No candidates detected._")
+    else:
+        for c in candidates:
+            lines.append(
+                f"- **{c['prefix']}**: {c['story_count']} stories — "
+                + ", ".join(f"`{s}`" for s in c["stories"])
+                + " → Consider creating FP-NNN per Trigger C"
+            )
+    lines.append("")
+
     # ---------- Per-story table ----------
     lines.append("## Stories (Table)")
     lines.append("")
@@ -516,8 +1046,6 @@ def format_report(stories: dict[str, Story], filter_desc: str) -> str:
             notes.append(f"spec:{s.spec_verdict}")
         if s.preflight_overflow:
             notes.append("overflow")
-        if s.fix_budget_exhausted:
-            notes.append("budget-exhausted")
         if s.test_patterns_inconsistencies:
             notes.append(f"patterns-drift:{s.test_patterns_inconsistencies}")
         if s.escalation_fp:
@@ -706,6 +1234,16 @@ def main() -> int:
         help=f"Path to events.jsonl (default: {DEFAULT_EVENTS_PATH})",
     )
     parser.add_argument(
+        "--scope",
+        default="active",
+        choices=["active", "all-time"],
+        help=(
+            "active (default): read events.jsonl only. "
+            "all-time: also read events.archive-2026-05-16.jsonl, "
+            "normalizing legacy events to v2 shape in-memory."
+        ),
+    )
+    parser.add_argument(
         "--since",
         default=None,
         help="Filter events on/after this date (YYYY-MM-DD)",
@@ -723,7 +1261,7 @@ def main() -> int:
     parser.add_argument(
         "--validate",
         action="store_true",
-        help="Validate the events file against the v1.1 schema. Exits 0 if clean, 1 if issues found. Prints issue list to stderr.",
+        help="Validate the events file against the v2 schema. Exits 0 if clean, 1 if issues found. Prints issue list to stderr.",
     )
     args = parser.parse_args()
 
@@ -741,7 +1279,7 @@ def main() -> int:
     if args.validate:
         exit_code, issues = validate_events_file(events_path)
         if exit_code == 0 and not issues:
-            print(f"✓ {events_path}: all events conform to v1.1 schema", file=sys.stderr)
+            print(f"✓ {events_path}: all events conform to v2 schema", file=sys.stderr)
             return 0
         if exit_code == 0 and issues:
             # Informational only (e.g., file doesn't exist yet)
@@ -754,17 +1292,27 @@ def main() -> int:
         return exit_code
 
     raw_events = load_events(events_path)
+
+    # --scope all-time: also load the legacy archive, normalizing events in-memory
+    if args.scope == "all-time":
+        archive_path = events_path.parent / DEFAULT_ARCHIVE_PATH.name
+        archive_events = load_events(archive_path)
+        normalized = [normalize_legacy_event(e) for e in archive_events]
+        raw_events = normalized + raw_events
+
     filtered = filter_events(raw_events, since=since_dt, epic=args.epic)
 
     filter_parts = []
+    if args.scope == "all-time":
+        filter_parts.append("all-time (active + archive)")
     if args.since:
         filter_parts.append(f"since {args.since}")
     if args.epic:
         filter_parts.append(f"epic {args.epic}")
-    filter_desc = "Scope: " + (", ".join(filter_parts) if filter_parts else "all events, all time")
+    filter_desc = "Scope: " + (", ".join(filter_parts) if filter_parts else "active (v2 events only)")
 
     stories = rollup_stories(filtered)
-    report = format_report(stories, filter_desc)
+    report = format_report(stories, filter_desc, events=filtered)
 
     if args.output:
         Path(args.output).write_text(report, encoding="utf-8")
