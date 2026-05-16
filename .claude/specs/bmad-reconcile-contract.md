@@ -204,6 +204,43 @@ in [`metrics-events.md`](metrics-events.md)). The event aggregates the
 counts (L1 applied, L2 queued, L3 blocked) and is what
 `/bmad-retrospective` reads to discover which stories had reconciles.
 
+**Phase 1 observability addition — `severity_by_tag` field (required).**
+The event MUST include a `severity_by_tag` object that breaks down
+post-triage severity counts per tag-enum prefix. Derive it by walking
+the FINAL `## Deviations` block in the `.reconcile.md` (post any
+overrides you applied during triage):
+
+1. For each deviation entry, extract its `**Tag**:` value.
+2. Map the tag to one of the 8 enum prefixes
+   (`SPEC_GAP` / `DECISION` / `SCOPE_CUT` / `BOY_SCOUT` /
+   `DOMAIN_NEW` / `PROCESS` / `TEST_DRIFT` / `UPSTREAM_MISMATCH`).
+   A tag like `SPEC_GAP_DEPT_COUNT_MISMATCH` maps to `SPEC_GAP`.
+3. Use the **final** `**Severity**:` value (L1/L2/L3) — your triage may
+   have changed it from the coder's hint.
+4. Tally `{tag_prefix: {L1: n, L2: m, L3: k}}`.
+5. Omit zero-count entries to keep the event compact.
+
+Example for a story with 2 SPEC_GAP (1 L1, 1 L2), 1 DECISION (L1), and
+0 entries with unrecognized prefixes:
+
+```json
+"severity_by_tag": {
+  "SPEC_GAP": {"L1": 1, "L2": 1, "L3": 0},
+  "DECISION": {"L1": 1, "L2": 0, "L3": 0}
+}
+```
+
+`report.py` consumes this field to render the **Severity × Tag**
+cross-table — a Phase 1 signal designed to surface "which categories
+of deviation cluster at which severities, project-wide".
+
+Pairing with `reconciliation_needed` (Team Lead Phase 5d) lets
+`report.py` also compute **human triage latency**
+(`reconcile_complete.ts - reconciliation_needed.ts`). No action
+required from `/bmad-correct-course` for the latency signal — Team
+Lead already emitted the `reconciliation_needed` event when handing
+the story over.
+
 ---
 
 ## Severity classification rules
