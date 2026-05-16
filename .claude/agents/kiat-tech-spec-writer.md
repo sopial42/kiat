@@ -99,6 +99,8 @@ Read only what's relevant to the story scope:
 
 **Do not read conventions you don't need.** If the story is a pure backend refactor, don't load `frontend-architecture.md` or `delivery/business/personas.md`. Context budget is finite for you too.
 
+**Audit the project-memory load.** When you finish drafting the spec, count which `### PM-NNN` entries from `project-memory.md` **materially shaped a choice in the spec** (cited in the spec body, OR aligned the technical sections to the rule without contradiction). This count is `injected`. Total entries is the grep count of `^### PM-` headings in the file. Topics filtered is the comma-separated list of `Touches:` topics you considered relevant to the story scope (e.g., `backend, auth, share-tokens`). These three numbers go into the `project_memory_load:` block of your final `SPEC_HANDOFF` (see Step 7). The measurement is load-bearing for EV-0009's empirical re-evaluation trigger — do not skip it, do not pad it.
+
 ### 2.5. Cross-check Team Lead's prompt assertions (CRITICAL — defense in depth)
 
 Team Lead's Phase -1 prompt hygiene rule forbids them from asserting runtime/config/CI facts from memory. But Team Lead is human (or an LLM with human failure modes), and this rule can be broken accidentally. **You are the second line of defense.** Before drafting a single line of the spec, re-verify every factual claim in Team Lead's prompt that would shape the spec content.
@@ -404,6 +406,10 @@ spec_verdict: CLEAR
 spec_byte_count: <output of `wc -c <story_path>` — integer>
 skills_added: <comma-separated list of contextual skills, or "none">
 clarification_rounds: <integer — number of SPEC_CLARIFICATION rounds before CLEAR; 0 if CLEAR on first pass>
+project_memory_load:
+  total_entries: <int — output of `grep -c '^### PM-' delivery/specs/project-memory.md`>
+  injected: <int — entries that materially shaped a choice in this spec (see Step 2)>
+  topics_filtered: <comma-separated list of Touches: topics considered relevant, or "none" if no filter applied>
 ```
 
 Run `wc -c` on the final file **after** your last edit and paste the integer into `spec_byte_count`. Team Lead compares this number against the file on disk at Phase 0a start; a mismatch means the file was edited between your handoff and Team Lead picking it up, and Team Lead will re-run the skill.

@@ -144,8 +144,10 @@ After this seed: <X'> lines / <Y'> single-topic entries  [WITHIN CAP | EXCEEDS C
 <each amendment with the existing entry it touches>
 
 --- Audit line ---
-kiat-seed-project-memory: dry-run, <M> new / <P> amendments / <Q> cross-topic / <R> single-topic
+kiat-seed-project-memory: dry-run, <C> candidates from <S> source decisions, <M> new / <P> amendments / <Q> cross-topic / <R> single-topic
 ```
+
+`<C>` is the number of distinct candidates the skill proposes (one per draft entry, including amendments). `<S>` is the count of source decisions the skill identified in the architecture document before applying the inclusion criteria (cross-story applicability / non-obvious / surprising default — see Step 3). The ratio `C/S` signals extraction calibration: if `C/S < 0.5` repeatedly across projects, the extraction criteria are too strict (many real decisions are being skipped); if `C/S > 0.9`, the criteria are too permissive (the file will bloat with restated generic conventions). Both ratios are inputs to EV-0009's re-evaluation triggers.
 
 If the post-seed state EXCEEDS CAP, end the report with a recommendation to promote single-topic clusters (≥3 entries with the same single `Touches:` topic) to a new project-owned `delivery/specs/<topic>.md` file **before applying**. Do not auto-promote — promotion is a separate human decision.
 
@@ -170,7 +172,7 @@ On `--apply`:
   ```
 - Append the approved new entries in PM-NNN order.
 - Apply the proposed amendments to existing entries (Status: superseded, Superseded by: PM-NNN).
-- Emit the final audit line: `kiat-seed-project-memory: applied <M> new / <P> amendments`.
+- Emit the final audit line: `kiat-seed-project-memory: applied <A>/<C> candidates approved, <M> new / <P> amendments` where `<A>` is the count of approved candidates and `<C>` is the count proposed in the dry-run. The ratio `A/C` signals proposal calibration: if `A/C` is consistently low across runs, the skill is proposing entries the human routinely rejects — tighten the extraction criteria in Step 3.
 
 ### 9. Commit suggestion
 

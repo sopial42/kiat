@@ -460,16 +460,20 @@ touches:
   - .claude/skills/kiat-seed-project-memory/SKILL.md
   - .claude/skills/bmad-create-architecture/steps/step-08-complete.md
   - .claude/specs/available-skills.md
+  - .claude/agents/kiat-tech-spec-writer.md:step-2-project-memory-load-audit
+  - .claude/agents/kiat-tech-spec-writer.md:spec-handoff-project_memory_load
   - CLAUDE.md:bmad-role-section
   - delivery/specs/project-memory.md:entry-template
   - delivery/specs/project-memory.md:cap-and-promotion-mechanics
 triggered_by:
   - pilot:nova-notariat/lgt (greenfield project using BMad + Kiat)
   - gap:cross-story technical decisions in _bmad-output/planning-artifacts/architecture.md never reach Kiat agents
+  - review-feedback:PR#4 (instrumentation requirement surfaced post-draft — without it, the empirical re-evaluation trigger is unmeasurable)
 key_metrics:
   - "LGT pilot architecture.md: 838 lines, ~15 cross-story technical decisions identified for seeding"
   - "project-memory.md template default size: 65 lines (empty of project content)"
   - "Adversarial review: 4 agents (architect / tech-writer / cynical / dev), unanimous rejection of distributed-overrides design (Proposal B)"
+  - "Instrumentation: 3 measurable ratios introduced — injected/total (per-story load), C/S (extraction calibration), A/C (proposal calibration)"
 decided_by: claude-sonnet-4-6 + Boss
 ```
 
@@ -487,6 +491,14 @@ Update `project-memory.md` template (`delivery/specs/project-memory.md`) with:
 
 Update `CLAUDE.md` BMad section with a paragraph documenting the bridge. Update `bmad-create-architecture/steps/step-08-complete.md` to suggest running the bridge after architecture completes (Kiat-conditional, detected by presence of `delivery/specs/project-memory.md`). Register the skill in `.claude/specs/available-skills.md`.
 
+**Instrumentation (added after review feedback on PR #4)**. Three deterministic measurements are wired so the re-evaluation triggers below mord plutôt qu'aboient :
+
+1. **`project_memory_load` block in `SPEC_HANDOFF`** (`kiat-tech-spec-writer.md` Step 2 + Step 7): the spec-writer emits `total_entries` (grep `^### PM-`), `injected` (entries that materially shaped a choice in the spec), and `topics_filtered` (`Touches:` topics considered relevant). Team Lead reads this from `SPEC_HANDOFF`; the v2 rollup event surfaces the ratio for aggregation across stories.
+2. **Skill audit line — dry-run** (`kiat-seed-project-memory` Step 6): emits `<C> candidates from <S> source decisions`. The ratio `C/S` measures whether the extraction criteria in Step 3 (cross-story / non-obvious / surprising default) are well-calibrated.
+3. **Skill audit line — apply** (`kiat-seed-project-memory` Step 8): emits `<A>/<C> candidates approved`. The ratio `A/C` measures whether the human routinely rejects the skill's proposals — low `A/C` ⇒ the skill is over-proposing.
+
+Without (1), the load-rate trigger below is post-hoc on transcripts (a `grep "project-memory.md"` matches both a `Read` tool call and a prose mention, indistinguishably). With (1), the trigger is a deterministic field aggregated per epic via the existing `report.py` infrastructure.
+
 ### Alternatives rejected
 - **A — Distributed overrides into framework-owned files** (`## Project-specific overrides` section appended to `backend-conventions.md`, `clerk-patterns.md`, etc.): rejected unanimously by 4 adversarial reviewers. Concrete reasons: (a) **merge hell** when upstream Kiat pushes a new version of a framework file with reorganized sections, (b) **routing ambiguity** — a decision like "PDF stream-and-forget" has 2+ plausible homes (`backend-conventions.md` / `database-conventions.md` / `deployment.md` / a new `pdf-generation.md`); search cost becomes N× instead of 1×, (c) **cross-topic decisions silently fragment** — "three-regime RLS data isolation" touches database + auth + security, whichever file you write it in, the other two coders miss it, (d) **tech-spec-writer routing table doubles** — every "load `backend-conventions.md`" becomes "load `backend-conventions.md` AND `backend-conventions.project.md` if exists".
 - **B — Sibling `.project.md` files** (e.g., `backend-conventions.project.md` next to the framework file): rejected — recreates the same routing complexity as A. Requires conditional loading by the tech-spec-writer on every story.
@@ -495,8 +507,10 @@ Update `CLAUDE.md` BMad section with a paragraph documenting the bridge. Update 
 - **E — Skill writes directly to `delivery/specs/` on every invocation without dry-run**: rejected — Cynical Reviewer flagged this as a loophole; any autonomous BMad session could run the skill end-to-end and bypass the human. The dry-run default closes the loophole.
 
 ### Re-evaluate if
-- After 10 shipped stories on a pilot project, the load-rate of `project-memory.md` by `kiat-tech-spec-writer` is **<30 % per story** (instrument it via the agent's read events) — means the file is dead weight and the one-file design needs reconsideration. **This is the empirical validation criterion from the Cynical Reviewer; it must be answered with data, not debate.**
-- The load-rate is ≥50 % — means the design is validated; consider documenting it as a Kiat default for greenfield projects.
+- After 10 shipped stories on a pilot project, the **median `injected/total_entries` ratio in `SPEC_HANDOFF.project_memory_load` is <0.30** — means most entries are dead weight per story, the one-file design needs reconsideration (per-story narrow loading via promotion to topical files starts to pay off). **This is the empirical validation criterion from the Cynical Reviewer, now wired to a deterministic measurement (see "Instrumentation" above) so it is answerable with data, not debate.**
+- The median ratio is ≥0.50 — design validated; document as Kiat default for greenfield projects.
+- The `C/S` ratio (skill candidates produced / source decisions identified) is consistently <0.50 or >0.90 across ≥3 distinct projects — means the extraction criteria in Step 3 of the skill are mis-calibrated (too strict or too permissive); revise the OR-ed conditions.
+- The `A/C` ratio (human-approved / proposed at `--apply`) is consistently <0.60 across ≥3 distinct projects — means the skill is over-proposing; the human is routinely rejecting candidates. Tighten extraction.
 - A single-topic cluster of ≥3 entries forms before the cap is reached on any project — means the cap threshold (25/400) is too lax; tighten it.
 - A merge conflict on `project-memory.md` recurs across ≥3 PRs within a 30-day window on the same project — means the file is becoming a coordination hotspot; promotion to topical files should be accelerated rather than gated by the cap.
 - A new project chooses NOT to invoke the skill but later complains of coder drift on architectural decisions — means the skill is insufficiently discoverable or its onboarding is missing. Promote its mention from a paragraph in CLAUDE.md to a Phase 0 check in `kiat-team-lead`.

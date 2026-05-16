@@ -256,8 +256,10 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 
 **Loaded by**: any top-level human session — typically right after `bmad-create-architecture` completes. Never auto-invoked by an agent.
 
-**Audit line pattern** (dry-run): `kiat-seed-project-memory: dry-run, <M> new / <P> amendments / <Q> cross-topic / <R> single-topic`
-**Audit line pattern** (apply): `kiat-seed-project-memory: applied <M> new / <P> amendments`
+**Audit line pattern** (dry-run): `kiat-seed-project-memory: dry-run, <C> candidates from <S> source decisions, <M> new / <P> amendments / <Q> cross-topic / <R> single-topic`
+**Audit line pattern** (apply): `kiat-seed-project-memory: applied <A>/<C> candidates approved, <M> new / <P> amendments`
+
+`C/S` (candidates produced / source decisions) and `A/C` (approved / proposed) feed EV-0009's empirical re-evaluation. Low `A/C` over multiple projects ⇒ extraction criteria too permissive. Low `C/S` ⇒ too strict.
 
 ---
 
