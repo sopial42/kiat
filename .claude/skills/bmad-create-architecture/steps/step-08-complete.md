@@ -45,6 +45,8 @@ Architecture complete. Invoke the `bmad-help` skill.
 
 Upon Completion of task output: offer to answer any questions about the Architecture Document.
 
+**Kiat-specific bridge** (only if this project uses the Kiat framework — detect by the presence of `delivery/specs/project-memory.md`): suggest the user run the `kiat-seed-project-memory` skill in a separate session to extract cross-story technical decisions from the architecture document just produced and seed them into `delivery/specs/project-memory.md`. This prevents `kiat-tech-spec-writer` and the coders from rediscovering decisions already documented here. Phrase it as a recommendation, not a requirement — small architectures or single-feature bolt-ons may not need it.
+
 
 ## SUCCESS METRICS:
 
