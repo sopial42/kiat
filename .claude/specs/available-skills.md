@@ -235,6 +235,32 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 
 **Audit line pattern**: `kiat-ultra-review: phase <1|2|3|4> complete, <N> findings / <M> S0 / <P> S1`
 
+### kiat-seed-project-memory
+
+- **Type**: Kiat-owned (framework)
+- **Size**: ~3k tokens (SKILL.md)
+- **Location**: `.claude/skills/kiat-seed-project-memory/SKILL.md`
+- **Purpose**: bridge the BMad→Kiat handoff for greenfield projects — extract cross-story technical decisions from a BMad architecture document (e.g., `_bmad-output/planning-artifacts/architecture.md`) and propose seed entries for `delivery/specs/project-memory.md`. The human approves entries before they are written, so BMad's "never write to `delivery/specs/`" rule is preserved.
+
+**When to use** (orchestrator session's trigger criteria — this skill is NOT invoked by stories, it's invoked by a top-level session before story implementation begins):
+- Greenfield project where BMad has just produced an architecture document and `project-memory.md` is still empty
+- Retroactive bootstrap on a project that has an architecture document but an empty / unseeded `project-memory.md`
+- Major architectural amendment that introduces cross-story decisions not yet captured in `project-memory.md`
+
+**When to skip**:
+- Brownfield projects where `project-memory.md` is already populated from real story patterns
+- Single-feature bolt-ons whose architecture has no cross-story implications
+- Projects without a BMad architecture document (run `bmad-create-architecture` first)
+
+**Output**: appended section in `delivery/specs/project-memory.md` titled `## <Project> Architectural Decisions (pre-implementation seed — YYYY-MM-DD)` with categorized entries (Data Architecture, Authentication, External Integrations, etc.), each pointing back to the architecture document via a `Canonical ref` line.
+
+**Loaded by**: any top-level human session — typically right after `bmad-create-architecture` completes. Never auto-invoked by an agent.
+
+**Audit line pattern** (dry-run): `kiat-seed-project-memory: dry-run, <C> candidates from <S> source decisions, <M> new / <P> amendments / <Q> cross-topic / <R> single-topic`
+**Audit line pattern** (apply): `kiat-seed-project-memory: applied <A>/<C> candidates approved, <M> new / <P> amendments`
+
+`C/S` (candidates produced / source decisions) and `A/C` (approved / proposed) feed EV-0009's empirical re-evaluation. Low `A/C` over multiple projects ⇒ extraction criteria too permissive. Low `C/S` ⇒ too strict.
+
 ---
 
 ## How to add a new skill to this registry
