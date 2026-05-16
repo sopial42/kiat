@@ -170,6 +170,18 @@ Check:
 
 This category does NOT apply to error cases, edge cases, or validation scenarios — those may use mocked Playwright specs (`page.route`) or lower-level tests at the coder's discretion. Only the happy path of a vertical slice is gated here.
 
+### 11. Supersedes declaration (optional, when present)
+
+The `## Supersedes:` section is OPTIONAL — most stories don't supersede any queue entry. When present, it tells Phase 0c which OPEN Q-IDs the story explicitly closes, allowing Phase 0c to emit `queue_supersede` instead of `epic_block`. Full protocol: [`../../agents/kiat-team-lead.md` §Phase 0c](../../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory) and [`../../EVOLUTION.md` EV-0002](../../EVOLUTION.md).
+
+When a `## Supersedes` heading exists in the story file, check:
+
+- **11.a — Q-ID format**. Every bullet under the section must reference a `Q-NNN` ID (three-digit zero-padded). Malformed IDs (`Q-12`, `Q-1234`, free text without `Q-` prefix) → `NEEDS_CLARIFICATION`.
+- **11.b — Q-ID exists as OPEN in the queue**. Grep `delivery/_queue/needs-human-review.md` for each declared `Q-NNN`. If the ID is missing OR its heading does not contain `[OPEN]` (e.g., already `[RESOLVED]`, `[REJECTED]`, `[PROMOTED]`, `[SUPERSEDED]`), the declaration is stale → `NEEDS_CLARIFICATION` ("Q-XXX declared as superseded but not OPEN in queue; either remove the declaration or update the Q-ID").
+- **11.c — Rationale present**. Each Q-ID bullet must carry a one-line rationale (any text after the `—` or `:`). Bare `Q-NNN` with no rationale → `NEEDS_CLARIFICATION`.
+
+If the section is absent, this category is a **no-op** (most stories). Do not flag missing `## Supersedes:` as a structural anomaly — absence is the default.
+
 ## Output format
 
 The first line of your output is parsed by Team Lead to decide the next step, so it has to be one of three exact strings. The rest of the output is free-form human-readable.
@@ -195,6 +207,7 @@ Cross-layer: <consistent or "N/A">
 Edge cases: <list>
 Testability: <summary>
 Real-backend E2E: <described or "N/A (non-vertical-slice)">
+Supersedes: <list of Q-IDs declared, all verified OPEN — or "N/A (none declared)">
 
 → Safe to launch coders.
 ```

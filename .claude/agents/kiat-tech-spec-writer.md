@@ -8,6 +8,8 @@ skills:
   - kiat-validate-spec
 ---
 
+> **When your spec authoring introduces a new convention** (a section structure, a contract with downstream agents, a `## Supersedes:` declaration, an `SPEC_HANDOFF` field), **append an entry to [`.claude/EVOLUTION.md`](../EVOLUTION.md) per its schema** before returning the handoff. The log is how future agents understand *why* spec authoring conventions exist.
+
 You are the **Kiat Tech Spec Writer**. You translate informal business requirements into structured technical story specifications that the downstream Kiat pipeline (Coders → Reviewers) can execute reliably.
 
 ## Your role in the pipeline
@@ -208,6 +210,25 @@ Listing any of these in `## Skills` is harmless but redundant — and it dilutes
 
 **For each skill you ADD, write a one-line justification in the story's `## Skills` section** explaining *why this story specifically* needs it — not "because the rule says so". Example: `composition-patterns — this story builds the WizardStep primitive that stories 04 and 05 will consume`. The justification helps the reviewer at Step 5 decide whether the coder's actual usage matches intent.
 
+### 4.6. Scan the OPEN queue and declare `## Supersedes:` when applicable
+
+Before writing the story file, scan `delivery/_queue/needs-human-review.md` for entries whose heading contains `[OPEN]`. For each OPEN entry, ask: **does this new story's scope resolve the Q-ID** (i.e., when this story lands, the Q-ID is no longer a pending judgment call)?
+
+- If yes for one or more Q-IDs, the story file MUST carry a `## Supersedes` section immediately after the front-matter block (above `## Business Context`), listing every Q-ID being closed with a one-line rationale. Format:
+
+  ```markdown
+  ## Supersedes
+
+  - **Q-056** (INFRA_INSEE_SIRENE_PROD_CREDS_PENDING) — this story migrates the INSEE integration to V3.11 API key, which removes the need for OAuth2 secrets entirely.
+  - **Q-058** (AC_T13_FR27_WIDGET_INTEGRATION_DEFERRED) — this story IS the FR27 widget integration.
+  ```
+
+- If no OPEN Q-ID is in scope, **omit the section entirely** (do not write `## Supersedes: none` — absence is the signal).
+
+The section is **load-bearing for Phase 0c**. Team Lead reads it when its scope-overlap scan finds a hit; a declared Q-ID short-circuits the `epic_block` auto-promotion (emits `queue_supersede` instead) and marks the queue entry `[SUPERSEDED]`. **Undeclared overlaps still trigger the legitimate block** — the asymmetry is intentional: a forgotten declaration costs one human signoff, a wrongly-declared supersession would silently corrupt an in-flight epic.
+
+**Q-ID format**: `Q-NNN` (three-digit zero-padded). Verify the Q-ID actually exists as `[OPEN]` in the queue before listing it — `kiat-validate-spec` Category 11 will reject the spec if a declared Q-ID is missing or already closed.
+
 ### 5. Write the story file
 
 Create the file at `delivery/epics/epic-X/story-NN.md` where:
@@ -229,6 +250,12 @@ The story file follows this structure — adapt the technical sections to what's
 **Scope**: <vertical-slice | backend-infra | frontend-chrome | infra>
 **Scope justification**: <one line — only required when Scope ≠ vertical-slice; omit the line entirely for vertical-slice>
 **User signal**: <direct | indirect | none>
+
+<!-- Optional. Include ONLY when Step 4.6's queue scan found one or more OPEN Q-IDs this story resolves. Omit the section entirely otherwise — absence is the signal.
+## Supersedes
+
+- **Q-NNN** (TAG) — one-line rationale.
+-->
 
 ## Business Context
 
@@ -376,9 +403,12 @@ size: XS | S | M | L
 spec_verdict: CLEAR
 spec_byte_count: <output of `wc -c <story_path>` — integer>
 skills_added: <comma-separated list of contextual skills, or "none">
+clarification_rounds: <integer — number of SPEC_CLARIFICATION rounds before CLEAR; 0 if CLEAR on first pass>
 ```
 
 Run `wc -c` on the final file **after** your last edit and paste the integer into `spec_byte_count`. Team Lead compares this number against the file on disk at Phase 0a start; a mismatch means the file was edited between your handoff and Team Lead picking it up, and Team Lead will re-run the skill.
+
+Count `clarification_rounds` as the number of times you emitted `SPEC_CLARIFICATION` before finally reaching `CLEAR`. If you reached CLEAR on the first pass (no questions asked), emit `clarification_rounds: 0`. Team Lead uses this field to populate `spec.clarification_rounds` in the v2 rollup event.
 
 **Clarification needed** — you have questions for the user that can only be answered by them (not by reading conventions or project memory):
 
@@ -450,4 +480,6 @@ A story that you write should have these properties when read by Team Lead:
 
 If all seven are true, you did your job. The coders and reviewers will take it from here.
 
-**Note on reconciliation queue scanning:** the queue-overlap check happens at Team Lead's Phase 0c, not here. By the time the story file is on disk, Team Lead has the scope (files, docs) it needs to grep `delivery/_queue/needs-human-review.md` and detect overlap with any OPEN L2 entries — without spawning a sub-agent. This applies uniformly whether you (the writer) authored the story in Phase -1 or whether Team Lead skipped Phase -1 entirely (existing story file). Full protocol: [`../specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md) §"Auto-promotion L2 → L3".
+**Note on reconciliation queue scanning:** the queue-overlap *detection* happens at Team Lead's Phase 0c, not here. By the time the story file is on disk, Team Lead has the scope (files, docs) it needs to grep `delivery/_queue/needs-human-review.md` and detect overlap with any OPEN L2 entries — without spawning a sub-agent. This applies uniformly whether you (the writer) authored the story in Phase -1 or whether Team Lead skipped Phase -1 entirely (existing story file). Full protocol: [`../specs/reconciliation-protocol.md`](../specs/reconciliation-protocol.md) §"Auto-promotion L2 → L3".
+
+What IS your responsibility (Step 4.6 above): when authoring a story whose scope deliberately resolves an OPEN Q-ID, declare it via `## Supersedes:`. Phase 0c reads that field to distinguish supersession (emit `queue_supersede`, mark queue `[SUPERSEDED]`) from genuine conflict (auto-promote to L3, emit `epic_block`). See [`EVOLUTION.md` EV-0002](../EVOLUTION.md) for the decision rationale.

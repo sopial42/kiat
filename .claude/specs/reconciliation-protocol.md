@@ -155,6 +155,243 @@ contradicts a rule already in `delivery/business/`).
 
 ---
 
+## The producer-pays severity gate (apply BEFORE writing any L2 entry)
+
+The biggest failure mode of any async-queue model is **frictionless
+production / expensive consumption**: producers (coders during
+reconciliation) emit entries at zero cost; consumers (humans triaging,
+future Team Lead pipelines drafting cleanup stories) pay the full
+cost. Left unchecked, this turns the queue into a parallel feature
+backlog, where each closing epic spawns 30-50% of the next epic's
+stories from its own reconciliation residue — and no actual user-facing
+feature is delivered between cycles.
+
+**Concrete instance from epic-08** (the trigger for this gate): at
+close-out, two L2 entries (Q-051 PEP test coverage, Q-052 `sirene` →
+`inpi_rne` rename residue) were proposed for human triage, with the
+next planned action being a story-04a "tech-debt cleanup" — itself a
+~30-min coder + reviewer pipeline cycle, producing zero user-observable
+change. Compounded across N epics, this is the infinite-loop pattern.
+
+The gate inverts the burden: **a deviation becomes L2 only if it
+survives three questions in order**. Otherwise it is L1 (applied
+inline, in the originating PR) or DROPPED (no entry, no trace). The
+coder runs the gate at handoff, the reviewer cross-checks it at review,
+`/bmad-correct-course` re-applies it during triage.
+
+### Q1 — Observable
+
+> Would a user (the project's primary persona), an operator reading
+> prod logs / dashboards / metrics, or an automated system (CI test,
+> security scanner, monitoring alert) **observe a different state** if
+> this deviation were never addressed?
+
+"Observable" means appears in: a UI / API response, a log line, a
+dashboard panel, a metric, a test failure, a security scanner output, a
+public contract. **It explicitly does NOT mean** "a future maintainer
+reading the code might be confused" — admitting that route re-opens the
+floodgates and is out of scope for this gate.
+
+- **Yes** → continue to Q2.
+- **No** → **DROPPED**. No entry written. If the deviation later
+  acquires observability (someone hits the bug, a log appears, a
+  contract changes), it can be raised at that moment; it is not lost
+  forever, just not actively tracked.
+
+### Q2 — Cost to apply now
+
+> Is the fix more than ~10 minutes of combined coder + reviewer work?
+
+The 10-minute threshold is a Schelling point, not a precise budget. A
+new test of <20 LOC, a sub-30-line rename, a one-bullet doc addition
+all sit comfortably below. A new domain rule with multiple candidate
+locations, a cross-cutting refactor, anything requiring spec rewrites
+sits comfortably above.
+
+- **No** (≤ 10 min) → **L1 inline**. The originating PR includes the
+  fix. No queue entry, no separate story, no follow-up cycle. Producer
+  absorbs the cost in the same context where it was discovered, while
+  the file is still warm.
+- **Yes** (> 10 min) → continue to Q3.
+
+### Q3 — Boy Scout opportunity
+
+> Does any in-flight or near-term planned story (within ~30 days, i.e.
+> visible in the current epic's `## Stories` list or the next epic's)
+> naturally edit one of the same files?
+
+The Boy Scout rule: **if you touch a file, you clean what's broken in
+it**. This is what prevents "DROPPED today" from compounding into
+"rename-hell tomorrow". A cosmetic incoherence in a file that someone
+will open next sprint, for unrelated reasons, gets fixed naturally as
+part of that sprint's work — without ever entering the queue. The
+original incoherence is not lost: it is delegated to the next coder
+who has independent reason to be in that file.
+
+- **Yes** → **piggyback**. Append a one-line note to that future
+  story's `## Notes` section pointing to the deviation (file + what to
+  fix while-here). No queue entry. The coder of that story applies it
+  in their PR as part of normal work.
+- **No** → **L2 (queue)**. The deviation is observable, expensive, and
+  has no natural cleanup vector. This is exactly what the queue is
+  for, and it should be a small fraction of all deviations.
+
+### What survives the gate
+
+After the gate, only deviations that are **(a) observable AND (b) > 10
+min AND (c) no piggyback** become L2 queue entries. This is much
+narrower than the historical default. Empirically, on the epic-08
+close-out at protocol introduction, the gate routes the deviations as:
+
+| Item | Q1 (observable?) | Q2 (>10 min?) | Q3 (piggyback?) | Outcome |
+|---|---|---|---|---|
+| PEP combined match test (Q-051 candidate) | Yes — silent regression in CI | No (~10 LOC) | — | **L1 inline by story-02 coder** |
+| slog event names `sirene_*` → `inpi_rne_*` (Q-052 sub-1) | Yes — log dashboards filter on event name | No (~15 lines) | — | **L1 inline by story-03a coder** |
+| README dir listing stale (Q-052 sub-2a) | Yes — anyone reading the README | No (~1 line) | — | **L1 inline by story-03a coder** |
+| Cross-package callsite stale strings (Q-052 sub-2b) | Mixed (slog yes, comments no) | Mixed | Yes — story-03b edits some of these files | **Slog: L1 inline. Comments: piggyback note in story-03b.** |
+| Venom test fixture user IDs (Q-052 sub-3) | No — internal test data, no external surface | — | — | **DROPPED** |
+
+Net effect on this concrete queue: **zero L2 entries**, zero follow-up
+cleanup story, identical or better final code state vs. the bundled
+story-04a plan.
+
+### Coder severity hint (now subordinate to the gate)
+
+The coder is the closest observer of a deviation, so their initial
+severity is taken as a hint, not as final classification.
+`/bmad-correct-course` may downgrade or upgrade. Hints to use **after**
+the gate has classified the deviation as L2:
+
+- **L2** is the default for what survives the gate (observable + >10
+  min + no piggyback).
+- **L3** if your change conflicts with something in `delivery/business/`
+  or breaks behavior already shipped in an earlier story — **regardless
+  of the gate's other answers**. L3 dominates: a contradiction with the
+  business layer is always blocking, even if it's "only" 5 lines.
+- **L1** is reserved for the gate's Q2-No path (≤10 min, applied
+  inline by the originating coder). After the gate, an L1 deviation
+  has already been resolved by the time the deviation block is
+  written; the entry exists for audit, not for action.
+
+### Gate failure modes and how the review cycle catches them
+
+Two ways the gate can be misused, both controllable by reviewer
+discipline (no new framework machinery needed — the existing review
+cycle is the enforcement layer):
+
+1. **Permissive Q1** — coder rationalizes "a future reader might be
+   confused" as observable. Reviewer pushes back: observable means a
+   concrete surface (log, UI, metric, test). Maintainer cognitive load
+   is not in scope. The reviewer's `kiat-review-*` skill should flag
+   any L2 entry whose Q1 justification reads as "for clarity" or
+   "for future maintenance" without naming a concrete observable.
+2. **Inflated Q2** — coder declares "this is 11 minutes" to push work
+   to L2 instead of doing it inline. Reviewer override: if the diff is
+   mechanical and bounded, it goes inline regardless of the estimate.
+
+Neither failure mode is unique to this gate — they are general
+code-review discipline. The gate adds no new attack surface; it just
+narrows the default landing zone for deviations.
+
+---
+
+## Resolution-at-handoff (the "producer-pays gate")
+
+The severity gate above (Q1/Q2/Q3) classifies a deviation. This section
+governs **who applies the L1 fix and when**. A coder, at handoff time,
+may set `**Status**: RESOLVED` on a deviation when **both** conditions
+hold: (a) the deviation classifies as L1 by the severity gate, and (b)
+the coder has already corrected the code / test / doc inline, in the
+same commit as the production code. The originating PR ships the fix;
+`/bmad-correct-course` sees the entry for audit only — no further
+action. The reviewer cross-checks at review-time; Team Lead Phase 5c
+re-checks at aggregation. This is the **producer-pays** convention:
+the agent who discovered the deviation absorbs the cost while the file
+is still warm, instead of routing it through human triage.
+
+The convention exists because routing every minor inline fix through
+`/bmad-correct-course` over-burdens humans, and silently auto-resolving
+high-risk items lets real drift sneak past review. The matrix below
+draws the line.
+
+### Allowed L1 categories (coder may mark RESOLVED at handoff)
+
+- [ ] **DECISION** on a design tradeoff with no observable business impact (naming, struct layout, narrow port widening, internal helper signature)
+- [ ] **BOY_SCOUT** cleanup of a stale incoherence in a file already in the diff
+- [ ] **DOCS** clarification (comment, README line, spec template one-liner) that does not change observable behavior
+- [ ] **AC-T## interpretation** that landed differently than literal spec text but matches the project's prior canonical convention AND did not change observable behavior (e.g., singular vs plural error envelope on a 404 path that every existing handler already returns singular)
+
+### FORBIDDEN categories (always route through `/bmad-correct-course` — never RESOLVED at handoff)
+
+The coder MUST set `Status: NEEDS_PROMOTION` (or `BLOCKING` for L3) and
+let reconciliation triage these, even if the inline fix looks
+mechanical:
+
+- Any **RLS / Row-Level-Security** change — new policy, widened transaction scope, GUC handling, table-level RLS toggle.
+- Any **security policy** change — auth path, JWT handling, CORS, secrets handling, rate-limit, audit-log gating.
+- Any **business rule** change — domain invariant, pricing/scoring rule, eligibility check, anything that would update `delivery/business/business-rules.md`.
+- Any **schema migration** — new column, dropped column, changed type, new index that affects query plans, new table.
+- Any **cross-cutting file** change per [`cross-cutting-files.md`](cross-cutting-files.md) — registries, catalogs, dispatchers. (Cross-cutting files drive the sequential-stories rule; a silent L1 here breaks downstream stories.)
+- Any **upstream API contract** change — request/response shape on a public REST endpoint, event-name change in slog (dashboards filter on these), webhook payload, exported package signature consumed by another service.
+
+Veto is conservative on purpose. A false positive (a legitimate L1
+routed through humans) costs 5 minutes of triage. A false negative (a
+silent RLS auto-resolve that ships) costs an incident.
+
+### Three verbatim examples (copied from real `.reconcile.md` files)
+
+**Example 1 — allowed L1 (DECISION, project convention).** From
+`story-01-historique-snapshots.reconcile.md`:
+
+> **Tag**: DECISION_ENVELOPE_SINGULAR_ERROR | **Severity**: L1
+> **Summary**: Story AC-T06 prescribed plural `errors: [{...}]` 404 envelope, but project-wide canonical at `internal/api/response.go` and every existing handler is singular `error: {code, message}`. Coder followed project convention.
+> **File**: `backend/internal/interface/handler/search.go` (ListByCase 404 path)
+> **SpecRef**: AC-T06
+> **Status**: RESOLVED
+> **Why**: Project consistency wins. Future story templates should reference the singular envelope. L1 candidate: update spec template (one-line).
+
+Clean producer-pays: no observable change (same wire shape as every
+other endpoint), reversible, doc-only follow-up queued separately.
+
+**Example 2 — allowed L1 (DECISION, narrow interface widening).** From
+the same file:
+
+> **Tag**: DECISION_COUNT_AT_TIMESTAMP_ON_EXISTING_PARTYREPO | **Severity**: L1
+> **Summary**: `CountAtTimestamp` added as a method on the existing `partiesdomain.PartyRepository` interface (vs. a new sibling interface). Same Bun impl, narrow surface increase.
+> **File**: `backend/internal/parties/domain/repository.go`
+> **SpecRef**: AC-T03
+> **Status**: RESOLVED
+> **Why**: Smaller blast radius than a new iface; mirrors the existing `CountByCase` shape.
+
+Clean producer-pays: design tradeoff, no observable behavior change,
+reversible.
+
+**Example 3 — BORDERLINE: RLS-adjacent, still RESOLVED — discuss.** From
+`story-02b-postgres-rls-parties-and-search-results.reconcile.md`:
+
+> **Tag**: BC_CASCADE_AUDIT_RLS_FIX | **Severity**: L1
+> **Summary**: `audit/application/list_events_by_case.go` cascade query subqueries `parties` (now RLS-protected by 017). Without GUC the `target_type='party'` branch silently drops every party.* audit event from the cascade. Fix landed in this diff: `ListEventsByCase` widened to `bun.IDB`; usecase runs both the cases pre-flight AND the cascade query inside a single WithRLSTx so the parties subquery sees the office GUC
+> **File**: backend/internal/audit/application/list_events_by_case.go:177-191; ...
+> **SpecRef**: AC-T07 (no regression on existing tests) — strictly out of explicit AC-T03 BC list but in-scope by the regression gate
+> **Status**: RESOLVED
+> **Why**: Single-tx wrap (cases pre-flight + cascade subquery in same tx) is optimal — GUC set once, applies to both. Reviewer verified cycle-1.
+
+This one touches the RLS forbidden category on its face — the diff
+adjusts a transaction scope so a subquery sees the right GUC. But it
+is **not a new RLS policy and not a widening of an existing policy**:
+it is a callsite-level fix that makes a regression-gated handler honor
+the RLS policy that story-02a already shipped. The reviewer
+differential-checked it cycle-1; Phase 5c kept it L1 because the
+producer-pays condition holds (fix landed inline, reversible by
+reverting the tx widening). The line: **if the diff changes a policy
+or widens what data crosses a tenant boundary, route through
+`/bmad-correct-course`. If the diff makes an already-shipped policy
+correctly cover a previously-uncovered callsite, RESOLVED at handoff
+is acceptable provided the reviewer signed off.** When in doubt,
+NEEDS_PROMOTION — see veto reasoning above.
+
+---
+
 ## The `story-NN-<slug>.reconcile.md` schema (one file, two sections)
 
 Created by **Team Lead at Phase 5c** (Deviations section) and updated by
@@ -261,11 +498,33 @@ _(or `_(no L3 entries)_` if reconcile produced no blockers)_
 <!-- RECONCILE_DONE: <ISO-8601 UTC timestamp> -->
 ```
 
+> **Transition note (epic-16 onwards):** The `**Tag**:` prefix is now restricted to
+> the 8-value enum below. Historical `.reconcile.md` files created before epic-16 are
+> NOT retroactively re-validated — the hook only runs on files touched during the
+> current session (`SubagentStop`), so old free-form tags are grandfathered in place.
+> New deviations from epic-16 onwards must use one of the 8 enum prefixes.
+
 ### Required fields per Deviation entry
 
 | Field | Type | Notes |
 |---|---|---|
-| `Tag` | enum | `AC-N` (N is the AC number) \| `SPEC_GAP` \| `DECISION` \| `OUT-OF-SCOPE` \| `SKILL_GAP` |
+| `Tag` | enum | `ENUM_PREFIX[_SUFFIX]` — see the prefix enum below |
+**Prefix enum (8 values, exhaustive):**
+- `SPEC_GAP` — the spec was unclear/wrong, coder interpreted
+- `DECISION` — design tradeoff with no business impact
+- `SCOPE_CUT` — scope reduced (deferred to follow-up story, AC out-of-scope)
+- `BOY_SCOUT` — cleanup outside scope
+- `DOMAIN_NEW` — new domain concept surfaced
+- `PROCESS` — framework/protocol deviation
+- `TEST_DRIFT` — test fixture/helper/pattern didn't match the spec
+- `UPSTREAM_MISMATCH` — external API contract differed from spec
+
+**Suffix**: free-form UPPER_SNAKE_CASE after the first `_` of the tag (e.g., `SPEC_GAP_DEPT_COUNT_MISMATCH`).
+
+A tag that does not start with one of the 8 prefixes is invalid — the post-delivery hook will REJECT the `.reconcile.md` file.
+
+Source of truth for the enum: this file. If the enum changes, update both this table and `.claude/tools/hooks/check-post-delivery-schema.sh`.
+
 | `Severity` | enum | `L1` \| `L2` \| `L3` — coder's initial assessment, may be re-classified by reconcile |
 | `Summary` | string | one line, no jargon — readable by a non-coder |
 | `File` | string | `path:line` (or `path` if no specific line) — what was changed |
@@ -436,10 +695,10 @@ Queue scope-overlap check: 3 OPEN L2 entries reviewed, 1 overlap (Q-014 affects 
 
 The story spec file (`story-NN-<slug>.md`) is **never modified** by
 Phase 5c, `/bmad-correct-course`, or `/bmad-retrospective`. It carries
-its own append-only `## Review Log` section (Team Lead per-cycle) and
-`## Prod Validation` section (Team Lead Phase 7) — those stay inline.
-The Deviations + Reconciliation pair lives entirely in the companion
-file.
+its own append-only `## Review Log` section (Team Lead per-cycle) — that
+stays inline. The Deviations + Reconciliation pair lives entirely in the
+companion file. (Historical stories may carry a `## Prod Validation`
+block from before EV-0007 retired Phase 7; new stories do not.)
 
 ---
 

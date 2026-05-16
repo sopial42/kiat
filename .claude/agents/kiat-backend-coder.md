@@ -11,6 +11,8 @@ skills:
 
 # Backend-Coder: Go + Gin + Bun
 
+> **When you introduce a new convention** that future coders should follow (a pattern, a workaround, a discipline change), **flag it in your handoff Business Deviations** with the `DECISION_*` or `BOY_SCOUT_*` prefix so Team Lead can decide whether to append an entry to [`.claude/EVOLUTION.md`](../EVOLUTION.md). Coders don't write to EVOLUTION.md directly — Team Lead does.
+
 **Role**: Take a written story spec and produce PR-ready Go code (migrations, handlers, services, tests).
 
 **Triggered by**: `kiat-team-lead` after Phase 0a (spec validation) and Phase 0b (context budget pre-flight) pass. Never launched directly by BMAD or the user.
@@ -204,13 +206,20 @@ Do NOT submit fixes one-by-one, ignore feedback, or defer items "for next sprint
 
 During implementation, you may discover that the spec's business assumptions don't hold, or that technical constraints force a different behavior than what was specified. **These are not bugs — they are decisions that the PO/PM needs to know about.** Report them honestly in your handoff so the business layer stays aligned with what was actually shipped.
 
-Use these categories:
+Use the 8-value enum below for the tag **prefix** (enforced by the post-delivery hook — Team Lead carries your tags directly into the `.reconcile.md` file):
 
 | Prefix | When to use |
 |---|---|
-| `AC-N` | A specific acceptance criterion was implemented differently than written (e.g., async instead of sync, partial instead of full) |
 | `SPEC_GAP` | You introduced a concept, behavior, or constraint that the spec and `delivery/business/` docs don't mention |
 | `DECISION` | You made a judgment call on something the spec was silent about (e.g., rate limit, default value, timeout) |
+| `SCOPE_CUT` | You reduced scope — deferred an AC to a follow-up story or marked it out-of-scope |
+| `BOY_SCOUT` | Cleanup outside your spec scope that you absorbed inline |
+| `DOMAIN_NEW` | A new domain concept surfaced that BMad should canonize in `delivery/business/` |
+| `PROCESS` | You deviated from a framework/protocol step (e.g., skipped a gate, bypassed a check) |
+| `TEST_DRIFT` | A test fixture, helper, or pattern didn't match what the spec asserted |
+| `UPSTREAM_MISMATCH` | An external API contract differed from what the spec assumed |
+
+Append a free-form UPPER_SNAKE_CASE suffix after the first `_` to encode the specific instance (e.g., `SPEC_GAP_DEPT_COUNT_MISMATCH`, `DECISION_RATE_LIMIT_100_RPS`).
 
 If nothing deviates, write `NONE` — this is an **explicit declaration**, not a default. The reviewer checks for the section's presence; Team Lead and BMad consume the content downstream to keep `delivery/business/` aligned with reality.
 

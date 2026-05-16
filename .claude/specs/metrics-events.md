@@ -1,11 +1,25 @@
-# Metrics Events: JSONL Event Log Schema (v1.1)
+# Metrics Events: JSONL Event Log Schema (v2)
 
 > **Why this exists:** Kiat's enforcement layers already emit audit lines in agent outputs. This doc defines the **collection format** so those lines become structured data we can report on.
 
 **Format:** Append-only JSONL (one JSON object per line).
-**Location:** `delivery/metrics/events.jsonl`
+**Location:** `delivery/metrics/events.jsonl` (active, v2 events only)
+**Archive:** `delivery/metrics/events.archive-2026-05-16.jsonl` (legacy v1/v1.1 events — read-only by convention)
 **Writer:** Team Lead (only).
-**Reader:** `kiat/.claude/tools/report.py` — generates weekly/epic markdown reports.
+**Reader:** `.claude/tools/report.py` — generates weekly/epic markdown reports.
+
+---
+
+## Schema version history
+
+| Version | Date | Change |
+|---|---|---|
+| v1 | 2026-04 | Initial intra-story event types (granular) |
+| v1.1 | 2026-04 | Rollup-first: one `story_rollup` per story replaces 8-10 granular events |
+| v1.2 | 2026-05 | Reconciliation events (`reconcile_complete`, `reconcile_failed`, `epic_block`, `epic_unblock`, `queue_supersede`) |
+| **v2** | **2026-05-16** | **Archive cut + canonical schema. `business_deviations` always object; `mode` enum-restricted; `spec` block required; `deviations_declared_explicitly` added; `prod_validation` retired. Active file restarted empty.** |
+
+**Archive cut (2026-05-16):** `delivery/metrics/events.jsonl` was moved to `events.archive-2026-05-16.jsonl`. The archive is read-only and holds all v1/v1.1/v1.2 events. New events (v2) write to the fresh `events.jsonl`. `report.py --scope all-time` reads both files and normalizes legacy events in-memory.
 
 ---
 
@@ -59,94 +73,74 @@ These two event types cover every normal story. Team Lead writes exactly one of 
 
 ---
 
-### `story_rollup` (PRIMARY — success path)
+### `story_rollup` (PRIMARY — success path, v2 schema)
 
 Emitted by Team Lead **once per successful story**, at the moment Team Lead marks the story as PASSED. Contains everything `report.py` needs.
 
+#### v2 template (copy-paste this, fill in your values)
+
 ```json
-{
-  "ts": "2026-04-10T14:45:00Z",
-  "story": "story-27",
-  "epic": "epic-3",
-  "event": "story_rollup",
-  "outcome": "passed",
-  "bmad_spec_bytes": 18420,
-  "spec_verdict": "CLEAR",
-  "spec_clarification_rounds": 0,
-  "preflight": {
-    "backend_coder": {"estimated_tokens": 21000, "budget": 25000, "result": "pass"},
-    "frontend_coder": {"estimated_tokens": 19000, "budget": 25000, "result": "pass"}
-  },
-  "reviews": {
-    "backend": {
-      "cycles": 2,
-      "final_verdict": "APPROVED",
-      "clerk_skill_triggered": true,
-      "clerk_verdict": "PASSED",
-      "test_patterns_consistent": true,
-      "total_issues_across_cycles": 3
-    },
-    "frontend": {
-      "cycles": 1,
-      "final_verdict": "APPROVED",
-      "clerk_skill_triggered": false,
-      "clerk_verdict": null,
-      "test_patterns_consistent": true,
-      "total_issues_across_cycles": 0
-    }
-  },
-  "fix_budget_used_min": 13,
-  "total_elapsed_min": 43,
-  "business_deviations": {
-    "count": 2,
-    "backend": ["AC-3: bulk delete → async job queue", "SPEC_GAP: soft delete for GDPR"],
-    "frontend": []
-  }
-}
+{"ts":"2026-05-17T10:00:00Z","schema":"v2","event":"story_rollup","story":"<story-NN-slug>","epic":"<epic-X-slug>","outcome":"passed","size":"XS","scope":"infra","layers":["framework"],"mode":"normal","spec":{"verdict":"CLEAR","byte_count":3456,"clarification_rounds":0,"writer_mode":"enrichment"},"preflight":{"backend_coder":{"estimated_tokens":18000,"budget":35000,"result":"pass"}},"review_cycles":[{"domain":"backend","cycles":1,"final_verdict":"APPROVED","clerk_skill_triggered":false,"clerk_verdict":null,"test_patterns_consistent":true,"total_issues_across_cycles":0}],"fix_budget_used_min":0,"test_patterns_drift":false,"business_deviations":{"count":0,"backend":[],"frontend":[]},"deviations_declared_explicitly":true,"failure_pattern_id":null,"code_commit_sha":"<40-hex-sha>"}
 ```
 
-**Field semantics:**
+**Field semantics (v2 canonical):**
 
 - `ts` (required): ISO 8601 UTC timestamp of when the story was marked PASSED
+- `schema` (required, v2+): always `"v2"` for new events. Absent on legacy events — `report.py` treats absent as `"v1"`.
 - `story`, `epic`, `event` (required): standard identification
 - `outcome` (required): always `"passed"` for this event type
-- `bmad_spec_bytes` (int): byte size of the **full story file** at reception (both layers: `## Business Context` written by BMad + technical sections written by the tech-spec-writer). Field name kept for schema backward-compat; the value covers both layers.
-- `spec_verdict` (enum): final verdict from `kiat-validate-spec` after any clarification rounds (`CLEAR` | `NEEDS_CLARIFICATION` | `BLOCKED`)
-- `spec_clarification_rounds` (int): number of clarification rounds (to the tech-spec-writer and/or BMad, depending on which layer the gap was in) before `CLEAR` was reached
-- `preflight` (object): per-agent context budget pre-flight results. Keys are agent names; values are `{estimated_tokens, budget, result}`. Omit keys for agents that weren't launched (e.g., no backend work).
-- `reviews` (object): per-domain review rollup. Keys are `"backend"` and/or `"frontend"`. Each contains:
-  - `cycles` (int): total number of review cycles (1 means approved on first try)
-  - `final_verdict` (enum): `"APPROVED"` | `"NEEDS_DISCUSSION"` | `"BLOCKED"` (final verdict when the story became PASSED — usually `APPROVED`, but `NEEDS_DISCUSSION` resolved by Team Lead arbitration is also possible)
-  - `clerk_skill_triggered` (bool): did any review cycle invoke `kiat-clerk-auth-review`?
-  - `clerk_verdict` (enum or null): if triggered, final Clerk verdict. Null otherwise.
-  - `test_patterns_consistent` (bool): did ALL cycles confirm the coder's implementation matched their acknowledged patterns? (false if any cycle flagged drift)
-  - `total_issues_across_cycles` (int): sum of `issues_count` from all BLOCKED verdicts during the story
-- `fix_budget_used_min` (int): approximate minutes between `fix_budget_started` and story completion. **Team Lead's best estimate** — not required to be precise. Set to 0 if the story was APPROVED on first try without entering a fix cycle.
-- `total_elapsed_min` (int): approximate minutes from story reception to completion. **Team Lead's best estimate.**
-- `business_deviations` (object): summary of deviations from spec reported by coders at Phase 5c. Contains:
-  - `count` (int): total number of deviations across all coders (0 if all reported `NONE`)
-  - `backend` (array of strings): one-line summaries of backend deviations (empty array if `NONE`)
-  - `frontend` (array of strings): one-line summaries of frontend deviations (empty array if `NONE`)
-- `mode` (enum, optional, default `"pipeline"`): `"pipeline"` | `"solo"`. Set to `"solo"` when the story shipped via Phase -2 solo-mode (Track A or Track B). Omitted = `"pipeline"`.
-- `solo_track` (enum, optional, REQUIRED when `mode == "solo"`): `"A"` | `"B"`.
-  - `"A"` = XS solo (≤5 files + ≤1 test, standing user authz, no cross-cutting, spec CLEAR — see [`kiat-team-lead.md` Phase -2 Track A](../agents/kiat-team-lead.md#track-a--xs-solo-lightweight-gate))
-  - `"B"` = S solo (≤10 files chirurgical, per-story explicit authz, scope ∈ allowed set, zero behavior change — see [`kiat-team-lead.md` Phase -2 Track B](../agents/kiat-team-lead.md#track-b--s-solo-full-5-rule-gate-unchanged))
-  - When `mode == "pipeline"`, this field MUST be absent (not `null`).
+- `size` (required): `"XS"` | `"S"` | `"M"` | `"L"` — story T-shirt size
+- `scope` (required): e.g. `"infra"`, `"backend"`, `"frontend"`, `"full-stack"` — story scope category
+- `layers` (required, array of strings): e.g. `["framework"]`, `["backend","frontend"]` — architectural layers touched
+- `code_commit_sha` (required, string, 40-hex): the SHA of the commit Team Lead created at Phase 6 Gate 1. **MUST differ from the parent SHA.** Without this field, `report.py` rejects the rollup as malformed. The 2026-05-01 incident — 5 rollups written `passed` while no commit existed — is the canonical reason this field is required.
+- `mode` (required, enum): `"normal"` | `"solo"` | `"team_lead_authored"`. **No other values accepted — custom values are a protocol violation.**
+  - `"normal"` = full pipeline (tech-spec-writer → coders → reviewers)
+  - `"solo"` = Phase -2 solo track (requires `solo_track` and `solo_authz`)
+  - `"team_lead_authored"` = Team Lead wrote the spec inline (spec bypassed; use `spec.verdict: "BYPASSED"`)
+- `solo_track` (enum, REQUIRED when `mode == "solo"`): `"A"` | `"B"`. MUST be absent when `mode != "solo"`.
+- `solo_authz` (string, REQUIRED when `mode == "solo"`): the authz token from the user, e.g. `"go 2026-05-16"`.
+- `spec` (required, object): spec validation block. Required on every rollup.
+  - `verdict` (enum): `"CLEAR"` | `"NEEDS_CLARIFICATION"` | `"BLOCKED"` | `"BYPASSED"` (BYPASSED = Team Lead authored inline, writer not invoked)
+  - `byte_count` (int): byte size of the full story file at Phase 0a check (`wc -c`)
+  - `clarification_rounds` (int): number of `SPEC_CLARIFICATION` rounds before `CLEAR` was reached; sourced from `SPEC_HANDOFF.clarification_rounds`. 0 if CLEAR on first pass or BYPASSED.
+  - `writer_mode` (string): `"enrichment"` | `"greenfield"` | `"team_lead_authored"` — matches SPEC_HANDOFF `mode` field
+- `preflight` (object): per-agent context budget pre-flight results. Keys are agent names; values are `{estimated_tokens, budget, result}`. Omit keys for agents not launched. Use `"n/a — solo Track B"` string for the value if solo track bypassed pre-flight.
+- `review_cycles` (array of objects): one entry per domain that had review activity. Each object:
+  - `domain` (enum): `"backend"` | `"frontend"`
+  - `cycles` (int): total review cycles (1 = approved first try)
+  - `final_verdict` (enum): `"APPROVED"` | `"NEEDS_DISCUSSION"` | `"BLOCKED"`
+  - `clerk_skill_triggered` (bool): any cycle invoked `kiat-clerk-auth-review`?
+  - `clerk_verdict` (enum or null): final Clerk verdict if triggered, else null
+  - `test_patterns_consistent` (bool): all cycles confirmed patterns match? false if any cycle flagged drift
+  - `total_issues_across_cycles` (int): sum of issues across all BLOCKED cycles
+- `fix_budget_used_min` (int or null): **retrospective metric only** — approximate minutes in fix cycles after first BLOCKED verdict. The 45-min gate was retired by [EV-0003](../EVOLUTION.md#ev-0003--retire-fix_budget45min). 0 if no fix cycle, null if unknown.
+- `test_patterns_drift` (bool): true if any `review_cycles` entry has `test_patterns_consistent: false`.
+- `business_deviations` (required, object): summary of coder deviations from spec (Phase 5c). **Always an object — never an integer.**
+  - `count` (int): total deviations across all coders. 0 if all reported `NONE`.
+  - `backend` (array of strings): one-line summaries of backend deviations. `[]` if none.
+  - `frontend` (array of strings): one-line summaries of frontend deviations. `[]` if none.
+- `deviations_declared_explicitly` (required when `business_deviations.count == 0`, bool): distinguishes "zero deviations because the coder declared NONE explicitly" (true) from "zero deviations because the coder didn't write a Business Deviations block at all" (false — canary for missing block). Always set this honestly. `false` = protocol gap, not just absence of deviations.
+- `failure_pattern_id` (string or null): `FP-NNN` if this story matched a documented failure pattern, else null.
+
+**Fields retired in v2 (do not include in new events):**
+
+- `prod_validation` — retired by [EV-0007](../EVOLUTION.md#ev-0007--retire-phase-7-prod_validation) on 2026-05-16. Legacy archive events keep it untouched — no migration. `report.py` ignores it on read.
+- `bmad_spec_bytes`, `spec_verdict`, `spec_clarification_rounds` — replaced by the `spec` object block above. Legacy events keep them; new v2 events use the `spec` block only.
+- `reviews` (object keyed by domain) — replaced by `review_cycles` (array). Legacy events keep the old shape; `report.py` normalizes both.
 
 **On precision of timestamps:** Team Lead does NOT have a reliable system clock. The `ts`, `fix_budget_used_min`, and `total_elapsed_min` fields are best-effort estimates based on the conversation context. Acceptable precision: ±5 minutes. If Team Lead cannot estimate, set the minute fields to `null` — `report.py` will handle it gracefully.
 
-#### How Team Lead tracks the 45-minute fix budget (single source of truth)
+#### How Team Lead estimates `fix_budget_used_min` (retrospective metric, v2)
 
-The rule itself (45 minutes per story, immediate escalations bypass the budget) is stated in [`README.md`](../../README.md#layer-2--wall-clock-retry-budget-not-cycle-count) (Layer 2) and in [`kiat-team-lead.md`](../agents/kiat-team-lead.md#retry-budget-time-based-not-cycle-based) (Retry budget section). The **tracking methodology** — how Team Lead turns that rule into a concrete timestamp — lives here because it is the same mechanism that feeds the `fix_budget_used_min` rollup field:
+The 45-min escalation gate was retired by [EV-0003](../EVOLUTION.md#ev-0003--retire-fix_budget45min) after 80 stories showed it never fired. The field stays in the rollup for retro analytics, but it is **never a trigger** — Team Lead never branches on it, never escalates because of it, never prepends it to a retry prompt. Re-cycles are bounded by the qualitative signals listed in [`kiat-team-lead.md`](../agents/kiat-team-lead.md#retry-budget-qualitative-signals-only) (spec ambiguity, security issue, ≥ 3 BLOCKED cycles).
 
-1. **Start:** record `fix_budget_started_at` the first time you send BLOCKED issues back to a coder. This is the only clock. Do NOT start it on test failures inside Phase 3 unless those failures end up BLOCKED by a reviewer.
-2. **On each re-review cycle:** compute `elapsed = now - fix_budget_started_at` using your best-effort sense of wall-clock time from the conversation (message spacing, prior step durations). You do not have a real clock — ±5 minutes is acceptable.
-3. **Decision on each BLOCKED re-review:**
-   - `elapsed < 45 min` → allow another fix cycle, no matter the cycle number (cycle 3, 4, 5 all OK)
-   - `elapsed ≥ 45 min` → escalate with `reason: "fix_budget_exhausted"`, do NOT run another cycle
-4. **Rollup:** at story completion, `fix_budget_used_min = elapsed` at the final re-review (or `0` if the story never entered a fix cycle, or `null` if you truly cannot estimate).
+Tracking methodology for the retrospective number:
 
-Immediate-escalation cases (security blocker, `NEEDS_DISCUSSION` that Team Lead cannot arbitrate, spec clarification request) bypass the clock entirely — see the Retry Budget section of `kiat-team-lead.md` for the full list. They produce `story_escalated` events with `fix_budget_used_min: null` when they fire before any fix cycle has started.
+1. **Mental start point:** the first time you send BLOCKED issues back to a coder. Do NOT count test failures inside Phase 3 unless those failures end up BLOCKED by a reviewer.
+2. **At story completion:** estimate the elapsed minutes between that point and the final re-review using your best-effort sense of wall-clock time from the conversation (message spacing, prior step durations). You do not have a real clock — ±5 minutes is acceptable.
+3. **Rollup:** `fix_budget_used_min = <estimate>` (or `0` if the story never entered a fix cycle, or `null` if you truly cannot estimate).
+
+Escalation cases (security blocker, `NEEDS_DISCUSSION` that Team Lead cannot arbitrate, spec clarification request, ≥ 3 BLOCKED cycles without convergence) produce `story_escalated` events with `fix_budget_used_min: null` when they fire before any fix cycle has started, or with the best-effort estimate otherwise.
 
 ---
 
@@ -187,7 +181,7 @@ Everything in `story_rollup` PLUS:
 - `failure_pattern_id` (string, optional): if the escalation matches a documented `FP-NNN` in `failure-patterns.md`
 - `note` (string, optional): free-text context for why it was escalated
 - `reviews` can be empty `{}` if escalation happened before any reviewer ran
-- `fix_budget_used_min` can be `null` if escalation happened before the fix budget started
+- `fix_budget_used_min` can be `null` if escalation happened before any fix cycle started (retrospective metric only — the 45-min gate was retired by EV-0003)
 
 ---
 
@@ -358,6 +352,48 @@ Emitted by Team Lead (or by a human via a manual append) when an
 
 ---
 
+### `queue_supersede` (v1.2 — added by EV-0002)
+
+Emitted by Team Lead at Phase 0c **in lieu of `epic_block`** when the
+scope-overlap scan finds a Q-ID that the new story explicitly declares
+in its `## Supersedes:` section. The story is not blocked — it lands
+and the Q-ID is closed as `[SUPERSEDED]` in the queue. **Emitted BEFORE
+Phase 0b runs** so the queue stays consistent even if the budget check
+later fails.
+
+```json
+{
+  "ts": "2026-05-16T23:30:00Z",
+  "story": "story-NN",
+  "epic": "epic-X",
+  "event": "queue_supersede",
+  "queue_id": "Q-058",
+  "deviation_tag": "AC_T13_FR27_WIDGET_INTEGRATION_DEFERRED",
+  "summary": "this story IS the FR27 widget integration",
+  "source": "kiat-team-lead"
+}
+```
+
+**Field semantics:**
+
+- `queue_id` (string, required): the `Q-NNN` ID being superseded
+- `deviation_tag` (string, required): copied verbatim from the queue
+  entry's heading tag (post-`Q-NNN — [STATUS]`)
+- `summary` (string, required): one-line rationale, copied from the
+  story's `## Supersedes:` bullet for this Q-ID
+- `source` (enum, required): always `"kiat-team-lead"` (Phase 0c is
+  the only writer)
+
+`queue_supersede` is mutually exclusive with `epic_block` for the same
+`(story, queue_id)` pair — Team Lead emits one or the other, never
+both, per Phase 0c's branching logic
+([`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory)).
+Reverting a supersession (e.g., the human later disagrees) is handled
+out-of-band by reopening a new `Q-NNN` entry — the original
+`queue_supersede` event stays as audit trail.
+
+---
+
 ### v1.0 Legacy Events (deprecated — still parsed by report.py for backward compat)
 
 The event types below are from v1.0 (intra-story phase transitions). Team Lead should NOT emit these anymore — use `story_rollup` / `story_escalated` instead. `report.py` still reads them for stories written before v1.1, and aggregates them on the fly if no rollup is present.
@@ -502,8 +538,8 @@ Emitted when a reviewer returns a verdict. **Most important event type — drive
 
 ---
 
-### 7. `fix_budget_started` (legacy)
-Emitted when a coder receives BLOCKED feedback and starts the 45-min clock.
+### 7. `fix_budget_started` (legacy, retired)
+Historically emitted when a coder received BLOCKED feedback, to start the 45-min retry clock. The 45-min gate was retired by [EV-0003](../EVOLUTION.md#ev-0003--retire-fix_budget45min); the event is no longer emitted but the shape is preserved here so `report.py` can still parse historical lines without crashing.
 
 ```json
 {
@@ -515,7 +551,7 @@ Emitted when a coder receives BLOCKED feedback and starts the 45-min clock.
 ```
 
 **Fields:**
-- `budget_min` (int): total budget in minutes (default 45)
+- `budget_min` (int): historical budget value (always `45` in the archived lines)
 
 ---
 
@@ -540,7 +576,7 @@ Emitted when Team Lead escalates to `kiat-tech-spec-writer`, BMad, user, or desi
   - `"spec_blocked"` — kiat-validate-spec returned BLOCKED
   - `"spec_clarification"` — kiat-validate-spec returned NEEDS_CLARIFICATION
   - `"budget_overflow"` — context budget exceeded
-  - `"fix_budget_exhausted"` — 45-min clock ran out
+  - `"fix_budget_exhausted"` — historical reason from when the 45-min gate existed; retired by [EV-0003](../EVOLUTION.md#ev-0003--retire-fix_budget45min) and no longer emitted by new stories. Kept in the enum so legacy lines parse.
   - `"needs_discussion"` — reviewer verdict NEEDS_DISCUSSION, Team Lead can't arbitrate
   - `"security_blocker"` — RLS missing, secret in code, etc.
   - `"test_flakiness"` — environmental issue, not code
@@ -592,9 +628,9 @@ JSONL is append-only).
 
 ---
 
-## Writing Events (Team Lead Protocol — v1.1 Rollup-First)
+## Writing Events (Team Lead Protocol — v2 Rollup-First)
 
-**v1.1 rule:** Team Lead writes **exactly ONE event per story**, at the very end of the story, using the Write tool (append mode) or Bash `>> events.jsonl`. The event is a single JSONL line, no pretty-printing.
+**v2 rule:** Team Lead writes **exactly ONE event per story**, at the very end of the story, using Bash `>> events.jsonl` heredoc. The event is a single JSONL line, no pretty-printing. Use the v2 template above — include `"schema": "v2"` and use the `spec` block, `review_cycles` array, and `business_deviations` object form.
 
 ### The only two writes Team Lead does per story
 
@@ -633,17 +669,24 @@ If Team Lead forgets to write the rollup at story completion, the story is invis
 
 ## Reading Events (Report Generator)
 
-See `kiat/.claude/tools/report.py`. The reader:
-1. Opens `delivery/metrics/events.jsonl`
-2. Parses each line as JSON (skips malformed lines with a warning)
-3. Groups by story ID
-4. Computes per-story and aggregate metrics
-5. Outputs markdown to stdout or a file
+See `.claude/tools/report.py`. The reader:
+1. By default: opens `delivery/metrics/events.jsonl` (active v2 events only)
+2. With `--scope all-time`: also reads `delivery/metrics/events.archive-2026-05-16.jsonl` and normalizes legacy events in-memory to v2 shape before computing metrics
+3. Parses each line as JSON (skips malformed lines with a warning)
+4. Groups by story ID
+5. Computes per-story and aggregate metrics
+6. Outputs markdown to stdout or a file
+
+**Legacy normalization** (applied in-memory by `report.py` when reading the archive):
+- `business_deviations` as int → `{count: <int>, backend: [], frontend: []}` object
+- `spec_verdict` + `spec_clarification_rounds` flat fields → `spec: {verdict: ..., byte_count: null, clarification_rounds: ..., writer_mode: "unknown"}`
+- `reviews` object → `review_cycles` array (one entry per domain key)
+- `prod_validation` field → ignored
 
 Metrics derivable from this schema:
 - Pre-flight overflow rate (count of `preflight` with `result: "overflow"` ÷ total `preflight` events)
 - Verdict distribution (count of `review` events grouped by `verdict`)
-- Fix budget utilization (avg `elapsed_min` across `escalated` with `reason: "fix_budget_exhausted"`)
+- Fix budget distribution (histogram + p90 of `fix_budget_used_min` across rollups — retrospective; the 45-min gate was retired by EV-0003)
 - Clerk skill trigger rate (count of `review` with `clerk_skill_triggered: true` ÷ total reviews)
 - Test patterns consistency (count of `review` with `test_patterns_consistent: false`)
 - Escalation reasons histogram (count of `escalated` events by `reason`)
@@ -656,14 +699,17 @@ Metrics derivable from this schema:
 
 ## Schema Versioning
 
-The initial schema version is **v1**. Any breaking change to existing event
-shapes must:
-1. Bump the schema version (v2, v3, ...)
-2. Add a `schema_version` field to new events
-3. Keep the reader backward-compatible with older events
+Current version: **v2** (active `events.jsonl`). Legacy v1/v1.1/v1.2 events in `events.archive-2026-05-16.jsonl`.
 
-**Additive changes** (new event types, new optional fields with defaults)
-do NOT require a version bump.
+Any breaking change to existing event shapes must:
+1. Bump the schema version (v3, ...)
+2. Add `"schema": "v3"` (or equivalent) to new events
+3. Archive the current active file, restart empty
+4. Keep the reader backward-compatible with all prior archives
+
+**Additive changes** (new optional fields with defaults) do NOT require a version bump or archive cut.
+
+**v2 field `"schema": "v2"`** — present on all events written after 2026-05-16. Absent on legacy archive events (treat absent as `"v1"`).
 
 ---
 
