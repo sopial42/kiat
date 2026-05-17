@@ -253,9 +253,9 @@ Write `No mockups — implementer uses the existing design system`. The frontend
 
 ### Handoff to Team Lead (which orchestrates the tech-spec-writer)
 
-Once BMad has written a story's `## Business Context` and the user is ready to turn it into code, the user invokes **Team Lead** (`kiat-team-lead`) on the story file. Team Lead detects that the technical sections are missing and enters **Phase -1**, where it spawns `kiat-tech-spec-writer` as a sub-agent. The writer runs in **enrichment mode**: it preserves the pre-existing `## Business Context` intact, reads any `../business/` docs linked from it, and appends the technical sections below.
+Once BMad has written a story's `## Business Context` and the user is ready to turn it into code, the user invokes **Team Lead** (`kiat-team-lead`) on the story file. Team Lead detects that the technical sections are missing and enters **Stage 2**, where it spawns `kiat-tech-spec-writer` as a sub-agent. The writer runs in **enrichment mode**: it preserves the pre-existing `## Business Context` intact, reads any `../business/` docs linked from it, and appends the technical sections below.
 
-The user never invokes `kiat-tech-spec-writer` directly — Team Lead is the single entry point for all technical work. See [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) for Phase -1 and [`../../.claude/agents/kiat-tech-spec-writer.md`](../../.claude/agents/kiat-tech-spec-writer.md) for the enrichment-mode protocol on the writer side.
+The user never invokes `kiat-tech-spec-writer` directly — Team Lead is the single entry point for all technical work. See [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) for Stage 2 and [`../../.claude/agents/kiat-tech-spec-writer.md`](../../.claude/agents/kiat-tech-spec-writer.md) for the enrichment-mode protocol on the writer side.
 
 ---
 
@@ -266,9 +266,9 @@ Every `_epic.md` and `story-NN-slug.md` carries a `**Status**:` line at the **to
 | Emoji | Status | Meaning | Who sets it |
 |---|---|---|---|
 | 📥 | `Backlog` | Known work, not planned for the current cycle | BMad (when placing a story in a future epic without a schedule) |
-| 📝 | `Drafted` | File exists with `## Business Context` populated; technical sections are empty or stubbed | BMad on creation, or tech-spec-writer during Phase -1 enrichment |
-| 🚧 | `In Progress` | Technical sections complete, Team Lead has started or is running the pipeline | Team Lead at Phase 0b transition |
-| ✅ | `Done` | Reviewers both APPROVED, rollup event written, (if applicable) Phase 7 prod validation passed | Team Lead at Phase 6 completion |
+| 📝 | `Drafted` | File exists with `## Business Context` populated; technical sections are empty or stubbed | BMad on creation, or tech-spec-writer during Stage 2 enrichment |
+| 🚧 | `In Progress` | Technical sections complete, Team Lead has started or is running the pipeline | Team Lead at Stage 3.3 transition |
+| ✅ | `Done` | Reviewers both APPROVED, rollup event written, Phase 7 (retired by EV-0007 — no longer runs) | Team Lead at Stage 7 completion |
 | 🛑 | `Blocked` | Pipeline escalated — spec gap, security finding, fix budget exhausted, prod validation failed | Team Lead on escalation |
 
 **Format in the file** (first line after the title):
@@ -283,8 +283,8 @@ Every `_epic.md` and `story-NN-slug.md` carries a `**Status**:` line at the **to
 
 ```
 📥 Backlog  → 📝 Drafted        (BMad or writer adds content)
-📝 Drafted  → 🚧 In Progress    (Team Lead starts Phase 0b)
-🚧 In Progress → ✅ Done         (Phase 6 rollup success + Phase 7 if applicable)
+📝 Drafted  → 🚧 In Progress    (Team Lead starts Stage 3.3)
+🚧 In Progress → ✅ Done         (Stage 7 rollup success — Phase 7 retired by EV-0007)
 🚧 In Progress → 🛑 Blocked     (any escalation)
 🛑 Blocked → 🚧 In Progress     (unblock — human resumed the pipeline)
 ✅ Done → (terminal; no further edits except retrospective notes)
@@ -369,7 +369,7 @@ Never rewrite previous cycles. Corrections go in a new cycle block with a note; 
 
 ---
 
-## Prod Validation (Phase 7 artifact)
+## Prod Validation (Phase 7 artifact — retired by EV-0007, kept for historical stories)
 
 Production-affecting stories carry a `## Prod Validation` section **below `## Review Log`**. Template scaffolds it as:
 
@@ -379,7 +379,7 @@ Production-affecting stories carry a `## Prod Validation` section **below `## Re
 _(not yet validated)_
 ```
 
-Team Lead replaces this placeholder after executing Phase 7, per the protocol in [`../../.claude/agents/kiat-team-lead.md`](../../.claude/agents/kiat-team-lead.md) Phase 7.
+_Phase 7 was retired by [EV-0007](../../.claude/EVOLUTION.md#ev-0007--retire-phase-7-prod_validation). New stories leave this section empty; existing stories keep their historical content._
 
 ---
 
@@ -390,7 +390,7 @@ same directory level:
 
 ```
 delivery/epics/epic-X/
-├── story-NN-<slug>.md             ← spec (read-only after Phase 0)
+├── story-NN-<slug>.md             ← spec (read-only after Stage 3 validation)
 └── story-NN-<slug>.reconcile.md   ← deviations + reconciliation
                                        (only when deviations exist)
 ```
@@ -402,14 +402,14 @@ the signal "no deviations".
 
 The companion file holds two sections:
 
-1. **`## Deviations`** — created by **Team Lead at Phase 5c**,
+1. **`## Deviations`** — created by **Team Lead at Stage 6.2**,
    aggregating `Business Deviations:` blocks from each coder's
    handoff. Strict bullet schema (Tag, Severity, Summary, File,
    SpecRef, Status, Why) enforced by
    `.claude/tools/hooks/check-post-delivery-schema.sh`.
 2. **`## Reconciliation`** — filled by **`/bmad-correct-course`**
    (human-invoked) with the L1/L2/L3 triage outcome, ending with the
-   `<!-- RECONCILE_DONE: ... -->` marker that the Phase 6
+   `<!-- RECONCILE_DONE: ... -->` marker that the Stage 7
    reconciliation guard greps for.
 
 ### Why deviation data lives outside the story file
@@ -450,7 +450,7 @@ Authoritative protocol:
 
 ### How `/bmad-correct-course` consumes the companion (per story, human-invoked)
 
-After Team Lead's Phase 5d emits a `RECONCILIATION_NEEDED:` notification, the **human** invokes `/bmad-correct-course` on the story when convenient. Team Lead does NOT auto-spawn it — the BMad skill is human-driven by design ("propose before writing"). The skill:
+After Team Lead's Stage 6.3 emits a `RECONCILIATION_NEEDED:` notification, the **human** invokes `/bmad-correct-course` on the story when convenient. Team Lead does NOT auto-spawn it — the BMad skill is human-driven by design ("propose before writing"). The skill:
 
 1. Reads the `.reconcile.md` companion's `## Deviations` section
 2. Triages each entry by L1/L2/L3 (re-classifies if the coder's hint was wrong)

@@ -31,7 +31,7 @@ The checklist is deliberately external to this file. When you're running the rev
 
 ## The review process
 
-### Phase 1 — Read spec and understand the contract
+### Stage 4.1 — Read spec and understand the contract
 
 Before looking at code, read the story spec at `delivery/epics/epic-X/story-NN.md`. Extract:
 - the acceptance criteria the coder was aiming at,
@@ -41,7 +41,7 @@ Before looking at code, read the story spec at `delivery/epics/epic-X/story-NN.m
 
 Without this, the rest of the review is guesswork — you can spot code smells without the spec but you can't verify that the code actually delivers what was asked for.
 
-### Phase 2 — Verify the coder's test-patterns acknowledgment
+### Stage 4.2 — Verify the coder's test-patterns acknowledgment
 
 The backend coder runs `kiat-test-patterns-check` at Step 0.5 of its workflow and emits a `TEST_PATTERNS: ACKNOWLEDGED` block in its handoff, listing which test-pattern blocks applied to this story. Your job is to cross-check:
 
@@ -51,13 +51,13 @@ The backend coder runs `kiat-test-patterns-check` at Step 0.5 of its workflow an
 
 This phase is fast when the coder did it right (30 seconds of grep). It's the phase that catches the worst failures when they didn't.
 
-### Phase 3 — Apply the checklist
+### Stage 4.3 — Apply the checklist
 
 Read [`references/checklist.md`](references/checklist.md) and work through each category in order. Categories are ordered by blast radius — a migration bug or an RLS failure is much worse than a naming nit, so catching the high-impact categories first means you flag the right things as `BLOCKED`.
 
 Load the checklist once at the start of the phase, not item by item. As you work through the code diff, keep the checklist open and check each category rather than trying to memorize 80 items.
 
-### Phase 3.5 — Cross-check the Business Deviations gate (light content check)
+### Stage 4.3.5 — Cross-check the Business Deviations gate (light content check)
 
 The coder is required to apply the **producer-pays severity gate** ([`reconciliation-protocol.md` §"The producer-pays severity gate"](../../specs/reconciliation-protocol.md)) before classifying any deviation as L2. Your role here is **narrow**: you do NOT judge whether the deviation makes business sense (that's Team Lead / BMad downstream). You judge whether the gate was applied honestly, by checking that each L2 entry's `Why` field names a **concrete observable** — a log line, a metric, a UI surface, an API contract, a CI test, a security scanner.
 
@@ -71,7 +71,7 @@ If you find a weakly-justified L2 entry, return `NEEDS_DISCUSSION` (not `BLOCKED
 
 This phase does NOT touch L1 or L3 entries (their gate logic is different) and does NOT count L2 entries whose Q1 cites a concrete observable. It is purely a check against the queue-as-feature-backlog drift pattern.
 
-### Phase 4 — Decide the verdict
+### Stage 5.1 — Decide the verdict
 
 Apply the decision logic below, then emit the output in the format below.
 
@@ -146,7 +146,7 @@ List each blocker with a file:line reference and the fix. Vague blockers ("the a
 
 ## Merging with the Clerk auth skill
 
-If the diff touches any auth-adjacent code, invoke [`kiat-clerk-auth-review`](../kiat-clerk-auth-review/SKILL.md) after Phase 3 and merge its verdict into yours:
+If the diff touches any auth-adjacent code, invoke [`kiat-clerk-auth-review`](../kiat-clerk-auth-review/SKILL.md) after Stage 4.3 and merge its verdict into yours:
 
 | Your verdict | Clerk verdict | Combined verdict |
 |---|---|---|

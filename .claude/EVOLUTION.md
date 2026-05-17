@@ -523,6 +523,84 @@ Without (1), the load-rate trigger below is post-hoc on transcripts (a `grep "pr
 
 ---
 
+## EV-0010 — Phase numbering → Stage naming (clean reset)
+
+```yaml
+id: EV-0010
+date: 2026-05-17
+type: refactor
+status: applied
+touches:
+  - .claude/agents/**
+  - .claude/specs/**
+  - .claude/skills/kiat-*/**
+  - delivery/**/*.md
+  - CLAUDE.md
+  - README.md
+triggered_by:
+  - DX review concluded that "Phase -2 / -1 / 0a / 0b / 0c / 5b / 5c / 5d"
+    accumulated as patches were stacked on top of an initial 0..6 model
+  - PR #16 introduced semantic STAGE names as a navigation layer but kept
+    phase numbers for cross-reference compatibility; this entry completes
+    the reset by retiring the legacy numbering everywhere except in
+    historical artifacts (EVOLUTION.md prior entries, shipped stories,
+    events.jsonl archive)
+key_metrics:
+  - "Files renamed: 37 (agents, specs, skills, READMEs, templates)"
+  - "Legacy phase references remaining in living docs: 0 (verified via grep)"
+  - "Legacy `Phase 7` references kept in 2 files (epics/README.md + story template) but explicitly annotated as retired by EV-0007"
+decided_by: PR #16 follow-up
+```
+
+### Context
+The protocol used patched phase identifiers — `Phase -2`, `Phase -1`, `Phase 0.1`, `Phase 0.2`, `Phase 0a`, `Phase 0b`, `Phase 0c`, `Phase 1..4`, `Phase 5b`, `Phase 5c`, `Phase 5d`, `Phase 6 Gate 1/2/3`. The negative numbers and the alphabetical sub-phases were the visible scar of patch-on-patch growth. Readers had to memorize "0a comes after 0.1 but before 0c, which runs before 0b", which is exactly the kind of friction that hides bugs.
+
+PR #16 introduced 7 semantic **STAGES** (Intake, Spec Authoring, Validation, Delivery, Review, Closeout, Ship) as a navigation layer, with phase numbers preserved underneath. This entry completes the reset: the phase numbers are renamed to `Stage X.Y` (all positive, dot-separated), and the legacy identifiers are removed from living docs.
+
+### Mapping (old → new)
+
+| Old | New | Step name |
+|---|---|---|
+| `Phase -2` | `Stage 1.1` | Solo-mode fast path |
+| `Phase 0.1` | `Stage 1.2` | Clean working tree gate |
+| `Phase 0.2` | `Stage 1.3` | Reconciliation pre-launch |
+| `Phase -1` | `Stage 2` | Spec authoring (conditional) |
+| `Phase 0a` | `Stage 3.1` | Spec diff-check |
+| `Phase 0c` | `Stage 3.2` | Queue scope-overlap |
+| `Phase 0b` | `Stage 3.3` | Pre-flight context budget |
+| `Phase 1` | `Stage 4.1` | Scope (backend / frontend / both) |
+| `Phase 2` | `Stage 4.2` | Launch coders |
+| `Phase 3` | `Stage 4.3` | Test feedback loop |
+| `Phase 4` | `Stage 5.1` | Reviewer verdict handling |
+| `Phase 5` | `Stage 5.2` | Story validation |
+| `Phase 5b` | `Stage 6.1` | Pitfall capture |
+| `Phase 5c` | `Stage 6.2` | Deviations companion file |
+| `Phase 5d` | `Stage 6.3` | Reconciliation notification |
+| `Phase 6 Gate 1` | `Stage 7.1` | Commit guard |
+| `Phase 6 Gate 2` | `Stage 7.2` | Integration test gate |
+| `Phase 6 Gate 3` | `Stage 7.3` | Rollup write & verify |
+| `Phase 6` (overall) | `Stage 7` | Ship |
+| `Phase 7` | (retired by EV-0007) | (no replacement — prod validation moved to user) |
+
+### Decision
+1. All living docs use the new `Stage X.Y` identifiers exclusively.
+2. **Historical artifacts are NOT rewritten**: EVOLUTION.md entries prior to this one, shipped stories under `delivery/epics/epic-00/` and `delivery/epics/epic-01/`, the `events.archive-2026-05-16.jsonl` file, and `bmad-*` upstream skills keep their original phase numbers — they document past state.
+3. The schema field `reached_phase` is renamed to `reached_stage` in v2 events. `report.py` accepts either field (legacy `reached_phase` for archived v1/v1.1 events). The enum of accepted values expands to all 18 stage identifiers — see `metrics-events.md`.
+4. The schema-rollout term "Phase 1 observability" (a v2.1 cohort label, unrelated to Team Lead phases) is renamed to "v2.1 observability" to remove the residual `Phase X` term from the spec.
+
+### Why not just keep the old numbers
+PR #16 made the case that the negative phases and alphabetical sub-phases were a debt that hurt readability and hid the lack of design intent. The numeric phases also collided with `Phase 7` (retired prod validation), making any future renumbering ambiguous. A clean cut to positive `Stage X.Y` removes the ambiguity in one PR.
+
+### Trade-off accepted
+Cross-references in EVOLUTION.md, archived events, and shipped stories still use the old names. The mapping table above is the bridge — anyone reading an old reference can look up the new identifier in O(1). The cost of leaving those alone (≈ 5 files in the archive layer) is one grep against this entry vs. the cost of rewriting append-only history (high — risk of corrupting the audit trail).
+
+### Links
+- PR #17 (this rename) — branched from PR #16's `refactor/dx-context-trim`
+- [EV-0007 — Retire Phase 7 (prod_validation)](#ev-0007--retire-phase-7-prod_validation) — the only phase number with no Stage equivalent
+- `metrics-events.md` §`story_escalated` — new `reached_stage` enum
+
+---
+
 ## Retroactive entries (EV-0100..EV-0199)
 
 > Decisions or observations from before this log existed, documented retroactively on 2026-05-16. These entries preserve wisdom that lived only in commit messages, reconcile notes, or contributors' memory.

@@ -138,8 +138,8 @@ Run the full pipeline on delivery/epics/epic-00/story-01-backend-skeleton.md
 ```
 
 Team Lead will:
-1. Enter **Phase -1** because the story's technical sections are empty — spawn `kiat-tech-spec-writer` to fill them.
-2. Run **Phase 0a** (spec validation) and **0b** (context budget check).
+1. Enter **Stage 2** because the story's technical sections are empty — spawn `kiat-tech-spec-writer` to fill them.
+2. Run **Stage 3.1** (spec validation) and **0b** (context budget check).
 3. Launch `kiat-backend-coder` — produces Go code + Venom tests.
 4. Launch `kiat-backend-reviewer` — verdict.
 5. Fix/arbitrate cycles within the 45-min fix budget.

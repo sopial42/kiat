@@ -104,7 +104,7 @@ Delete the two unused shapes above and keep only the one that applies. The front
 ## Skills
 
 > Populated by `kiat-tech-spec-writer` when it writes the story.
-> Read by `kiat-team-lead` at Phase 0b (context budget pre-flight) and by the coders at Step 1.
+> Read by `kiat-team-lead` at Stage 3.3 (context budget pre-flight) and by the coders at Step 1.
 > See [`.claude/specs/available-skills.md`](../../.claude/specs/available-skills.md) for the registry of contextual skills.
 
 **Base (auto-loaded by coder agents, no action needed):**
@@ -319,16 +319,16 @@ _(no cycles run yet)_
 
 > The story spec file (this file) is **never modified** to record
 > coder deviations or BMad reconciliation outcome. If any coder
-> reports a deviation, Team Lead at Phase 5c creates the companion
+> reports a deviation, Team Lead at Stage 6.2 creates the companion
 > file `story-NN-<slug>.reconcile.md` next to this one. The companion
-> holds both the `## Deviations` section (Team Lead Phase 5c, validated
+> holds both the `## Deviations` section (Team Lead Stage 6.2, validated
 > by `check-post-delivery-schema.sh`) and the `## Reconciliation`
 > section (filled by `/bmad-correct-course` when the human invokes it).
 >
 > **No companion file = no deviations** (story shipped as specified —
 > nothing to reconcile).
 > **Companion file with `RECONCILE_DONE` marker** = fully reconciled.
-> **Companion file without the marker** = blocks epic close (Phase 6
+> **Companion file without the marker** = blocks epic close (Stage 7
 > reconciliation guard).
 >
 > Authoritative protocol:
@@ -340,7 +340,7 @@ _(no cycles run yet)_
 
 ## Prod Validation
 
-> Filled by Team Lead at Phase 7 for production-affecting stories. Protocol in
+> Phase 7 was retired by [EV-0007](../../../.claude/EVOLUTION.md#ev-0007--retire-phase-7-prod_validation) — new stories leave this section empty. Kept for historical stories. Original protocol was in
 > [`../../../.claude/agents/kiat-team-lead.md`](../../../.claude/agents/kiat-team-lead.md) Phase 7.
 
 _(not yet validated)_

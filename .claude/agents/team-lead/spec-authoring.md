@@ -1,21 +1,21 @@
 # Team Lead — Stage 2: Spec Authoring
 
-> Loaded on demand by Team Lead when the input is an informal request OR a story file without a technical layer. Covers **Phase -1** (spawning `kiat-tech-spec-writer`) and the **prompt hygiene** rules that govern the writer prompt.
+> Loaded on demand by Team Lead when the input is an informal request OR a story file without a technical layer. Covers **Stage 2** (spawning `kiat-tech-spec-writer`) and the **prompt hygiene** rules that govern the writer prompt.
 
 If the input is an already-complete story file (both `## Business Context` and the technical sections present), **skip this stage entirely** and load `validation.md` instead.
 
 ---
 
-## Phase -1 — Spec authoring (conditional, runs only on informal requests)
+## Stage 2 — Spec authoring (conditional, runs only on informal requests)
 
 Team Lead is the single entry point for the user, so the input can be either an already-written story file OR a free-text request. Route deterministically:
 
 | Input shape | Route |
 |---|---|
-| The user points to a path like `delivery/epics/epic-X/story-NN.md` AND that file exists AND it contains both a `## Business Context` section and the technical sections below (`## Acceptance Criteria (technical)` or equivalent) | Skip Phase -1, go straight to Phase 0a |
-| The user gives free-text, OR points to a file that exists but has only `## Business Context` (no technical layer yet), OR the file doesn't exist yet | Enter Phase -1 |
+| The user points to a path like `delivery/epics/epic-X/story-NN.md` AND that file exists AND it contains both a `## Business Context` section and the technical sections below (`## Acceptance Criteria (technical)` or equivalent) | Skip Stage 2, go straight to Stage 3.1 |
+| The user gives free-text, OR points to a file that exists but has only `## Business Context` (no technical layer yet), OR the file doesn't exist yet | Enter Stage 2 |
 
-**In Phase -1, spawn `kiat-tech-spec-writer` as a sub-agent via the `Agent` tool, in a single message**. Pass it:
+**In Stage 2, spawn `kiat-tech-spec-writer` as a sub-agent via the `Agent` tool, in a single message**. Pass it:
 - The user's raw request, verbatim
 - The path of any existing story file the user referenced (even if incomplete — the writer may be in enrichment mode)
 - A directive to return a structured handoff (see below)
@@ -26,9 +26,9 @@ The writer handles clarification rounds with the user-facing conversation throug
 
 ## Prompt hygiene — NEVER assert runtime/config facts from memory (CRITICAL)
 
-**The most dangerous failure mode of Phase -1 is Team Lead stating a config/runtime/CI fact in the writer's prompt that turns out to be wrong.** The writer trusts Team Lead's prompt and writes the whole spec on top of that premise. Every downstream layer (coder, reviewer, CI) inherits the bad premise. By the time the bug surfaces, the story has been shipped.
+**The most dangerous failure mode of Stage 2 is Team Lead stating a config/runtime/CI fact in the writer's prompt that turns out to be wrong.** The writer trusts Team Lead's prompt and writes the whole spec on top of that premise. Every downstream layer (coder, reviewer, CI) inherits the bad premise. By the time the bug surfaces, the story has been shipped.
 
-The incident that triggered this rule: Team Lead wrote in a Phase -1 prompt "Playwright in CI runs test-auth only", while in reality the project's `Makefile` + `.github/workflows/ci.yml` both configure `ENABLE_TEST_AUTH=false` (real-Clerk) for the E2E suite. The spec-writer authored ACs for the wrong auth branch, the coder then silently deviated to match CI reality, and the reviewer rightfully flagged the drift as `NEEDS_DISCUSSION` — costing one arbitration cycle and a spec in-place patch.
+The incident that triggered this rule: Team Lead wrote in a Stage 2 prompt "Playwright in CI runs test-auth only", while in reality the project's `Makefile` + `.github/workflows/ci.yml` both configure `ENABLE_TEST_AUTH=false` (real-Clerk) for the E2E suite. The spec-writer authored ACs for the wrong auth branch, the coder then silently deviated to match CI reality, and the reviewer rightfully flagged the drift as `NEEDS_DISCUSSION` — costing one arbitration cycle and a spec in-place patch.
 
 **Rule**: before writing ANY prompt line that asserts a fact about CI, runtime env, build flags, test harness config, deployment targets, or infra — **Read the source of truth file first and cite the line number in your prompt**. If you cannot cite, you do not assert.
 
@@ -109,7 +109,7 @@ skills_added: <comma-separated list, or "none">
 
 The writer's frontmatter pre-loads `kiat-validate-spec`, so by contract it will not return `SPEC_HANDOFF` until the skill says `CLEAR`. If the writer returns `BLOCKED` or cannot recover after two clarification rounds, it escalates back to you with `SPEC_HANDOFF_FAILED` — treat that as a `story_escalated` event with `escalated_to: "user"` and `reason: "spec_blocked"`.
 
-**Record the writer's handoff values** in your working log — you need `story_path` and `spec_byte_count` at Phase 0a, and `size` + `skills_added` at Phase 0b.
+**Record the writer's handoff values** in your working log — you need `story_path` and `spec_byte_count` at Stage 3.1, and `size` + `skills_added` at Stage 3.3.
 
 **Audit line**:
 ```

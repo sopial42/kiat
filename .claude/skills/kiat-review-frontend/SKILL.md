@@ -24,7 +24,7 @@ Frontend reviews on Kiat stories are harder than backend reviews because the fai
 
 This skill gives a consistent phased protocol and externalizes the detailed checklist so progress through the review is tracked rather than improvised. The 3-way verdict format means Team Lead can route outcomes without parsing prose.
 
-The checklist lives in `references/checklist.md`. Read it once at the start of Phase 3; referring back to it category by category is much faster than trying to remember 100+ items.
+The checklist lives in `references/checklist.md`. Read it once at the start of Stage 4.3; referring back to it category by category is much faster than trying to remember 100+ items.
 
 ## When to invoke
 
@@ -34,7 +34,7 @@ The checklist lives in `references/checklist.md`. Read it once at the start of P
 
 ## The review process
 
-### Phase 1 — Read spec and design system
+### Stage 4.1 — Read spec and design system
 
 Before looking at code, read:
 - the story spec at `delivery/epics/epic-X/story-NN.md` — for acceptance criteria, Figma references, and the intended user flows,
@@ -42,7 +42,7 @@ Before looking at code, read:
 
 Reading the design system matters because "this uses the wrong color" is only a meaningful comment if you know what the right color is. Without the spec, you'll flag correct code as wrong; without the design system, you'll miss real drift.
 
-### Phase 2 — Verify the coder's test-patterns acknowledgment
+### Stage 4.2 — Verify the coder's test-patterns acknowledgment
 
 The frontend coder runs `kiat-test-patterns-check` at Step 0.5 and emits a `TEST_PATTERNS: ACKNOWLEDGED` block in its handoff. Your job:
 
@@ -52,13 +52,13 @@ The frontend coder runs `kiat-test-patterns-check` at Step 0.5 and emits a `TEST
 
 This phase is fast when the coder did it right. It exists because the worst test flakiness bugs slip past reviews that skip it.
 
-### Phase 3 — Apply the checklist
+### Stage 4.3 — Apply the checklist
 
 Read [`references/checklist.md`](references/checklist.md) and work through each category in order. Categories are ordered by blast radius: accessibility and spec compliance failures hit real users, while naming nits are cosmetic.
 
 Trust the toolchain on anything the toolchain catches (`tsc --noEmit`, `eslint`, `prettier`, test runners). Your value in a review is in judgment items — architecture, accessibility, design compliance, drift from acknowledged rules — not in restating what the linter already said.
 
-### Phase 3.5 — Cross-check the Business Deviations gate (light content check)
+### Stage 4.3.5 — Cross-check the Business Deviations gate (light content check)
 
 The coder is required to apply the **producer-pays severity gate** ([`reconciliation-protocol.md` §"The producer-pays severity gate"](../../specs/reconciliation-protocol.md)) before classifying any deviation as L2. Your role here is **narrow**: you do NOT judge whether the deviation makes business sense (that's Team Lead / BMad downstream). You judge whether the gate was applied honestly, by checking that each L2 entry's `Why` field names a **concrete observable** — a log line, a metric, a UI surface a user actually sees, an API contract, a Playwright test, an accessibility scanner, a visual regression check.
 
@@ -72,7 +72,7 @@ If you find a weakly-justified L2 entry, return `NEEDS_DISCUSSION` (not `BLOCKED
 
 This phase does NOT touch L1 or L3 entries (their gate logic is different) and does NOT count L2 entries whose Q1 cites a concrete observable. It is purely a check against the queue-as-feature-backlog drift pattern.
 
-### Phase 4 — Decide the verdict
+### Stage 5.1 — Decide the verdict
 
 Apply the decision logic below and emit the output in the format below.
 
@@ -145,7 +145,7 @@ List each blocker with a file:line reference and a specific fix. Vague blockers 
 
 ## Merging with the Clerk auth skill
 
-If the diff touches any auth-adjacent code, invoke [`kiat-clerk-auth-review`](../kiat-clerk-auth-review/SKILL.md) after Phase 3 and merge its verdict into yours:
+If the diff touches any auth-adjacent code, invoke [`kiat-clerk-auth-review`](../kiat-clerk-auth-review/SKILL.md) after Stage 4.3 and merge its verdict into yours:
 
 | Your verdict | Clerk verdict | Combined verdict |
 |---|---|---|

@@ -1,7 +1,7 @@
 # Deviations & Reconciliation: story-NN-<slug>
 
 > Companion to [story-NN-<slug>.md](./story-NN-<slug>.md). Created by
-> Team Lead at Phase 5c (writes the Deviations section). Updated by
+> Team Lead at Stage 6.2 (writes the Deviations section). Updated by
 > `/bmad-correct-course` (writes the Reconciliation section, ending
 > with the `RECONCILE_DONE` marker).
 >
@@ -20,7 +20,7 @@
 
 ## Deviations
 
-> Aggregated by Team Lead at Phase 5c from each coder's `Business
+> Aggregated by Team Lead at Stage 6.2 from each coder's `Business
 > Deviations:` handoff block. Validated by
 > `.claude/tools/hooks/check-post-delivery-schema.sh` on Team Lead
 > SubagentStop.

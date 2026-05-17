@@ -51,15 +51,15 @@ These files are referenced by `kiat-team-lead.md` and Read at specific phases. T
 
 | File | Bytes | Tokens (≈) | Loaded when |
 |---|---:|---:|---|
-| `.claude/specs/context-budgets.md` | 10 957 | 2 740 | Phase 0b |
-| `.claude/specs/metrics-events.md` | 37 171 | 9 290 | Phase 5c, 5d, 6 (rollup write) |
+| `.claude/specs/context-budgets.md` | 10 957 | 2 740 | Stage 3.3 |
+| `.claude/specs/metrics-events.md` | 37 171 | 9 290 | Stage 6.2, 5d, 6 (rollup write) |
 | `.claude/specs/failure-patterns.md` | 6 963 | 1 740 | Pre-escalation only |
-| `.claude/specs/reconciliation-protocol.md` | 43 314 | 10 830 | Phase 0.2, 0c, 5c, 5d |
-| `.claude/specs/bmad-reconcile-contract.md` | 20 275 | 5 070 | Phase 5d |
+| `.claude/specs/reconciliation-protocol.md` | 43 314 | 10 830 | Stage 1.3, 0c, 5c, 5d |
+| `.claude/specs/bmad-reconcile-contract.md` | 20 275 | 5 070 | Stage 6.3 |
 | `.claude/specs/parallel-worktree-protocol.md` | 35 430 | 8 860 | Multi-session work only |
-| `delivery/specs/cross-cutting-files.md` | (varies) | ~500 | Phase 0c, Phase 3 |
-| `delivery/_queue/needs-human-review.md` | (varies) | ~200 | Phase 0c |
-| `delivery/metrics/events.jsonl` | (varies, append-only) | tail-only | Phase 0.2, 6 |
+| `delivery/specs/cross-cutting-files.md` | (varies) | ~500 | Stage 3.2, Stage 4.3 |
+| `delivery/_queue/needs-human-review.md` | (varies) | ~200 | Stage 3.2 |
+| `delivery/metrics/events.jsonl` | (varies, append-only) | tail-only | Stage 1.3, 6 |
 
 **Realistic mid-flow Team Lead context** (story with deviations, real reconciliation): ~26k boot + ~22k on-demand specs = **~48k tokens before the story file itself**.
 
@@ -91,9 +91,11 @@ This part is well-designed. The "links are not Read-instructions" rule in `CLAUD
 
 ---
 
-## 6. Cross-reference debt: phase numbering
+## 6. Cross-reference debt: phase numbering — resolved by EV-0010
 
-`Phase -2 / -1 / 0a / 0b / 0c / 5b / 5c / 5d` are referenced 100+ times across 25 files:
+> **Update (PR #17)**: the rename is now done. This section is retained for context. Mapping `Phase ... → Stage X.Y` lives in [`.claude/EVOLUTION.md#ev-0010--phase-numbering--stage-naming-clean-reset`](.claude/EVOLUTION.md#ev-0010--phase-numbering--stage-naming-clean-reset). What follows is the pre-rename baseline.
+
+`Phase -2 / -1 / 0a / 0b / 0c / 5b / 5c / 5d` were referenced 100+ times across 25 files:
 
 ```
 ./.claude/agents/kiat-team-lead.md            69 refs
@@ -117,9 +119,7 @@ This part is well-designed. The "links are not Read-instructions" rule in `CLAUD
 ./kiat-getting-started.md                      2
 ```
 
-**Verdict**: a full rename of `-2/-1/0a/0b/0c/5b/5c/5d` to semantic names (`intake`, `spec-authoring`, `validation`, `closeout`, …) is a cross-cutting refactor touching 25 files including EVOLUTION.md (which is append-only history). Out of scope for the context-trim PR. Left as follow-up.
-
-What this PR does instead: groups phases under **semantic stages** in the Team Lead orchestrator and the new modular files (`team-lead/intake.md`, `team-lead/spec-authoring.md`, etc.). The negative-phase numbers (`-2`, `-1`) are now flagged as historical accidents in the orchestrator's preamble.
+**Resolution**: PR #17 (stacked on PR #16) executed the full rename to `Stage X.Y` with positive integers only. Living docs reference only the new identifiers; historical artifacts (EVOLUTION entries, shipped stories, archived events) keep the old names with the EV-0010 mapping table as the bridge. The `reached_phase` schema field was renamed to `reached_stage`; `report.py` accepts both for backward compat.
 
 ---
 

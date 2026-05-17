@@ -112,7 +112,7 @@ The user invokes `kiat-tech-spec-writer` on the story file. The writer detects t
 ### 4. Code Phase
 
 - Both story layers are populated ✅ (`kiat-validate-spec` reports `SPEC_VERDICT: CLEAR`)
-- `kiat-team-lead` runs Phase 0a (re-validate) + Phase 0b (pre-flight budget) ✅
+- `kiat-team-lead` runs Stage 3.1 (re-validate) + Stage 3.3 (pre-flight budget) ✅
 - Backend-Coder builds `story-NN.md` backend code
 - Frontend-Coder builds `story-NN.md` frontend code (parallel)
 
@@ -155,7 +155,7 @@ Reviews live inline in the story file under `## Review Log` (append-only, one cy
 
 ## Spec Completeness Checklist
 
-Before code starts, the human verifies that **both story layers** are complete. `kiat-validate-spec` runs this mechanically at Phase 0a, but the human can sanity-check it too.
+Before code starts, the human verifies that **both story layers** are complete. `kiat-validate-spec` runs this mechanically at Stage 3.1, but the human can sanity-check it too.
 
 **Business layer** (written by BMad — check against [`epics/README.md`](epics/README.md) and [`business/README.md`](business/README.md) for the full contract):
 - [ ] `## Business Context` exists with user story, personas, user-facing acceptance criteria, business rationale
@@ -226,7 +226,7 @@ kiat-tech-spec-writer (technical layer — enrichment mode)
     ↓
 Human: launches kiat-team-lead on the story
     ↓
-Team Lead: Phase 0a (re-validate) + 0b (pre-flight budget)
+Team Lead: Stage 3.1 (re-validate) + 0b (pre-flight budget)
     ↓
 Backend-Coder + Frontend-Coder: Build in parallel
     ↓

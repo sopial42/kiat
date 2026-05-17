@@ -1,12 +1,12 @@
 # Team Lead — Stage 4: Delivery
 
-> Loaded on demand after validation passes. Covers **Phase 1** (scope), **Phase 2** (parallel coder launch), and **Phase 3** (test feedback loop). At the end of this stage, both coders have reported back with a passing test suite at their layer and a `TEST_PATTERNS: ACKNOWLEDGED` block.
+> Loaded on demand after validation passes. Covers **Stage 4.1** (scope), **Stage 4.2** (parallel coder launch), and **Stage 4.3** (test feedback loop). At the end of this stage, both coders have reported back with a passing test suite at their layer and a `TEST_PATTERNS: ACKNOWLEDGED` block.
 
 ---
 
-## Phase 1 — Scope the story
+## Stage 4.1 — Scope the story
 
-**One story per Team Lead invocation.** Stories run STRICTLY SEQUENTIAL. Team Lead never starts story N+1 until story N is committed (Phase 6 Gate 1 enforces the commit). If a user passes a list of stories, Team Lead handles the first one and explicitly directs the user to relaunch for the next.
+**One story per Team Lead invocation.** Stories run STRICTLY SEQUENTIAL. Team Lead never starts story N+1 until story N is committed (Stage 7.1 enforces the commit). If a user passes a list of stories, Team Lead handles the first one and explicitly directs the user to relaunch for the next.
 
 This rule is non-negotiable. The 2026-05-01 incident — 4 epic-09 stories run in parallel, all touching the same cross-cutting registry files (`applies-to.ts`, `types.ts`, `party-detail-card.tsx`, `main.go`), mutual interference, 25 E2E failures, all work lost — is the canonical example of why. Cross-cutting files are listed in [`delivery/specs/cross-cutting-files.md`](../../../delivery/specs/cross-cutting-files.md); even when no individual story names them, multi-story waves nearly always collide there.
 
@@ -20,7 +20,7 @@ Read the story spec. Determine:
 
 ---
 
-## Phase 2 — Launch coders
+## Stage 4.2 — Launch coders
 
 Hand each coder the story file path and tell them which per-story specs to load (taken from the story's `## Skills` section plus the ambient docs listed in the coder's own agent definition). **If the story involves writing tests**, explicitly remind the coder to load the relevant pitfalls doc (`testing-pitfalls-backend.md` or `testing-pitfalls-frontend.md`) — these are on-demand docs that coders may skip if not prompted.
 
@@ -28,7 +28,7 @@ Coders will run their own Step 0 (budget self-check) and Step 0.5 (`kiat-test-pa
 
 ---
 
-## Phase 3 — Test and feedback loop
+## Stage 4.3 — Test and feedback loop
 
 When coders report completion:
 - Backend: expect `make test-back` green
@@ -54,4 +54,4 @@ Examples:
 
 **Exception — full suite required when the fix touches a cross-cutting file** listed in [`delivery/specs/cross-cutting-files.md`](../../../delivery/specs/cross-cutting-files.md). A cross-cutting fix can break tests that were previously green elsewhere; isolated re-run would miss the regression. In that case, the coder runs the full suite (`make test-back` and/or `make test-e2e`).
 
-The full integration re-run still happens once at Phase 6 Gate 2 (post-commit, pre-rollup), independent of the inner-loop choices made here.
+The full integration re-run still happens once at Stage 7.2 (post-commit, pre-rollup), independent of the inner-loop choices made here.
