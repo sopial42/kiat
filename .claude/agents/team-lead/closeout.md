@@ -94,7 +94,7 @@ RECONCILIATION_NEEDED: story-NN-<slug>
 Reconciliation: human invocation needed (/bmad-correct-course) — 3 deviations queued for triage
 ```
 
-### Emit `reconciliation_needed` event (Stage 4.1 observability — schema v2.1)
+### Emit `reconciliation_needed` event (v2.1 observability — schema v2.1)
 
 After emitting the notification block AND the audit line, append one JSONL event to `delivery/metrics/events.jsonl`. This event marks the moment human triage becomes needed; pairs with the later `reconcile_complete` event to measure **human triage latency** (`reconcile_complete.ts - reconciliation_needed.ts`).
 

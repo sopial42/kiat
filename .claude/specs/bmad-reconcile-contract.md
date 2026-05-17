@@ -204,7 +204,7 @@ in [`metrics-events.md`](metrics-events.md)). The event aggregates the
 counts (L1 applied, L2 queued, L3 blocked) and is what
 `/bmad-retrospective` reads to discover which stories had reconciles.
 
-**Stage 4.1 observability addition — `severity_by_tag` field (required).**
+**v2.1 observability addition — `severity_by_tag` field (required).**
 The event MUST include a `severity_by_tag` object that breaks down
 post-triage severity counts per tag-enum prefix. Derive it by walking
 the FINAL `## Deviations` block in the `.reconcile.md` (post any
