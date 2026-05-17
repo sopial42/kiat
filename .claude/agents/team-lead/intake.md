@@ -1,12 +1,12 @@
 # Team Lead — Stage 1: Intake
 
-> Loaded on demand by Team Lead at the start of every story. Covers the **solo-mode fast path** (Phase -2), the **clean working tree gate** (Phase 0.1) and the **reconciliation pre-launch check** (Phase 0.2). All three run before any other work.
+> Loaded on demand by Team Lead at the start of every story. Covers the **solo-mode fast path** (Stage 1.1), the **clean working tree gate** (Stage 1.2) and the **reconciliation pre-launch check** (Stage 1.3). All three run before any other work.
 
 ---
 
-## Phase -2 — Solo-mode fast path (conditional, runs FIRST on every request)
+## Stage 1.1 — Solo-mode fast path (conditional, runs FIRST on every request)
 
-For surgical, low-risk work, the full pipeline (spec writer → coders → reviewers → Phase 5c) is over-ceremony. Phase -2 is a fast path where **Team Lead does the work alone** — no spec writer, no coders, no reviewers, no Phase 5c companion at ship time. The trade-off: the human accepts that the type-checker, linter, and the test the story includes act as the reviewer proxy, and that reconciliation will happen post-hoc via `/bmad-correct-course` recover-mode.
+For surgical, low-risk work, the full pipeline (spec writer → coders → reviewers → Stage 6.2) is over-ceremony. Stage 1.1 is a fast path where **Team Lead does the work alone** — no spec writer, no coders, no reviewers, no Stage 6.2 companion at ship time. The trade-off: the human accepts that the type-checker, linter, and the test the story includes act as the reviewer proxy, and that reconciliation will happen post-hoc via `/bmad-correct-course` recover-mode.
 
 Solo-mode has **two tracks**, gated by T-shirt size, plus a default-pipeline tier:
 
@@ -82,8 +82,8 @@ When the gate passes (either Track):
 3. **Run the reviewer proxy**: `npm run lint`, `tsc --noEmit` (FE) or `go vet ./...` + `go build ./...` (BE), and the test the story includes (Track A: the single test required by XS-2 is mandatory; Track B: any existing E2E or unit suite that exercises the touched surface). The proxy MUST be green before commit.
 4. **Commit** with an explicit `Story shipped solo (Track A | Track B) by Team Lead per <user-authorization-verbatim or memory entry> <date>` line in the commit body.
 5. **Emit the rollup event** with `"mode": "solo"`, `"solo_track": "A" | "B"`, and the `business_deviations` count derived from the story file's `## What was deferred` + `## Implementation discipline` sections (typically 1-3 — at minimum a `PROCESS_SOLO_MODE` audit-only deviation).
-6. **Skip Phase 5c at ship time**. The `.reconcile.md` companion file is NOT created here — it is produced post-hoc by `/bmad-correct-course` recover-mode (see [`bmad-reconcile-contract.md`](../../specs/bmad-reconcile-contract.md) §"Solo-mode recovery"). Until recover-mode runs, the story has no companion file.
-7. **Emit Phase 5d notification** as `RECONCILIATION_NEEDED` exactly as the normal flow would — the recover-mode entry point is the same `/bmad-correct-course` skill. The skill auto-detects solo-mode (no Phase 5c upstream) and reconstitutes the companion from the story file + commit body.
+6. **Skip Stage 6.2 at ship time**. The `.reconcile.md` companion file is NOT created here — it is produced post-hoc by `/bmad-correct-course` recover-mode (see [`bmad-reconcile-contract.md`](../../specs/bmad-reconcile-contract.md) §"Solo-mode recovery"). Until recover-mode runs, the story has no companion file.
+7. **Emit Stage 6.3 notification** as `RECONCILIATION_NEEDED` exactly as the normal flow would — the recover-mode entry point is the same `/bmad-correct-course` skill. The skill auto-detects solo-mode (no Stage 6.2 upstream) and reconstitutes the companion from the story file + commit body.
 
 ### Audit lines (always emit, one of the variants below)
 
@@ -109,7 +109,7 @@ Solo-mode eligibility: FAIL Track A on XS-2 (story sized S = 8 files + 1 test, X
 
 No authorization at all (Track B + no standing XS authz):
 ```
-Solo-mode: not authorized by user — proceeding to Phase -1 normal routing
+Solo-mode: not authorized by user — proceeding to Stage 2 normal routing
 ```
 
 ### Why this two-track model exists
@@ -124,7 +124,7 @@ Anti-pattern to avoid: **Team Lead size-gaming**. If a story is genuinely S in s
 
 ---
 
-## Phase 0.1 — Clean working tree gate
+## Stage 1.2 — Clean working tree gate
 
 Run `git status --porcelain`. If the output is non-empty, REFUSE to launch:
 
@@ -146,7 +146,7 @@ Working tree gate: 27 modified + 12 untracked paths ❌ — REFUSED to launch st
 
 ---
 
-## Phase 0.2 — Reconciliation pre-launch check
+## Stage 1.3 — Reconciliation pre-launch check
 
 Before doing ANY other work on a new story, scan `delivery/metrics/events.jsonl` for unresolved reconciliation blocks. The full protocol is in [`.claude/specs/reconciliation-protocol.md`](../../specs/reconciliation-protocol.md); short version:
 
@@ -156,8 +156,8 @@ Before doing ANY other work on a new story, scan `delivery/metrics/events.jsonl`
    - Set the story's `**Status**` line to `🛑 Blocked` (not `📝 Drafted`)
    - Update the epic aggregate the same way
    - Escalate to the user with the full block context (deviation tag, summary, the `.reconcile.md` it came from, the queue ID if applicable)
-   - Do NOT proceed to Phase 0a, Phase 0b, or anything else
-4. **If no unresolved blocks**, emit the audit line and proceed to Phase 0a.
+   - Do NOT proceed to Stage 3.1, Stage 3.3, or anything else
+4. **If no unresolved blocks**, emit the audit line and proceed to Stage 3.1.
 
 **Audit line (always emit)**:
 ```

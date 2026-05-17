@@ -25,7 +25,7 @@ first — the directory's structure is part of the contract.
 
 1. **Append** — `/bmad-correct-course` writes a new `## Q-NNN — [OPEN]` entry
    when it triages an L2 deviation that needs a human judgment call.
-2. **Scope-overlap check** — Team Lead scans this file at Phase 0c
+2. **Scope-overlap check** — Team Lead scans this file at Stage 3.2
    (between spec validation and context-budget check) for every new
    story. An OPEN entry whose `Affects` overlaps the new story's scope
    auto-promotes from L2 to L3 (status becomes `PROMOTED`, an
@@ -47,7 +47,7 @@ first — the directory's structure is part of the contract.
 |---|---|---|
 | Human (PO / Tech Lead) | Anytime, on push notification, or weekly | OPEN entries; triage them |
 | `/bmad-correct-course` | Never reads — only appends | n/a |
-| Team Lead | Phase 0c of every new story | OPEN entries whose `Affects` overlaps the new story (auto-promote on hit); also reads `events.jsonl` for unresolved L3 escalations at Phase 0 |
+| Team Lead | Stage 3.2 of every new story | OPEN entries whose `Affects` overlaps the new story (auto-promote on hit); also reads `events.jsonl` for unresolved L3 escalations at Stage 1.3 |
 | `/bmad-retrospective` | Once per epic, at retro | OPEN entries from this epic, to force-close |
 
 ---

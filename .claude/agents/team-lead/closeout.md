@@ -1,10 +1,10 @@
 # Team Lead — Stage 6: Closeout
 
-> Loaded on demand after review (Stage 5) ends with merged verdict APPROVED. Covers **Phase 5b** (pitfall capture), **Phase 5c** (deviations companion file), and **Phase 5d** (reconciliation notification + event emission). At the end of this stage, the story is ready for the ship stage.
+> Loaded on demand after review (Stage 5) ends with merged verdict APPROVED. Covers **Stage 6.1** (pitfall capture), **Stage 6.2** (deviations companion file), and **Stage 6.3** (reconciliation notification + event emission). At the end of this stage, the story is ready for the ship stage.
 
 ---
 
-## Phase 5b — Pitfall capture (after tests pass, before rollup)
+## Stage 6.1 — Pitfall capture (after tests pass, before rollup)
 
 If the story consumed **> 15 minutes of coder wall-clock on test-related issues** (flaky assertions, wrong wait patterns, auth quirks, DB seeding problems, Venom key casing, Clerk session corruption, etc.), you MUST capture the lesson before closing the story. The goal: the next coder who hits a similar problem finds the answer in the pitfalls file instead of burning another 15+ minutes.
 
@@ -35,19 +35,19 @@ If the story consumed **> 15 minutes of coder wall-clock on test-related issues*
 
 ---
 
-## Phase 5c — Create deviations companion file (after review, before rollup)
+## Stage 6.2 — Create deviations companion file (after review, before rollup)
 
-After both reviewers return `APPROVED` and Phase 5b is done, **aggregate the Business Deviations from both coders into a companion `.reconcile.md` file** next to the story spec. The story spec file itself is NEVER modified — all deviation data lives in the companion.
+After both reviewers return `APPROVED` and Stage 6.1 is done, **aggregate the Business Deviations from both coders into a companion `.reconcile.md` file** next to the story spec. The story spec file itself is NEVER modified — all deviation data lives in the companion.
 
 **Procedure:**
 
 1. **Collect** the `Business Deviations:` section from each coder's handoff (backend and/or frontend).
-2. **If ALL coders reported `NONE`**: no action needed — the story shipped as specified, no companion file is created. Emit the audit line and proceed to Phase 6.
+2. **If ALL coders reported `NONE`**: no action needed — the story shipped as specified, no companion file is created. Emit the audit line and proceed to Stage 7.
 3. **If ANY coder reported deviations**: create the companion file at `delivery/epics/epic-X/story-NN-<slug>.reconcile.md`, following the canonical template at [`delivery/epics/epic-template/story-NN-slug.reconcile.md`](../../../delivery/epics/epic-template/story-NN-slug.reconcile.md). The file MUST have:
    - A `## Deviations` section between `<!-- POST_DELIVERY_BLOCK_BEGIN -->` and `<!-- POST_DELIVERY_BLOCK_END -->` markers, with one bullet per deviation following the strict schema (Tag, Severity, Summary, File, SpecRef, Status, Why) — see [`reconciliation-protocol.md`](../../specs/reconciliation-protocol.md) §"The `story-NN-<slug>.reconcile.md` schema".
    - A `## Reconciliation` section containing the placeholder `_(awaiting reconciliation — run /bmad-correct-course on this story)_` — `/bmad-correct-course` will replace this with the L1/L2/L3 outcome when the human invokes it.
 4. **The validator hook `check-post-delivery-schema.sh`** runs on your `SubagentStop` and validates the `## Deviations` schema in the new companion file. If it fails, fix the schema and re-edit. When aggregating deviations into the `.reconcile.md` companion, ensure each tag prefix is one of the 8 enum values (`SPEC_GAP|DECISION|SCOPE_CUT|BOY_SCOUT|DOMAIN_NEW|PROCESS|TEST_DRIFT|UPSTREAM_MISMATCH`). The `check-post-delivery-schema.sh` hook will reject the file otherwise.
-5. **Include a `business_deviations` count in the rollup event** (Phase 6) — see [`metrics-events.md`](../../specs/metrics-events.md) for the field.
+5. **Include a `business_deviations` count in the rollup event** (Stage 7) — see [`metrics-events.md`](../../specs/metrics-events.md) for the field.
 
 **Audit line (always emit)**:
 ```
@@ -64,18 +64,18 @@ Business reconciliation: 3 deviations aggregated into story-NN-<slug>.reconcile.
 
 ---
 
-## Phase 5d — Notify human that reconciliation is needed (if deviations exist)
+## Stage 6.3 — Notify human that reconciliation is needed (if deviations exist)
 
 Once the `.reconcile.md` companion file exists AND the `check-post-delivery-schema.sh` hook has passed, you do NOT spawn a reconciliation sub-agent. Per-story reconciliation is **human-invoked** via `/bmad-correct-course` — that's BMad's existing mode for "significant changes during sprint execution", which is exactly what a populated `## Deviations` section in the companion file represents.
 
-Your job at Phase 5d: **emit a clear notification** so the human knows reconciliation is needed before the next story can safely launch (or before the epic can close). The reconciliation guard at Phase 6 will enforce this — without a `story-NN-<slug>.reconcile.md` companion file carrying `RECONCILE_DONE`, the epic stays open.
+Your job at Stage 6.3: **emit a clear notification** so the human knows reconciliation is needed before the next story can safely launch (or before the epic can close). The reconciliation guard at Stage 7 will enforce this — without a `story-NN-<slug>.reconcile.md` companion file carrying `RECONCILE_DONE`, the epic stays open.
 
-**Skip Phase 5d** if Post-Delivery Notes is the placeholder `_(no deviations)_`. Audit line:
+**Skip Stage 6.3** if Post-Delivery Notes is the placeholder `_(no deviations)_`. Audit line:
 ```
 Reconciliation: skipped — no deviations to reconcile
 ```
 
-**Run Phase 5d** otherwise. The notification format (emit verbatim in your final output, before the rollup):
+**Run Stage 6.3** otherwise. The notification format (emit verbatim in your final output, before the rollup):
 
 ```
 RECONCILIATION_NEEDED: story-NN-<slug>
@@ -89,16 +89,16 @@ RECONCILIATION_NEEDED: story-NN-<slug>
              /bmad-correct-course must honor when used in Kiat context)
 ```
 
-**Audit line (always emit on Phase 5d when deviations exist)**:
+**Audit line (always emit on Stage 6.3 when deviations exist)**:
 ```
 Reconciliation: human invocation needed (/bmad-correct-course) — 3 deviations queued for triage
 ```
 
-### Emit `reconciliation_needed` event (Phase 1 observability — schema v2.1)
+### Emit `reconciliation_needed` event (Stage 4.1 observability — schema v2.1)
 
 After emitting the notification block AND the audit line, append one JSONL event to `delivery/metrics/events.jsonl`. This event marks the moment human triage becomes needed; pairs with the later `reconcile_complete` event to measure **human triage latency** (`reconcile_complete.ts - reconciliation_needed.ts`).
 
-Skip the event emission when Phase 5d itself is skipped (no deviations).
+Skip the event emission when Stage 6.3 itself is skipped (no deviations).
 
 Field derivation:
 - `deviations_count` — total entries in `## Deviations`, counted across the backend and frontend sub-sections of the `.reconcile.md` you just created.

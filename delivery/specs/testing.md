@@ -430,7 +430,7 @@ CI is the **final gate** before merge. The rules are mechanical, not negotiable:
 - **If CI fails but local passes:** that's a flakiness signal, not a "retry until it passes" situation. Debug it using the anti-flakiness rules above. Common causes: `waitForTimeout`, `serial` mode, storageState token expiry, Clerk rate limits.
 - **No skipping hooks or force-pushing to bypass CI.** See [git-conventions.md](git-conventions.md) for the immutability rules.
 
-This rule is enforced at the Team Lead level (Phase 5 "Story Validation" requires all tests passing before a story is marked PASSED) and at the Kiat framework level (story cannot complete without green CI).
+This rule is enforced at the Team Lead level (Stage 5.2 "Story Validation" requires all tests passing before a story is marked PASSED) and at the Kiat framework level (story cannot complete without green CI).
 
 ---
 

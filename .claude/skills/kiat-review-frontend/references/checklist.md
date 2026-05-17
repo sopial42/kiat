@@ -1,6 +1,6 @@
 # Frontend Review Checklist
 
-This is the reference checklist loaded by `kiat-review-frontend/SKILL.md` during Phase 3. Categories are ordered by blast radius — items that affect real users (accessibility, spec compliance, data correctness) come before cosmetic concerns.
+This is the reference checklist loaded by `kiat-review-frontend/SKILL.md` during Stage 4.3. Categories are ordered by blast radius — items that affect real users (accessibility, spec compliance, data correctness) come before cosmetic concerns.
 
 Skim what's obviously fine; focus attention on the non-trivial items. A checklist entry isn't a nit to flag — it's a question to answer. If the code clearly handles it, move on.
 

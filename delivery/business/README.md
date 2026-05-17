@@ -130,7 +130,7 @@ BMad skill:
 
 | Cadence | Trigger | BMad skill | Reads | Writes |
 |---|---|---|---|---|
-| **Per-story** | After Team Lead emits `RECONCILIATION_NEEDED:` at Phase 5d (i.e., when a `.reconcile.md` companion exists) | `/bmad-correct-course` | `story-NN-<slug>.reconcile.md` §`## Deviations` | Same `.reconcile.md`: appends `## Reconciliation` section + `RECONCILE_DONE` marker, applies L1, queues L2, escalates L3 |
+| **Per-story** | After Team Lead emits `RECONCILIATION_NEEDED:` at Stage 6.3 (i.e., when a `.reconcile.md` companion exists) | `/bmad-correct-course` | `story-NN-<slug>.reconcile.md` §`## Deviations` | Same `.reconcile.md`: appends `## Reconciliation` section + `RECONCILE_DONE` marker, applies L1, queues L2, escalates L3 |
 | **Per-epic** | After the final story in an epic moves to `✅ Done` | `/bmad-retrospective` | All `*.reconcile.md` + queue | `_epic.reconcile.md` (new file at epic root) + force-closes OPEN queue entries |
 
 **Key file model**: the story spec file (`story-NN-<slug>.md`) is
@@ -157,7 +157,7 @@ restate them — one source of truth per rule.
 #### Quick orientation (the high-level flow)
 
 1. **Coder** ships story, emits `Business Deviations:` block in handoff.
-2. **Team Lead Phase 5c**:
+2. **Team Lead Stage 6.2**:
    - If all coders reported NONE → no `.reconcile.md` is created
      (story shipped as specified).
    - If any deviations → CREATES the companion file
@@ -167,7 +167,7 @@ restate them — one source of truth per rule.
        by `check-post-delivery-schema.sh` hook.
      - `## Reconciliation` section with placeholder `_(awaiting
        reconciliation — run /bmad-correct-course)_`.
-3. **Team Lead Phase 5d** (only if Phase 5c created a companion file):
+3. **Team Lead Stage 6.3** (only if Stage 6.2 created a companion file):
    emits `RECONCILIATION_NEEDED:` notification telling the human to
    run `/bmad-correct-course` on the story.
 4. **Human** runs `/bmad-correct-course <story-path>` when convenient.
@@ -183,8 +183,8 @@ restate them — one source of truth per rule.
    The skill REPLACES the `## Reconciliation` placeholder in the
    SAME companion file with the L1/L2/L3 outcome and ends with
    `<!-- RECONCILE_DONE: ... -->`. It does NOT modify the
-   `## Deviations` section (immutable from Phase 5c).
-5. **Reconciliation guard** at Team Lead's Phase 6 enforces: epic
+   `## Deviations` section (immutable from Stage 6.2).
+5. **Reconciliation guard** at Team Lead's Stage 7 enforces: epic
    stays open until every `.reconcile.md` carries `RECONCILE_DONE`.
 6. **At epic close** the human runs `/bmad-retrospective` on the epic,
    producing `_epic.reconcile.md` with `EPIC_RECONCILE_DONE`.

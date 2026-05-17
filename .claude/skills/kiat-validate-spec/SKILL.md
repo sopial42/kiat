@@ -23,7 +23,7 @@ The earliest failure point in the Kiat pipeline is an ambiguous story spec. A si
 
 This skill catches those ambiguities *before* any coder runs. When the tech-spec-writer is still in the loop, a clarification costs five minutes; once a coder has planned around a misreading, the same clarification costs a retry cycle plus the cognitive overhead of unwinding the wrong mental model. The math heavily favours catching things early, so the skill is deliberately tuned to err on the side of flagging — a false positive costs a question, a false negative costs a retry.
 
-**When to invoke:** At Phase 0 of the Team Lead workflow, after the pre-flight context budget check passes, before launching any coder. Also use it when a coder escalates mid-story with "I can't tell what this means" — the skill's checklist usually surfaces the ambiguity quickly.
+**When to invoke:** At Stage 3.1 of the Team Lead workflow (spec diff-check), before launching any coder. The pre-flight context budget check (Stage 3.3) runs immediately after. Also use it when a coder escalates mid-story with "I can't tell what this means" — the skill's checklist usually surfaces the ambiguity quickly.
 
 **Input:** the story spec file at `delivery/epics/epic-X/story-NN.md`.
 
@@ -35,7 +35,7 @@ Run each category. The categories are ordered so that structural gaps (which for
 
 ### 0. Technical layer not still at placeholder
 
-A Kiat story has a two-layer structure: `## Business Context` (written by BMad) and the technical sections (`## Acceptance Criteria (technical)`, `## Implementation Notes for Coder`) written by `kiat-tech-spec-writer` at Phase -1. If the technical sections still contain the scaffold placeholder text, the story is **not authored** — only inherited from the template. A coder accepting such a story bypasses the two-layer discipline and ships against the user-facing AC alone, which is the documented failure mode behind story-02-connecteur-sirene (epic-02, 2026-04-28) and queue entry Q-027.
+A Kiat story has a two-layer structure: `## Business Context` (written by BMad) and the technical sections (`## Acceptance Criteria (technical)`, `## Implementation Notes for Coder`) written by `kiat-tech-spec-writer` at Stage 2. If the technical sections still contain the scaffold placeholder text, the story is **not authored** — only inherited from the template. A coder accepting such a story bypasses the two-layer discipline and ships against the user-facing AC alone, which is the documented failure mode behind story-02-connecteur-sirene (epic-02, 2026-04-28) and queue entry Q-027.
 
 Check the story file content for placeholder regexes that the template ships with:
 
@@ -191,7 +191,7 @@ This category does NOT apply to error cases, edge cases, or validation scenarios
 
 ### 11. Supersedes declaration (optional, when present)
 
-The `## Supersedes:` section is OPTIONAL — most stories don't supersede any queue entry. When present, it tells Phase 0c which OPEN Q-IDs the story explicitly closes, allowing Phase 0c to emit `queue_supersede` instead of `epic_block`. Full protocol: [`../../agents/kiat-team-lead.md` §Phase 0c](../../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory) and [`../../EVOLUTION.md` EV-0002](../../EVOLUTION.md).
+The `## Supersedes:` section is OPTIONAL — most stories don't supersede any queue entry. When present, it tells Stage 3.2 which OPEN Q-IDs the story explicitly closes, allowing Stage 3.2 to emit `queue_supersede` instead of `epic_block`. Full protocol: [`../../agents/kiat-team-lead.md` §Stage 3.2](../../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory) and [`../../EVOLUTION.md` EV-0002](../../EVOLUTION.md).
 
 When a `## Supersedes` heading exists in the story file, check:
 

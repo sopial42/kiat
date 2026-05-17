@@ -1,14 +1,14 @@
 # Team Lead — Stage 5: Review
 
-> Loaded on demand after delivery (Stage 4). Covers **Phase 4** (reviewer verdict handling, 3-way outcome) and **Phase 5** (story validation against acceptance criteria). Includes the mandatory `## Review Log` append protocol.
+> Loaded on demand after delivery (Stage 4). Covers **Stage 5.1** (reviewer verdict handling, 3-way outcome) and **Stage 5.2** (story validation against acceptance criteria). Includes the mandatory `## Review Log` append protocol.
 
 ---
 
-## Phase 4 — Reviewer verdict handling (3-way outcome, CRITICAL)
+## Stage 5.1 — Reviewer verdict handling (3-way outcome, CRITICAL)
 
 Launch the reviewers (backend and/or frontend, parallel when both) **in a single message with two `Agent` tool calls** — same rule as coder launch. They run `kiat-review-backend` / `kiat-review-frontend` skills and emit **exactly one** verdict on line 1:
 
-- `VERDICT: APPROVED` → Phase 5 (if this is the only reviewer, or after merging with the other)
+- `VERDICT: APPROVED` → Stage 5.2 (if this is the only reviewer, or after merging with the other)
 - `VERDICT: NEEDS_DISCUSSION` → **you arbitrate** — do NOT send back to coder blindly
 - `VERDICT: BLOCKED` → aggregate all issues and send back to coder in one batch
 
@@ -30,7 +30,7 @@ Compute the story-level verdict deterministically from the two reviewer verdicts
 
 | Backend | Frontend | Story-level decision | Your action |
 |---|---|---|---|
-| APPROVED | APPROVED | APPROVED | → Phase 5 |
+| APPROVED | APPROVED | APPROVED | → Stage 5.2 |
 | APPROVED | BLOCKED | BLOCKED | Send frontend issues to frontend coder. Do NOT touch backend. |
 | BLOCKED | APPROVED | BLOCKED | Send backend issues to backend coder. Do NOT touch frontend. |
 | BLOCKED | BLOCKED | BLOCKED | Send aggregated issues to BOTH coders in parallel (single message). One fix-budget clock. |
@@ -40,13 +40,13 @@ Compute the story-level verdict deterministically from the two reviewer verdicts
 | BLOCKED | NEEDS_DISCUSSION | BLOCKED | Send BLOCKED issues to the relevant coder; **hold the NEEDS_DISCUSSION item until after the fix cycle** — do not arbitrate in parallel with an active fix, re-raise it when the coder is done. |
 | NEEDS_DISCUSSION | BLOCKED | BLOCKED | Symmetric. |
 
-Rule of thumb: a BLOCKED reviewer always wins over NEEDS_DISCUSSION, and NEEDS_DISCUSSION always wins over APPROVED. Story only reaches Phase 5 when the merged verdict is APPROVED.
+Rule of thumb: a BLOCKED reviewer always wins over NEEDS_DISCUSSION, and NEEDS_DISCUSSION always wins over APPROVED. Story only reaches Stage 5.2 when the merged verdict is APPROVED.
 
 ### NEEDS_DISCUSSION decision tree
 
 | Situation | Your action |
 |---|---|
-| Reviewer questions a pattern you know is intentional (documented in specs) | Override → proceed to Phase 5, note the rationale |
+| Reviewer questions a pattern you know is intentional (documented in specs) | Override → proceed to Stage 5.2, note the rationale |
 | Reviewer uncovered a spec ambiguity | Escalate to `kiat-tech-spec-writer`: "Spec says X but reviewer found Y — clarify?" |
 | Reviewer questions a design / UX tradeoff | Escalate to designer / user with the reviewer's specific question |
 | Reviewer questions an architectural tradeoff | Escalate to user: "Reviewer flagged X, accept tradeoff or refactor?" |
@@ -60,7 +60,7 @@ Rule of thumb: a BLOCKED reviewer always wins over NEEDS_DISCUSSION, and NEEDS_D
 
 ## Review Log append (MANDATORY, once per reviewer cycle)
 
-As soon as both reviewers have returned for a given cycle (or the single reviewer when only one layer is in scope), **append a cycle block to the story's `## Review Log` section** before taking any further action (sending fixes back, arbitrating NEEDS_DISCUSSION, or proceeding to Phase 5). Do this even when the verdict is APPROVED on the very first cycle — the log is append-only and captures every cycle, not just the ones that blocked.
+As soon as both reviewers have returned for a given cycle (or the single reviewer when only one layer is in scope), **append a cycle block to the story's `## Review Log` section** before taking any further action (sending fixes back, arbitrating NEEDS_DISCUSSION, or proceeding to Stage 5.2). Do this even when the verdict is APPROVED on the very first cycle — the log is append-only and captures every cycle, not just the ones that blocked.
 
 The full rationale and the append-only contract live in [`delivery/epics/README.md#review-log`](../../../delivery/epics/README.md#review-log). Your job here is the mechanical append:
 
@@ -108,7 +108,7 @@ Review Log: cycle N appended to story-NN (backend APPROVED, frontend BLOCKED wit
 
 ---
 
-## Phase 5 — Story validation
+## Stage 5.2 — Story validation
 
 Before marking PASSED, verify:
 - Every acceptance criterion from the spec is implemented and tested

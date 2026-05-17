@@ -1,10 +1,10 @@
 # Team Lead — Stage 7: Ship
 
-> Loaded on demand after closeout (Stage 6). Covers **Phase 6** (the hard exit gate): commit guard, integration test gate, rollup write-then-verify, final status transition, and the **reconciliation guard** that controls epic closure. The story is NOT done until every audit line in this stage has been emitted.
+> Loaded on demand after closeout (Stage 6). Covers **Stage 7** (the hard exit gate): commit guard, integration test gate, rollup write-then-verify, final status transition, and the **reconciliation guard** that controls epic closure. The story is NOT done until every audit line in this stage has been emitted.
 
 ---
 
-## Phase 6 — Mark story complete and emit the rollup event (HARD EXIT GATE)
+## Stage 7 — Mark story complete and emit the rollup event (HARD EXIT GATE)
 
 Update the story file with a status footer (date, files changed, test counts, reviewer verdicts) and emit **exactly one** event to `delivery/metrics/events.jsonl`. This is your exit marker. See [`.claude/specs/metrics-events.md`](../../specs/metrics-events.md) for the v1.1 Rollup-First schema.
 
@@ -60,7 +60,7 @@ Commit guard: sha unchanged (<sha_before>) ❌ — REFUSED rollup, code not comm
 
 ### Gate 2 — Integration test gate
 
-Tests passed at coder-level (Phase 3) on a working tree that was not yet integrated with the prior story. After the commit at Gate 1, run the full suite ONE more time on the post-commit tree. This is the gate that catches cross-story interference — exactly the failure mode that took down the 4 epic-09 stories on 2026-05-01.
+Tests passed at coder-level (Stage 4.3) on a working tree that was not yet integrated with the prior story. After the commit at Gate 1, run the full suite ONE more time on the post-commit tree. This is the gate that catches cross-story interference — exactly the failure mode that took down the 4 epic-09 stories on 2026-05-01.
 
 **Pipe to file, exit code only** — never read the full output into Team Lead's context (would burn 20-50k tokens per command):
 
@@ -83,7 +83,7 @@ echo "E2E_EXIT=$e2e_exit"
   - Escalate with the failure tail and the commit SHA
   - Do NOT mark `✅ Done`
 
-If the failure is a known fix, the coder fixes it, an additional commit is created (Gate 1 re-runs), and Gate 2 re-runs. The smart re-run rule from Phase 3 applies: only the failed test by default, full suite if the fix touches a cross-cutting file ([`delivery/specs/cross-cutting-files.md`](../../../delivery/specs/cross-cutting-files.md)).
+If the failure is a known fix, the coder fixes it, an additional commit is created (Gate 1 re-runs), and Gate 2 re-runs. The smart re-run rule from Stage 4.3 applies: only the failed test by default, full suite if the fix touches a cross-cutting file ([`delivery/specs/cross-cutting-files.md`](../../../delivery/specs/cross-cutting-files.md)).
 
 **Audit lines**:
 ```
@@ -146,7 +146,7 @@ In the **same edit pass**, update the epic's `_epic.md` aggregate status per the
 **When all stories in an epic are `✅ Done` and the epic is about to become `✅ Done`**, scan every story's directory for `.reconcile.md` companion files before flipping the epic status. The protocol details are in [`.claude/specs/reconciliation-protocol.md`](../../specs/reconciliation-protocol.md); short version:
 
 1. For each story in the epic directory, check if `story-NN-<slug>.reconcile.md` exists.
-2. **No companion file** → story shipped as specified, no reconciliation needed (Phase 5c didn't create one).
+2. **No companion file** → story shipped as specified, no reconciliation needed (Stage 6.2 didn't create one).
 3. **Companion file exists with `<!-- RECONCILE_DONE: ... -->` marker** → reconciled by `/bmad-correct-course`, done.
 4. **Companion file exists WITHOUT `RECONCILE_DONE` marker** → **unreconciled** — `/bmad-correct-course` was not run yet (or did not complete).
 5. **Legacy form** (pre-protocol stories): the story file's `## Post-Delivery Notes` section contains a line matching `_Reconciled by BMad on .* —` → reconciled by BMad Review mode in legacy form, done. (No new stories should land in legacy form — but they're accepted during migration.)
@@ -160,7 +160,7 @@ Additionally, the epic-level retrospective MUST have run: an `_epic.reconcile.md
 | All stories: no companion file or `RECONCILE_DONE` present | `_epic.reconcile.md` present with `EPIC_RECONCILE_DONE` | Epic → `✅ Done` |
 | All stories reconciled | `_epic.reconcile.md` missing or no marker | Epic stays `🚧 In Progress`. Emit warning: "Run `/bmad-retrospective` to close the epic." |
 | Any story has `.reconcile.md` without `RECONCILE_DONE` | (irrelevant) | Epic stays `🚧 In Progress`. Emit warning listing unreconciled stories. |
-| Any L3 `epic_block` event unresolved (check via Phase 0 protocol) | (irrelevant) | Epic stays `🛑 Blocked`. |
+| Any L3 `epic_block` event unresolved (check via Stage 1.3 protocol) | (irrelevant) | Epic stays `🛑 Blocked`. |
 
 **Audit line:**
 ```
@@ -171,7 +171,7 @@ or
 Reconciliation guard: epic-X — 5 stories scanned, 2 unreconciled (story-03, story-05) ⚠️ → epic stays 🚧 In Progress. BMad reconciliation needed before epic closure.
 ```
 
-**Why this guard exists**: without it, an epic can close with business deviations that the PO/PM never saw. The guard ensures the feedback loop is actually closed — not just that the data was created (Phase 5c), but that it was consumed (BMad Review mode). It's the difference between "we told the PO" and "the PO acknowledged it".
+**Why this guard exists**: without it, an epic can close with business deviations that the PO/PM never saw. The guard ensures the feedback loop is actually closed — not just that the data was created (Stage 6.2), but that it was consumed (BMad Review mode). It's the difference between "we told the PO" and "the PO acknowledged it".
 
 **Status audit line (always emit)**:
 ```

@@ -81,7 +81,7 @@ Then, one story at a time:
 Run the full pipeline on delivery/epics/epic-00/story-01-backend-skeleton.md
 ```
 
-Repeat for `story-02` (frontend), `story-03` (Playwright harness), `story-04` (CI workflow). Team Lead spawns `kiat-tech-spec-writer` at Phase -1 for each story (technical sections are empty — they get filled), then backend and/or frontend coders in parallel, then reviewers, test gates, rollup event.
+Repeat for `story-02` (frontend), `story-03` (Playwright harness), `story-04` (CI workflow). Team Lead spawns `kiat-tech-spec-writer` at Stage 2 for each story (technical sections are empty — they get filled), then backend and/or frontend coders in parallel, then reviewers, test gates, rollup event.
 
 **After all 4 stories pass**: `make ci-local` green, `make dev-offline` boots a working app (sign-in / items CRUD / sign-out), `.github/workflows/ci.yml` exists. This is the "EPIC 00 done" baseline — the agents just proved they work in your environment.
 
@@ -120,7 +120,7 @@ Two families: **dev loops** (you iterate in a browser) and **test suites** (auto
 Tech lead humans only ever talk to **Team Lead**. Team Lead spawns everything else.
 
 ```
-┌──────┐   ┌───────────────┐    Phase -1 (if informal or missing tech layer)
+┌──────┐   ┌───────────────┐    Stage 2 (if informal or missing tech layer)
 │ User ├──►│  Team Lead    ├──────────────────────────────────┐
 └──────┘   └───────────────┘                                  │
                                                               ▼
@@ -131,31 +131,31 @@ Tech lead humans only ever talk to **Team Lead**. Team Lead spawns everything el
                                                    │ • returns SPEC_HANDOFF│
                                                    └──────────┬───────────┘
                                                               │
-              Phase 0a diff-check + 0b budget + 0c queue overlap
+              Stage 3.1 diff-check + 0b budget + 0c queue overlap
                                                               ▼
-                           Phase 1 — launch coders in parallel
+                           Stage 4.1 — launch coders in parallel
                              ┌───────────────┐     ┌───────────────┐
                              │backend-coder  │     │frontend-coder │
                              └───────┬───────┘     └───────┬───────┘
                                      │                     │
-                              Phase 3 — tests + handoff     │
+                              Stage 4.3 — tests + handoff     │
                                      ▼                     ▼
                              ┌───────────────┐     ┌───────────────┐
                              │backend-review │     │frontend-review│
                              └───────┬───────┘     └───────┬───────┘
                                      └──────────┬──────────┘
                                                 ▼
-                        Phase 4 — parse VERDICT (3-way: APPROVED / NEEDS_DISCUSSION / BLOCKED)
+                        Stage 5.1 — parse VERDICT (3-way: APPROVED / NEEDS_DISCUSSION / BLOCKED)
                                                 │
                        ┌────────────────────────┼────────────────────────┐
                        ▼                        ▼                        ▼
                   APPROVED                BLOCKED                 NEEDS_DISCUSSION
                        │                  back to coder           Team Lead arbitrates
                        ▼                                                  │
-                  Phase 5 validation                                      │
+                  Stage 5.2 validation                                      │
                        │                                                  │
                        ▼                                                  ▼
-               Phase 5b/c/d closeout                          Phase 6 rollup emission
+               Stage 6.1/c/d closeout                          Stage 7 rollup emission
 ```
 
 The full procedure is split into 7 stage files under `.claude/agents/team-lead/` — each loaded on demand by Team Lead, not pre-loaded. The orchestrator entry point is [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-team-lead.md).
@@ -176,7 +176,7 @@ Reviewers emit exactly one verdict on line 1:
 
 | Verdict | Meaning | Team Lead's action |
 |---|---|---|
-| `APPROVED` | Ship it | Move to Phase 5 |
+| `APPROVED` | Ship it | Move to Stage 5.2 |
 | `BLOCKED` | Concrete issues a coder can fix | Batch issues, send back, start fix cycle |
 | `NEEDS_DISCUSSION` | Judgment call a coder can't resolve alone | **Team Lead arbitrates** — override if pattern is documented, escalate to writer / user / designer if not. Never bounce to coder as "fix this". |
 
@@ -189,7 +189,7 @@ The BLOCKED vs NEEDS_DISCUSSION distinction is **load-bearing** — it's what pr
 Once Phases A-D are done, every new feature follows this loop:
 
 1. **Capture the domain with BMad** — in a Claude Code session at the repo root, run a BMad skill (`bmad-product-brief`, `bmad-create-epics-and-stories`, `bmad-create-story`…). BMad writes to `delivery/business/` (glossary, personas, rules) and creates stories in `delivery/epics/epic-NN/story-NN-slug.md`, populating only the `## Business Context` section.
-2. **Hand off to Team Lead** — close the BMad session, relaunch with `claude --agent kiat-team-lead`, and point it at the new story file. Team Lead enters Phase -1 (spawns `kiat-tech-spec-writer` to enrich the story with technical sections), then launches backend + frontend coders in parallel, reviewers, test gates.
+2. **Hand off to Team Lead** — close the BMad session, relaunch with `claude --agent kiat-team-lead`, and point it at the new story file. Team Lead enters Stage 2 (spawns `kiat-tech-spec-writer` to enrich the story with technical sections), then launches backend + frontend coders in parallel, reviewers, test gates.
 3. **Watch the pipeline run** — Team Lead streams its phase log. At the end you get either `story_rollup: passed` or an escalation for you to resolve.
 4. **Run locally, verify, commit** — `make dev` to poke the feature in a browser, `make ci-local` to run the full gate, then push. CI green on GitHub → ready to ship.
 
@@ -236,10 +236,10 @@ If no visual reference exists, write `No mockups — implementer uses the existi
 ## Common questions
 
 **Can I skip BMad and go straight to Team Lead?**
-Yes — launch Team Lead with an informal request ("add feature X"), it'll enter Phase -1 and spawn tech-spec-writer which writes both layers. You lose the domain-knowledge capture in `delivery/business/`, so this is fine for refactors and infra stories, not ideal for net-new business features.
+Yes — launch Team Lead with an informal request ("add feature X"), it'll enter Stage 2 and spawn tech-spec-writer which writes both layers. You lose the domain-knowledge capture in `delivery/business/`, so this is fine for refactors and infra stories, not ideal for net-new business features.
 
 **Can I write stories by hand and skip tech-spec-writer?**
-Yes — if a story has both `## Business Context` and the technical sections already populated, Team Lead skips Phase -1.
+Yes — if a story has both `## Business Context` and the technical sections already populated, Team Lead skips Stage 2.
 
 **What if a reviewer disagrees with a pattern documented in `delivery/specs/`?**
 Team Lead overrides on `NEEDS_DISCUSSION` when the spec is authoritative. If the reviewer found a genuine gap, that's a spec bug — fix `delivery/specs/`, then the next story inherits the fix.

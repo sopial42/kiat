@@ -18,7 +18,7 @@
 | v1.1 | 2026-04 | Rollup-first: one `story_rollup` per story replaces 8-10 granular events |
 | v1.2 | 2026-05 | Reconciliation events (`reconcile_complete`, `reconcile_failed`, `epic_block`, `epic_unblock`, `queue_supersede`) |
 | **v2** | **2026-05-16** | **Archive cut + canonical schema. `business_deviations` always object; `mode` enum-restricted; `spec` block required; `deviations_declared_explicitly` added; `prod_validation` retired. Active file restarted empty.** |
-| **v2.1** | **2026-05-17** | **Phase 1 observability (additive — no breaking change). New event `reconciliation_needed` emitted by Team Lead Phase 5d for human-triage latency measurement. New `severity_by_tag` field on `reconcile_complete` for the Severity × Tag cross-table.** |
+| **v2.1** | **2026-05-17** | **v2.1 observability (additive — no breaking change). New event `reconciliation_needed` emitted by Team Lead Stage 6.3 for human-triage latency measurement. New `severity_by_tag` field on `reconcile_complete` for the Severity × Tag cross-table.** |
 
 **Archive cut (2026-05-16):** `delivery/metrics/events.jsonl` was moved to `events.archive-2026-05-16.jsonl`. The archive is read-only and holds all v1/v1.1/v1.2 events. New events (v2) write to the fresh `events.jsonl`. `report.py --scope all-time` reads both files and normalizes legacy events in-memory.
 
@@ -93,16 +93,16 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
 - `size` (required): `"XS"` | `"S"` | `"M"` | `"L"` — story T-shirt size
 - `scope` (required): e.g. `"infra"`, `"backend"`, `"frontend"`, `"full-stack"` — story scope category
 - `layers` (required, array of strings): e.g. `["framework"]`, `["backend","frontend"]` — architectural layers touched
-- `code_commit_sha` (required, string, 40-hex): the SHA of the commit Team Lead created at Phase 6 Gate 1. **MUST differ from the parent SHA.** Without this field, `report.py` rejects the rollup as malformed. The 2026-05-01 incident — 5 rollups written `passed` while no commit existed — is the canonical reason this field is required.
+- `code_commit_sha` (required, string, 40-hex): the SHA of the commit Team Lead created at Stage 7.1. **MUST differ from the parent SHA.** Without this field, `report.py` rejects the rollup as malformed. The 2026-05-01 incident — 5 rollups written `passed` while no commit existed — is the canonical reason this field is required.
 - `mode` (required, enum): `"normal"` | `"solo"` | `"team_lead_authored"`. **No other values accepted — custom values are a protocol violation.**
   - `"normal"` = full pipeline (tech-spec-writer → coders → reviewers)
-  - `"solo"` = Phase -2 solo track (requires `solo_track` and `solo_authz`)
+  - `"solo"` = Stage 1.1 solo track (requires `solo_track` and `solo_authz`)
   - `"team_lead_authored"` = Team Lead wrote the spec inline (spec bypassed; use `spec.verdict: "BYPASSED"`)
 - `solo_track` (enum, REQUIRED when `mode == "solo"`): `"A"` | `"B"`. MUST be absent when `mode != "solo"`.
 - `solo_authz` (string, REQUIRED when `mode == "solo"`): the authz token from the user, e.g. `"go 2026-05-16"`.
 - `spec` (required, object): spec validation block. Required on every rollup.
   - `verdict` (enum): `"CLEAR"` | `"NEEDS_CLARIFICATION"` | `"BLOCKED"` | `"BYPASSED"` (BYPASSED = Team Lead authored inline, writer not invoked)
-  - `byte_count` (int): byte size of the full story file at Phase 0a check (`wc -c`)
+  - `byte_count` (int): byte size of the full story file at Stage 3.1 check (`wc -c`)
   - `clarification_rounds` (int): number of `SPEC_CLARIFICATION` rounds before `CLEAR` was reached; sourced from `SPEC_HANDOFF.clarification_rounds`. 0 if CLEAR on first pass or BYPASSED.
   - `writer_mode` (string): `"enrichment"` | `"greenfield"` | `"team_lead_authored"` — matches SPEC_HANDOFF `mode` field
 - `preflight` (object): per-agent context budget pre-flight results. Keys are agent names; values are `{estimated_tokens, budget, result}`. Omit keys for agents not launched. Use `"n/a — solo Track B"` string for the value if solo track bypassed pre-flight.
@@ -116,7 +116,7 @@ Emitted by Team Lead **once per successful story**, at the moment Team Lead mark
   - `total_issues_across_cycles` (int): sum of issues across all BLOCKED cycles
 - `fix_budget_used_min` (int or null): **retrospective metric only** — approximate minutes in fix cycles after first BLOCKED verdict. The 45-min gate was retired by [EV-0003](../EVOLUTION.md#ev-0003--retire-fix_budget45min). 0 if no fix cycle, null if unknown.
 - `test_patterns_drift` (bool): true if any `review_cycles` entry has `test_patterns_consistent: false`.
-- `business_deviations` (required, object): summary of coder deviations from spec (Phase 5c). **Always an object — never an integer.**
+- `business_deviations` (required, object): summary of coder deviations from spec (Stage 6.2). **Always an object — never an integer.**
   - `count` (int): total deviations across all coders. 0 if all reported `NONE`.
   - `backend` (array of strings): one-line summaries of backend deviations. `[]` if none.
   - `frontend` (array of strings): one-line summaries of frontend deviations. `[]` if none.
@@ -137,7 +137,7 @@ The 45-min escalation gate was retired by [EV-0003](../EVOLUTION.md#ev-0003--ret
 
 Tracking methodology for the retrospective number:
 
-1. **Mental start point:** the first time you send BLOCKED issues back to a coder. Do NOT count test failures inside Phase 3 unless those failures end up BLOCKED by a reviewer.
+1. **Mental start point:** the first time you send BLOCKED issues back to a coder. Do NOT count test failures inside Stage 4.3 unless those failures end up BLOCKED by a reviewer.
 2. **At story completion:** estimate the elapsed minutes between that point and the final re-review using your best-effort sense of wall-clock time from the conversation (message spacing, prior step durations). You do not have a real clock — ±5 minutes is acceptable.
 3. **Rollup:** `fix_budget_used_min = <estimate>` (or `0` if the story never entered a fix cycle, or `null` if you truly cannot estimate).
 
@@ -158,7 +158,7 @@ Emitted by Team Lead **once per escalated story**, at the moment Team Lead escal
   "outcome": "escalated",
   "escalated_to": "bmad",
   "reason": "budget_overflow",
-  "reached_phase": "0b",
+  "reached_stage": "3.3",
   "bmad_spec_bytes": 34000,
   "spec_verdict": "CLEAR",
   "preflight": {
@@ -178,7 +178,7 @@ Everything in `story_rollup` PLUS:
 - `outcome` (required): always `"escalated"` for this event type
 - `escalated_to` (enum): `"tech-spec-writer"` | `"bmad"` | `"user"` | `"designer"`
 - `reason` (enum): `"spec_blocked"` | `"spec_clarification_loop"` | `"budget_overflow"` | `"fix_budget_exhausted"` | `"needs_discussion"` | `"security_blocker"` | `"test_flakiness"` | `"other"`
-- `reached_phase` (string): which phase the story reached before escalation — `"0a"` | `"0b"` | `"1"` | `"2"` | `"3"` | `"4"` | `"5"`
+- `reached_stage` (string): which stage the story reached before escalation — `"1.1"` | `"1.2"` | `"1.3"` | `"2"` | `"3.1"` | `"3.2"` | `"3.3"` | `"4.1"` | `"4.2"` | `"4.3"` | `"5.1"` | `"5.2"` | `"6.1"` | `"6.2"` | `"6.3"` | `"7.1"` | `"7.2"` | `"7.3"`. **Legacy `reached_phase` field still readable by `report.py` for archived v1/v1.1 events.**
 - `failure_pattern_id` (string, optional): if the escalation matches a documented `FP-NNN` in `failure-patterns.md`
 - `note` (string, optional): free-text context for why it was escalated
 - `reviews` can be empty `{}` if escalation happened before any reviewer ran
@@ -194,7 +194,7 @@ These event types support the per-story reconciliation protocol
 introduced in v1.2. Full semantics live in
 [`reconciliation-protocol.md`](reconciliation-protocol.md). The events
 are written by **`/bmad-correct-course`** (per story) and **tech-spec-writer**
-(when its Phase -1 queue scan auto-promotes an L2 to L3).
+(when its Stage 2 queue scan auto-promotes an L2 to L3).
 
 These events are additive — they don't replace any v1.1 event. A
 story can have one `story_rollup` AND one `reconcile_complete` AND zero
@@ -202,10 +202,10 @@ or more `epic_block` events.
 
 ---
 
-### `reconciliation_needed` (Phase 1 observability)
+### `reconciliation_needed` (v2.1 observability)
 
-Emitted by Team Lead at **Phase 5d**, immediately after creating the
-`.reconcile.md` companion file (Phase 5c) and emitting the
+Emitted by Team Lead at **Stage 6.3**, immediately after creating the
+`.reconcile.md` companion file (Stage 6.2) and emitting the
 `RECONCILIATION_NEEDED:` notification block. Marks the moment a story
 finished its automated pipeline and is now awaiting human triage via
 `/bmad-correct-course`.
@@ -213,7 +213,7 @@ finished its automated pipeline and is now awaiting human triage via
 The matching `reconcile_complete` event (when it eventually fires)
 gives the latency `RECONCILE_DONE - RECONCILIATION_NEEDED` — the
 **human triage cost** per story. This is the headline observability
-signal added in Phase 1.
+signal added in v2.1.
 
 ```json
 {
@@ -249,7 +249,7 @@ no triage is needed; latency to `reconcile_complete` should be ~0).
 
 ---
 
-### `reconcile_complete` (v1.2 — enriched in Phase 1)
+### `reconcile_complete` (v1.2 — enriched in v2.1)
 
 Emitted by `/bmad-correct-course` once per story it processes, AFTER it has
 written the `.reconcile.md` companion file and applied L1 changes /
@@ -293,7 +293,7 @@ human triage latency.
   the next story can start.
 - `queue_ids_added` (array of string): list of `Q-NNN` IDs
   appended in this run, for traceability
-- `severity_by_tag` (object, **Phase 1 additive**): final severity
+- `severity_by_tag` (object, **v2.1 additive**): final severity
   breakdown per tag-enum prefix, post-triage by
   `/bmad-correct-course`. Keys are one of the 8 enum prefixes
   (`SPEC_GAP`, `DECISION`, `SCOPE_CUT`, `BOY_SCOUT`, `DOMAIN_NEW`,
@@ -312,7 +312,7 @@ If reconcile failed entirely (could not produce a valid
 Emitted by `/bmad-correct-course` when it cannot complete (typically because
 the `## Post-Delivery Notes` section is malformed and somehow bypassed
 the validator hook). A failure here blocks epic closure exactly as a
-missing reconcile would — the reconciliation guard at Team Lead Phase 6
+missing reconcile would — the reconciliation guard at Team Lead Stage 7
 greps for `RECONCILE_DONE` markers, and a failed reconcile produces a
 `RECONCILE_FAILED` marker instead.
 
@@ -339,7 +339,7 @@ greps for `RECONCILE_DONE` markers, and a failed reconcile produces a
 ### `epic_block` (v1.2)
 
 Emitted by `/bmad-correct-course` (when it classifies a deviation as L3) OR
-by tech-spec-writer (when its Phase -1 queue scan auto-promotes an L2
+by tech-spec-writer (when its Stage 2 queue scan auto-promotes an L2
 to L3 due to scope overlap with the new story). Team Lead reads
 `events.jsonl` for unresolved `epic_block` events at every story
 pre-launch — an unresolved event refuses the next story.
@@ -417,11 +417,11 @@ Emitted by Team Lead (or by a human via a manual append) when an
 
 ### `queue_supersede` (v1.2 — added by EV-0002)
 
-Emitted by Team Lead at Phase 0c **in lieu of `epic_block`** when the
+Emitted by Team Lead at Stage 3.2 **in lieu of `epic_block`** when the
 scope-overlap scan finds a Q-ID that the new story explicitly declares
 in its `## Supersedes:` section. The story is not blocked — it lands
 and the Q-ID is closed as `[SUPERSEDED]` in the queue. **Emitted BEFORE
-Phase 0b runs** so the queue stays consistent even if the budget check
+Stage 3.3 runs** so the queue stays consistent even if the budget check
 later fails.
 
 ```json
@@ -444,12 +444,12 @@ later fails.
   entry's heading tag (post-`Q-NNN — [STATUS]`)
 - `summary` (string, required): one-line rationale, copied from the
   story's `## Supersedes:` bullet for this Q-ID
-- `source` (enum, required): always `"kiat-team-lead"` (Phase 0c is
+- `source` (enum, required): always `"kiat-team-lead"` (Stage 3.2 is
   the only writer)
 
 `queue_supersede` is mutually exclusive with `epic_block` for the same
 `(story, queue_id)` pair — Team Lead emits one or the other, never
-both, per Phase 0c's branching logic
+both, per Stage 3.2's branching logic
 ([`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md#phase-0c--reconciliation-queue-scope-overlap-check-mandatory)).
 Reverting a supersession (e.g., the human later disagrees) is handled
 out-of-band by reopening a new `Q-NNN` entry — the original
@@ -713,9 +713,9 @@ JSONL is append-only).
 
 Team Lead builds the rollup from its conversation state at story completion:
 
-- **`bmad_spec_bytes`**: was measured at Phase 0b pre-flight check (Team Lead ran `wc -c` on the spec file)
-- **`spec_verdict` + `spec_clarification_rounds`**: recorded from Phase 0a (how many times `kiat-validate-spec` returned `NEEDS_CLARIFICATION` before reaching `CLEAR`)
-- **`preflight`**: recorded at Phase 0b (one entry per launched coder)
+- **`bmad_spec_bytes`**: was measured at Stage 3.3 pre-flight check (Team Lead ran `wc -c` on the spec file)
+- **`spec_verdict` + `spec_clarification_rounds`**: recorded from Stage 3.1 (how many times `kiat-validate-spec` returned `NEEDS_CLARIFICATION` before reaching `CLEAR`)
+- **`preflight`**: recorded at Stage 3.3 (one entry per launched coder)
 - **`reviews`**: aggregated from all reviewer verdicts received during the story. Count cycles, pick the final verdict, check if any cycle had `clerk_skill_triggered` or `test_patterns_consistent: false`
 - **`fix_budget_used_min`** and **`total_elapsed_min`**: best-effort estimates. Team Lead does not have a system clock — use the conversation's natural sense of time, or set to `null` if unsure. `report.py` handles null gracefully.
 

@@ -47,8 +47,8 @@ BMad is **external to Kiat** — it is not a Kiat agent, not defined in `.claude
 
 Your full protocol is in [`.claude/agents/kiat-team-lead.md`](.claude/agents/kiat-team-lead.md). You are the **only** Kiat agent a human talks to for technical work — new feature, bug fix, refactor, spec question, anything. You accept two input shapes:
 
-1. **Informal request** ("add feature X", "fix bug Y") — you enter **Phase -1** and spawn `kiat-tech-spec-writer` as a sub-agent to produce a structured story file at `delivery/epics/epic-X/story-NN.md`. The writer runs `kiat-validate-spec` internally, returns a `SPEC_HANDOFF` block, and you continue the pipeline.
-2. **Existing story file** — if the file already contains both `## Business Context` (written by BMad) and the technical sections, you skip Phase -1 and go straight to Phase 0a.
+1. **Informal request** ("add feature X", "fix bug Y") — you enter **Stage 2** and spawn `kiat-tech-spec-writer` as a sub-agent to produce a structured story file at `delivery/epics/epic-X/story-NN.md`. The writer runs `kiat-validate-spec` internally, returns a `SPEC_HANDOFF` block, and you continue the pipeline.
+2. **Existing story file** — if the file already contains both `## Business Context` (written by BMad) and the technical sections, you skip Stage 2 and go straight to Stage 3.1.
 
 Key phases after 0: 0a spec diff-check (re-validates if the file changed since handoff), 0b context budget check, parallel coder launch, 3-way verdict handling, 45-min fix budget, metrics emission, failure pattern consultation at escalation.
 
@@ -58,7 +58,7 @@ Key phases after 0: 0a spec diff-check (re-validates if the file changed since h
 
 ### If you are the Tech Spec Writer (sub-agent of Team Lead — never invoked directly)
 
-Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You are spawned by Team Lead during Phase -1 when the input is an informal request (or a story file without a technical layer). You translate informal business requirements — or a BMad-written `## Business Context` — into structured story files in `delivery/epics/epic-X/story-NN.md`. You operate in two modes: **enrichment** (the story file already has a `## Business Context` written by BMad, you preserve it intact and append only the technical sections below) or **greenfield** (no prior Business Context, you write both layers yourself). You decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and return a machine-parseable `SPEC_HANDOFF` block to Team Lead. If a user somehow reaches you directly, redirect them to Team Lead.
+Your full protocol is in [`.claude/agents/kiat-tech-spec-writer.md`](.claude/agents/kiat-tech-spec-writer.md). You are spawned by Team Lead during Stage 2 when the input is an informal request (or a story file without a technical layer). You translate informal business requirements — or a BMad-written `## Business Context` — into structured story files in `delivery/epics/epic-X/story-NN.md`. You operate in two modes: **enrichment** (the story file already has a `## Business Context` written by BMad, you preserve it intact and append only the technical sections below) or **greenfield** (no prior Business Context, you write both layers yourself). You decide which contextual skills the coders will need (consulting [`.claude/specs/available-skills.md`](.claude/specs/available-skills.md)), self-validate via `kiat-validate-spec`, and return a machine-parseable `SPEC_HANDOFF` block to Team Lead. If a user somehow reaches you directly, redirect them to Team Lead.
 
 ### If you are a Coder (backend or frontend)
 

@@ -1,10 +1,10 @@
 # Team Lead — Stage 3: Validation
 
-> Loaded on demand after Stage 1 (intake) passes. Covers **Phase 0a** (spec diff-check), **Phase 0c** (queue scope-overlap check), and **Phase 0b** (pre-flight context budget), in that order. All three must pass before any coder launches. Status transition `📝 Drafted → 🚧 In Progress` happens at the end of this stage.
+> Loaded on demand after Stage 1 (intake) passes. Covers **Stage 3.1** (spec diff-check), **Stage 3.2** (queue scope-overlap check), and **Stage 3.3** (pre-flight context budget), in that order. All three must pass before any coder launches. Status transition `📝 Drafted → 🚧 In Progress` happens at the end of this stage.
 
 ---
 
-## Phase 0a — Spec diff-check (MANDATORY, runs first on every story)
+## Stage 3.1 — Spec diff-check (MANDATORY, runs first on every story)
 
 The writer already ran `kiat-validate-spec` inside its own workflow before handoff — by contract it cannot return `SPEC_HANDOFF` unless the skill said `CLEAR`. Re-running the full skill here would be duplicate work in the common case where the file hasn't changed.
 
@@ -12,19 +12,19 @@ Instead, do a **diff-check**: trust the writer's verdict if the story file is by
 
 **Two sub-cases:**
 
-1. **Input came from Phase -1** (Team Lead just spawned the writer):
+1. **Input came from Stage 2** (Team Lead just spawned the writer):
    - Read `spec_byte_count` from the `SPEC_HANDOFF`.
    - Run `wc -c delivery/epics/epic-X/story-NN.md` and compare.
-   - If equal → trust `SPEC_VERDICT: CLEAR`, **proceed to Phase 0b immediately**.
+   - If equal → trust `SPEC_VERDICT: CLEAR`, **proceed to Stage 3.3 immediately**.
    - If different → the file was edited between handoff and now (unusual, but possible if the user tweaked it). Run the `kiat-validate-spec` skill and parse its first line exactly as in sub-case 2.
 
-2. **Input was an existing story file (Phase -1 skipped)**:
+2. **Input was an existing story file (Stage 2 skipped)**:
    - There is no prior handoff to compare against. Run the `kiat-validate-spec` skill on the story and parse the first line **deterministically**:
 
 | First line                                  | Action |
 |----------------------------------------------|--------|
-| `SPEC_VERDICT: CLEAR`                        | Proceed to Phase 0b |
-| `SPEC_VERDICT: NEEDS_CLARIFICATION`          | Respawn `kiat-tech-spec-writer` with the skill's specific questions attached. Wait for an updated `SPEC_HANDOFF`. Re-enter Phase 0a on the new file. Do NOT launch coders. |
+| `SPEC_VERDICT: CLEAR`                        | Proceed to Stage 3.3 |
+| `SPEC_VERDICT: NEEDS_CLARIFICATION`          | Respawn `kiat-tech-spec-writer` with the skill's specific questions attached. Wait for an updated `SPEC_HANDOFF`. Re-enter Stage 3.1 on the new file. Do NOT launch coders. |
 | `SPEC_VERDICT: BLOCKED`                      | Escalate to user. Spec has structural gaps. Do NOT patch ambiguities yourself. |
 
 If the skill output doesn't start with `SPEC_VERDICT:`, treat it as malformed and re-run.
@@ -40,11 +40,11 @@ Spec validation: story-NN (no prior handoff), skill returned CLEAR ✓
 
 ---
 
-## Phase 0c — Reconciliation queue scope-overlap check (MANDATORY)
+## Stage 3.2 — Reconciliation queue scope-overlap check (MANDATORY)
 
-After Phase 0a (spec is `CLEAR` and the story file is finalized on disk), but before Phase 0b (context budget), scan `delivery/_queue/needs-human-review.md` for OPEN L2 entries that would overlap this story's scope. Phase 0 already caught any unresolved L3 (`epic_block`) events; Phase 0c catches L2 entries that would silently corrupt this story if launched against them.
+After Stage 3.1 (spec is `CLEAR` and the story file is finalized on disk), but before Stage 3.3 (context budget), scan `delivery/_queue/needs-human-review.md` for OPEN L2 entries that would overlap this story's scope. Stage 1.3 already caught any unresolved L3 (`epic_block`) events; Stage 3.2 catches L2 entries that would silently corrupt this story if launched against them.
 
-**Why this lives in Team Lead, not in tech-spec-writer**: by Phase 0c, the story file is on disk regardless of whether Phase -1 ran (informal request → writer authored it) or was skipped (existing story file). Team Lead already loaded the file at Phase 0a. The scan is a mechanical grep + path comparison — no creative judgment required, no need to spawn a sub-agent.
+**Why this lives in Team Lead, not in tech-spec-writer**: by Stage 3.2, the story file is on disk regardless of whether Stage 2 ran (informal request → writer authored it) or was skipped (existing story file). Team Lead already loaded the file at Stage 3.1. The scan is a mechanical grep + path comparison — no creative judgment required, no need to spawn a sub-agent.
 
 **Procedure**:
 
@@ -60,18 +60,18 @@ After Phase 0a (spec is `CLEAR` and the story file is finalized on disk), but be
 5. **On overlap, check for a declared supersession FIRST** (per EV-0002):
    - Read the story file's `## Supersedes` section (immediately below the front-matter, above `## Business Context`). If the section is absent, treat as no declaration.
    - **If the overlapping Q-ID is listed there** (verbatim `Q-NNN`), this is a SUPERSESSION, not a conflict. Do:
-     - Edit the queue entry: change `[OPEN]` in the heading to `[SUPERSEDED]`, add a `**Closed at**: <ISO-8601 UTC>` line, add `**Decision**: superseded by <story-NN> (Phase 0c — Team Lead honored the story's `## Supersedes:` declaration)`.
-     - Append a `queue_supersede` event to `delivery/metrics/events.jsonl` with the story ID, the queue ID, the entry's `deviation_tag`, and a one-line `summary` copied from the story's Supersedes rationale. Schema: [`../../specs/metrics-events.md`](../../specs/metrics-events.md) §`queue_supersede`. **Emit this event BEFORE running Phase 0b** — the queue must be in a consistent state if Phase 0b fails.
-     - Emit the audit line (see below) and **proceed to Phase 0b**.
+     - Edit the queue entry: change `[OPEN]` in the heading to `[SUPERSEDED]`, add a `**Closed at**: <ISO-8601 UTC>` line, add `**Decision**: superseded by <story-NN> (Stage 3.2 — Team Lead honored the story's `## Supersedes:` declaration)`.
+     - Append a `queue_supersede` event to `delivery/metrics/events.jsonl` with the story ID, the queue ID, the entry's `deviation_tag`, and a one-line `summary` copied from the story's Supersedes rationale. Schema: [`../../specs/metrics-events.md`](../../specs/metrics-events.md) §`queue_supersede`. **Emit this event BEFORE running Stage 3.3** — the queue must be in a consistent state if Stage 3.3 fails.
+     - Emit the audit line (see below) and **proceed to Stage 3.3**.
    - **If the Q-ID is NOT declared in `## Supersedes`**, fall through to the AUTO-PROMOTE path in step 6.
 
 6. **On overlap that is NOT declared as superseded, AUTO-PROMOTE** to L3 and refuse to launch:
-   - Edit the queue entry: change `[OPEN]` in the heading to `[PROMOTED]`, add a `**Closed at**: <ISO-8601 UTC>` line, add `**Decision**: auto-promoted to L3 by Team Lead Phase 0c — overlaps with story-NN scope (specifics: <evidence>)`.
+   - Edit the queue entry: change `[OPEN]` in the heading to `[PROMOTED]`, add a `**Closed at**: <ISO-8601 UTC>` line, add `**Decision**: auto-promoted to L3 by Team Lead Stage 3.2 — overlaps with story-NN scope (specifics: <evidence>)`.
    - Append an `epic_block` event to `delivery/metrics/events.jsonl` with `source: "kiat-team-lead"`, the queue ID in the `queue_id` field, and `blocked_until: "human_signoff"`. Schema: [`../../specs/metrics-events.md`](../../specs/metrics-events.md) §`epic_block`.
    - Flip the story to `🛑 Blocked` and update the epic aggregate.
    - Escalate to user with the queue ID, the overlap evidence, and what they need to decide.
-   - Do NOT proceed to Phase 0b.
-7. **On no overlap**, emit the audit line and proceed to Phase 0b.
+   - Do NOT proceed to Stage 3.3.
+7. **On no overlap**, emit the audit line and proceed to Stage 3.3.
 
 **Audit line (always emit)** — pick the variant that matches the outcome:
 ```
@@ -90,7 +90,7 @@ Queue scope-overlap check: 3 OPEN L2 entries reviewed, 1 overlap (Q-014 affects 
 
 ---
 
-## Phase 0b — Pre-flight context budget check (MANDATORY)
+## Stage 3.3 — Pre-flight context budget check (MANDATORY)
 
 Before launching ANY coder, verify the story's injected context fits the coder's budget. Full rules live in [`.claude/specs/context-budgets.md`](../../specs/context-budgets.md). Short version:
 
@@ -103,7 +103,7 @@ Before launching ANY coder, verify the story's injected context fits the coder's
    - Per-story specs referenced in the story's `## Skills` section
    - Required skills (counted once)
 3. **Decision**:
-   - `estimated ≤ budget` → proceed to Phase 1
+   - `estimated ≤ budget` → proceed to Stage 4.1
    - `estimated > budget` → overflow protocol (below)
 
 **Overflow protocol**:

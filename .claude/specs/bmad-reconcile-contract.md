@@ -14,7 +14,7 @@
 > companion file `story-NN-<slug>.reconcile.md` has a populated
 > `## Deviations` section, the BMad session MUST satisfy what's
 > specified below to integrate cleanly with the Kiat pipeline.
-> Kiat agents (Team Lead at Phase 6, tech-spec-writer at Phase -1,
+> Kiat agents (Team Lead at Stage 7, tech-spec-writer at Stage 2,
 > coders at scope reading) are entitled to assume the contract holds.
 
 ---
@@ -23,7 +23,7 @@
 
 `/bmad-correct-course` handles **one story at a time**, invoked by the
 human after Team Lead emits a `RECONCILIATION_NEEDED:` notification at
-Phase 5d. The epic-level rollup is `/bmad-retrospective` — a sibling
+Stage 6.3. The epic-level rollup is `/bmad-retrospective` — a sibling
 BMad skill with its own contract (per-epic, not per-story).
 
 Why split: per-story reconcile is reactive (close out the deviations
@@ -37,24 +37,24 @@ different outputs.
 ## Trigger and invocation flow
 
 1. **Coder** ships story, emits `Business Deviations:` block in handoff.
-2. **Team Lead Phase 5c** aggregates the deviations into the companion
+2. **Team Lead Stage 6.2** aggregates the deviations into the companion
    file `story-NN-<slug>.reconcile.md` (creating it) under the
    `## Deviations` section using the strict bullet schema. The
    validator hook (`check-post-delivery-schema.sh`) enforces.
-3. **Team Lead Phase 5c** creates the companion file
+3. **Team Lead Stage 6.2** creates the companion file
    `story-NN-<slug>.reconcile.md` with a `## Deviations` section
    populated from coder handoffs. The story spec file itself is NOT
    modified — it never carries a deviations section.
-4. **Team Lead Phase 5d** detects the companion file's existence and
+4. **Team Lead Stage 6.3** detects the companion file's existence and
    emits a `RECONCILIATION_NEEDED:` notification block telling the
    human which story needs `/bmad-correct-course`.
-5. **Team Lead Phase 6** writes the rollup and ships the story. The
-   reconciliation guard at Phase 6 refuses to flip the epic to `✅
+5. **Team Lead Stage 7** writes the rollup and ships the story. The
+   reconciliation guard at Stage 7 refuses to flip the epic to `✅
    Done` until every story with a `.reconcile.md` companion file
    carries the `RECONCILE_DONE` marker.
 6. **Human** invokes `/bmad-correct-course <story-path>` when
    convenient (immediately if the next story's scope might overlap;
-   can defer otherwise — but Team Lead's Phase 0c will auto-promote on
+   can defer otherwise — but Team Lead's Stage 3.2 will auto-promote on
    overlap if too long).
 7. **BMad session** running `/bmad-correct-course` reads the
    `.reconcile.md` companion file's `## Deviations` section, triages
@@ -66,9 +66,9 @@ decides when.
 
 ---
 
-## Solo-mode recovery (no Phase 5c upstream)
+## Solo-mode recovery (no Stage 6.2 upstream)
 
-When Team Lead ships a story via Phase -2 solo-mode (see [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Phase -2 — Solo-mode fast path"), there is **no Phase 5c upstream** — the `.reconcile.md` companion file does NOT exist when `/bmad-correct-course` is invoked. The skill detects this and switches to **recover-mode**.
+When Team Lead ships a story via Stage 1.1 solo-mode (see [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Stage 1.1 — Solo-mode fast path"), there is **no Stage 6.2 upstream** — the `.reconcile.md` companion file does NOT exist when `/bmad-correct-course` is invoked. The skill detects this and switches to **recover-mode**.
 
 ### Detection
 
@@ -83,26 +83,26 @@ If the companion file is missing for any other reason (e.g., human deleted it, f
 ### Sources of truth (in priority order) for the reconstructed `## Deviations`
 
 1. **The story file's `## What was deferred` section** — explicit deferrals listed by Team Lead at solo-ship time. Each deferral becomes one deviation bullet (typically tagged `SCOPE_*_DEFERRED`).
-2. **The story file's `## Implementation discipline` section** — process choices (solo-mode authorization, Phase 5c skip, reviewer proxy used). At minimum produces one `PROCESS_SOLO_MODE` deviation and one `PROCESS_RECONCILE_RECOVERY` deviation, both L1 audit-only.
-3. **The commit body** (`git show <story_commit_sha> --no-patch`) — Team Lead's solo authorization quote, additional rationale, and any "shipped solo" markers required by Phase -2 step 4.
+2. **The story file's `## Implementation discipline` section** — process choices (solo-mode authorization, Stage 6.2 skip, reviewer proxy used). At minimum produces one `PROCESS_SOLO_MODE` deviation and one `PROCESS_RECONCILE_RECOVERY` deviation, both L1 audit-only.
+3. **The commit body** (`git show <story_commit_sha> --no-patch`) — Team Lead's solo authorization quote, additional rationale, and any "shipped solo" markers required by Stage 1.1 step 4.
 4. **The story spec text itself** (read-only) — for `SpecRef` pointers to acceptance criteria the solo ship absorbed or deferred.
 
 ### Procedure
 
 1. Create the `.reconcile.md` companion file from scratch using the canonical template at [`../../delivery/epics/epic-template/story-NN-slug.reconcile.md`](../../delivery/epics/epic-template/story-NN-slug.reconcile.md).
-2. Add a header note in the file's intro explaining it was created by recover-mode (not Team Lead Phase 5c). Cite the Phase 5c skip authorization (verbatim user quote + date from the commit body) so the audit trail names the human who authorized the bypass.
-3. Populate `## Deviations` from the priority-ordered sources above, following the strict bullet schema (Tag, Severity, Summary, File, SpecRef, Status, Why) — same as the normal Phase 5c output.
+2. Add a header note in the file's intro explaining it was created by recover-mode (not Team Lead Stage 6.2). Cite the Stage 6.2 skip authorization (verbatim user quote + date from the commit body) so the audit trail names the human who authorized the bypass.
+3. Populate `## Deviations` from the priority-ordered sources above, following the strict bullet schema (Tag, Severity, Summary, File, SpecRef, Status, Why) — same as the normal Stage 6.2 output.
 4. Continue with the standard reconcile flow (L1/L2/L3 triage, queue closures, `RECONCILE_DONE` marker, `reconcile_complete` event). The output is indistinguishable from a normal reconcile — only the `## Deviations` provenance differs, and that's documented in the header.
 
 ### When NOT to enter recover-mode
 
-- The companion file already exists — even if `## Deviations` is empty (`<!-- POST_DELIVERY_BLOCK_BEGIN -->\n_(no deviations)_\n<!-- POST_DELIVERY_BLOCK_END -->`). Empty deviations is a legitimate Phase 5c outcome ("story shipped exactly as specified"); do not overwrite.
-- The story rollup event does NOT carry `"mode": "solo"`. Without that flag, the missing companion is a Phase 5c bug, not a solo-mode bypass — surface to the human and halt.
+- The companion file already exists — even if `## Deviations` is empty (`<!-- POST_DELIVERY_BLOCK_BEGIN -->\n_(no deviations)_\n<!-- POST_DELIVERY_BLOCK_END -->`). Empty deviations is a legitimate Stage 6.2 outcome ("story shipped exactly as specified"); do not overwrite.
+- The story rollup event does NOT carry `"mode": "solo"`. Without that flag, the missing companion is a Stage 6.2 bug, not a solo-mode bypass — surface to the human and halt.
 - The story file lacks an `## Implementation discipline` section AND the commit body lacks a solo-mode marker. Recover-mode without provenance is unsafe.
 
 ### Why recover-mode exists (for the framework port reviewer)
 
-Two recurrences validated the pattern: epic-12 story-01 (INSEE V3.11 portal migration 2026-05-01) and epic-03 story-02 (Levé palette propagation 2026-05-02). Both shipped solo, both were recovered cleanly post-hoc by `/bmad-correct-course` reading the story file + commit body. Codifying recover-mode pairs with [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Phase -2 — Solo-mode fast path" — without recover-mode, solo-mode stories would orphan their reconciliation and break the epic close guard.
+Two recurrences validated the pattern: epic-12 story-01 (INSEE V3.11 portal migration 2026-05-01) and epic-03 story-02 (Levé palette propagation 2026-05-02). Both shipped solo, both were recovered cleanly post-hoc by `/bmad-correct-course` reading the story file + commit body. Codifying recover-mode pairs with [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) §"Stage 1.1 — Solo-mode fast path" — without recover-mode, solo-mode stories would orphan their reconciliation and break the epic close guard.
 
 ---
 
@@ -132,7 +132,7 @@ following:
 ### 1. Append the `## Reconciliation` section to the SAME `.reconcile.md` file
 
 The companion file `story-NN-<slug>.reconcile.md` already exists when
-`/bmad-correct-course` runs (it was created by Team Lead at Phase 5c
+`/bmad-correct-course` runs (it was created by Team Lead at Stage 6.2
 with the `## Deviations` section). `/bmad-correct-course` updates the
 SAME file in place — it does NOT create a new file. Specifically:
 
@@ -204,7 +204,7 @@ in [`metrics-events.md`](metrics-events.md)). The event aggregates the
 counts (L1 applied, L2 queued, L3 blocked) and is what
 `/bmad-retrospective` reads to discover which stories had reconciles.
 
-**Phase 1 observability addition — `severity_by_tag` field (required).**
+**Stage 4.1 observability addition — `severity_by_tag` field (required).**
 The event MUST include a `severity_by_tag` object that breaks down
 post-triage severity counts per tag-enum prefix. Derive it by walking
 the FINAL `## Deviations` block in the `.reconcile.md` (post any
@@ -231,10 +231,10 @@ Example for a story with 2 SPEC_GAP (1 L1, 1 L2), 1 DECISION (L1), and
 ```
 
 `report.py` consumes this field to render the **Severity × Tag**
-cross-table — a Phase 1 signal designed to surface "which categories
+cross-table — a Stage 4.1 signal designed to surface "which categories
 of deviation cluster at which severities, project-wide".
 
-Pairing with `reconciliation_needed` (Team Lead Phase 5d) lets
+Pairing with `reconciliation_needed` (Team Lead Stage 6.3) lets
 `report.py` also compute **human triage latency**
 (`reconcile_complete.ts - reconciliation_needed.ts`). No action
 required from `/bmad-correct-course` for the latency signal — Team
@@ -319,7 +319,7 @@ Notes):
   matching in last N lines of `events.jsonl`)
 
 A re-run is rare but legitimate — typically the result of a coder
-catching a Phase 5c aggregation bug. Don't double-act.
+catching a Stage 6.2 aggregation bug. Don't double-act.
 
 ---
 
@@ -384,8 +384,8 @@ Without `_epic.reconcile.md`, the epic CANNOT close. See
 - [`metrics-events.md`](metrics-events.md) — `epic_block`,
   `reconcile_complete`, `reconcile_failed` event schemas
 - [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) — Phase
-  5c (aggregation), Phase 5d (`RECONCILIATION_NEEDED` notification),
-  Phase 6 (reconciliation guard)
+  5c (aggregation), Stage 6.3 (`RECONCILIATION_NEEDED` notification),
+  Stage 7 (reconciliation guard)
 - [`../../delivery/business/README.md`](../../delivery/business/README.md) §"Review mode" —
   BMad's writing protocol; references this contract as the
   authoritative spec for what `/bmad-correct-course` must produce in

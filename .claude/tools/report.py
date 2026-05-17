@@ -1177,9 +1177,12 @@ def _validate_rollup(
 
     # escalation-specific required fields
     if escalated:
-        for field in ("escalated_to", "reason", "reached_phase"):
+        for field in ("escalated_to", "reason"):
             if field not in evt:
                 issues.append(f"L{lineno}: {name} missing required field `{field}`")
+        # `reached_stage` (v2+) or legacy `reached_phase` (v1/v1.1) — accept either
+        if "reached_stage" not in evt and "reached_phase" not in evt:
+            issues.append(f"L{lineno}: {name} missing required field `reached_stage` (or legacy `reached_phase`)")
         valid_reasons = {
             "spec_blocked", "spec_clarification_loop", "budget_overflow",
             "fix_budget_exhausted", "needs_discussion", "security_blocker",

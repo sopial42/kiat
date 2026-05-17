@@ -13,11 +13,11 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 ├── README.md                      # This file (framework doc index)
 ├── settings.json                  # Permissions allowlist + SubagentStop hook wiring (Layer 7)
 ├── agents/                        # 6 kiat-* agent system prompts
-│   ├── kiat-tech-spec-writer.md   # Sub-agent of Team Lead (spawned at Phase -1 for informal requests)
+│   ├── kiat-tech-spec-writer.md   # Sub-agent of Team Lead (spawned at Stage 2 for informal requests)
 │   ├── kiat-team-lead.md          # Pipeline orchestrator (slim entry — loads stage files on demand)
 │   ├── team-lead/                 # Stage-specific procedures loaded by Team Lead at each pipeline phase
 │   │   ├── intake.md              # Solo-mode, clean tree, reconciliation pre-launch
-│   │   ├── spec-authoring.md      # Phase -1 + prompt hygiene
+│   │   ├── spec-authoring.md      # Stage 2 + prompt hygiene
 │   │   ├── validation.md          # Spec diff-check, queue overlap, context budget
 │   │   ├── delivery.md            # Scope, launch coders, test feedback loop
 │   │   ├── review.md              # 3-way verdict, Review Log append
@@ -75,10 +75,10 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 - Project conventions in `../delivery/specs/` + business docs in `../delivery/business/` (on-demand, only the ones relevant to the story scope)
 
 ### `kiat-team-lead` reads
-- [./specs/context-budgets.md](./specs/context-budgets.md) — to run Phase 0b pre-flight check
+- [./specs/context-budgets.md](./specs/context-budgets.md) — to run Stage 3.3 pre-flight check
 - [./specs/metrics-events.md](./specs/metrics-events.md) — to emit JSONL events at phase transitions
 - [./specs/failure-patterns.md](./specs/failure-patterns.md) — to consult before escalation
-- [./skills/kiat-validate-spec/SKILL.md](./skills/kiat-validate-spec/SKILL.md) — invoked at Phase 0a (defense in depth)
+- [./skills/kiat-validate-spec/SKILL.md](./skills/kiat-validate-spec/SKILL.md) — invoked at Stage 3.1 (defense in depth)
 
 ### `kiat-backend-coder` / `kiat-frontend-coder` read
 - [./skills/kiat-test-patterns-check/SKILL.md](./skills/kiat-test-patterns-check/SKILL.md) — invoked at Step 0.5
