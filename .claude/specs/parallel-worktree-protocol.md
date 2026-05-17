@@ -361,7 +361,7 @@ In worktree mode, Playwright assumes the stack is already up (`webServer: undefi
 
 ### 8.3 Team Lead — context
 
-`kiat-team-lead.md` gets a one-line addition to its Phase 0 protocol:
+`kiat-team-lead.md` gets a one-line addition to its Stage 1.2 (clean working tree gate) protocol:
 
 > If running inside a worktree (`KIAT_WORKTREE_ID` set), include the worktree-id in the metrics rollup so reports can correlate failures with parallel-execution conditions.
 

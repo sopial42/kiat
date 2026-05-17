@@ -41,7 +41,7 @@ Minimal but production-shape UI proves the auth plumbing, RSC boundary, and desi
 
 **No mockups — implementer uses the existing design system (neutral Tailwind v4 defaults) and Shadcn primitives directly.** No custom visual work in EPIC 00.
 
-This is a deliberate choice, not an oversight: the scaffold is design-neutral by construction so a forker's first visual reference in EPIC 01+ doesn't have to fight an existing design. See `kiat-how-to.md` → "Scaffold teaches patterns, not aesthetics".
+This is a deliberate choice, not an oversight: the scaffold is design-neutral by construction so a forker's first visual reference in EPIC 01+ doesn't have to fight an existing design. See [`README.md#linking-a-visual-reference-to-a-story`](../../../README.md#linking-a-visual-reference-to-a-story) — "EPIC 00 scaffold is design-neutral by construction".
 
 ---
 

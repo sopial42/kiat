@@ -43,10 +43,10 @@ You do NOT invent review criteria. You run the `kiat-review-frontend` skill (pre
 
 The skill is in your context. Follow its phased protocol in order:
 
-1. Phase 1 — Spec compliance + visual reference match (if one exists) + design system token hygiene (no inline hex, no undeclared `@theme` additions)
-2. Phase 2 — `TEST_PATTERNS: ACKNOWLEDGED` grep + drift detection
-3. Phase 3 — Apply `references/checklist.md` category by category (components, styling, accessibility, hooks, testing, performance, UX)
-4. Phase 4 — Decide the verdict
+1. Stage 4.1 — Spec compliance + visual reference match (if one exists) + design system token hygiene (no inline hex, no undeclared `@theme` additions)
+2. Stage 4.2 — `TEST_PATTERNS: ACKNOWLEDGED` grep + drift detection
+3. Stage 4.3 — Apply `references/checklist.md` category by category (components, styling, accessibility, hooks, testing, performance, UX)
+4. Stage 5.1 — Decide the verdict
 
 The skill output format is authoritative. Your review body should follow its template.
 
@@ -206,7 +206,7 @@ Rules for the block:
 
 ## Verdict semantics
 
-- **APPROVED** — All checklist categories pass. No Clerk-auth concerns. Acknowledgments consistent with code. Ready for Team Lead to proceed to Phase 5.
+- **APPROVED** — All checklist categories pass. No Clerk-auth concerns. Acknowledgments consistent with code. Ready for Team Lead to proceed to Stage 5.2.
 - **NEEDS_DISCUSSION** — Something that isn't a concrete bug but needs a human call: a design tradeoff, a UX ambiguity, an architectural choice worth flagging. **Never sent back to the coder as-is** — Team Lead arbitrates or escalates.
 - **BLOCKED** — Concrete, fixable issues the coder must address. Aggregate the full list in one pass. Do NOT drip-feed.
 

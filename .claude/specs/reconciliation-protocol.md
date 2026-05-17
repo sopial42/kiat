@@ -1,8 +1,8 @@
 # Reconciliation Protocol (Story-level + Epic-level)
 
 > **Why this file exists.** The existing pipeline already captures coder
-> deviations after Phase 5c and prevents an epic from closing while any
-> story has unreconciled deviations (Phase 6 reconciliation guard). This
+> deviations after Stage 6.2 and prevents an epic from closing while any
+> story has unreconciled deviations (Stage 7 reconciliation guard). This
 > file extends that foundation with **severity tiers**, a **queue
 > mechanism**, **companion `.reconcile.md` files** (holding both
 > deviations and reconciliation in one place), and **auto-promotion
@@ -14,7 +14,7 @@ This document is the single source of truth for:
 1. The **L1 / L2 / L3 severity model** layered on top of the existing
    `AC-N | SPEC_GAP | DECISION` deviation tags.
 2. The **`.reconcile.md` companion-file format** — contains BOTH
-   deviations (Team Lead Phase 5c) AND reconciliation outcome
+   deviations (Team Lead Stage 6.2) AND reconciliation outcome
    (`/bmad-correct-course`). The story spec file stays untouched.
 3. The **queue contract** at `delivery/_queue/needs-human-review.md` —
    write-once by reconcile, read-many by humans and the epic retro,
@@ -38,9 +38,9 @@ delivery/epics/epic-X/
 ├── _epic.md                              ← spec (Business Context + tech)
 ├── _epic.reconcile.md                    ← epic-level retro outcome
 │                                            (created by /bmad-retrospective)
-├── story-NN-<slug>.md                    ← spec (read-only after Phase 0)
+├── story-NN-<slug>.md                    ← spec (read-only after Stage 3 validation)
 └── story-NN-<slug>.reconcile.md          ← deviations + reconciliation
-                                            (created by Team Lead Phase 5c
+                                            (created by Team Lead Stage 6.2
                                              only when deviations exist;
                                              updated by /bmad-correct-course)
 ```
@@ -103,9 +103,9 @@ itself never carries a Post-Delivery Notes section in the new model.
 ┌──────────────────────────────────────────────────────────────────────┐
 │  TEAM LEAD PRE-FLIGHT for story-(NN+1)                               │
 │                                                                      │
-│  Phase 0:  reads events.jsonl for unresolved epic_block (L3)         │
+│  Stage 1.3: reads events.jsonl for unresolved epic_block (L3)         │
 │            → REFUSES to launch on hit                                 │
-│  Phase 0c: reads queue for OPEN L2, checks scope overlap             │
+│  Stage 3.2: reads queue for OPEN L2, checks scope overlap             │
 │            → AUTO-PROMOTES to L3 on hit, then refuses                │
 └──────────────────────────────────────────────────────────────────────┘
 
@@ -149,7 +149,7 @@ severity (how reconcile should treat it).
 |---|---|---|---|---|
 | **L1 — auto-apply** | Reversible, narrow, the canonical landing spot is obvious | reconcile (mechanically) | reconcile | No |
 | **L2 — propose & queue** | Judgment call, multiple candidate landing spots, or affects nothing immediately downstream | reconcile (writes proposal) | human (async) | No, unless promoted |
-| **L3 — escalate & block** | Contradicts existing `delivery/business/` rule, breaks an already-shipped story, or is auto-promoted from L2 due to scope overlap | reconcile or Team Lead Phase 0c | human (synchronous) | **Yes — Team Lead refuses next story launch** |
+| **L3 — escalate & block** | Contradicts existing `delivery/business/` rule, breaks an already-shipped story, or is auto-promoted from L2 due to scope overlap | reconcile or Team Lead Stage 3.2 | human (synchronous) | **Yes — Team Lead refuses next story launch** |
 
 The category does not determine the severity by itself. A `DECISION`
 entry can be L1 (one-line addition to an existing convention), L2 (new
@@ -307,7 +307,7 @@ hold: (a) the deviation classifies as L1 by the severity gate, and (b)
 the coder has already corrected the code / test / doc inline, in the
 same commit as the production code. The originating PR ships the fix;
 `/bmad-correct-course` sees the entry for audit only — no further
-action. The reviewer cross-checks at review-time; Team Lead Phase 5c
+action. The reviewer cross-checks at review-time; Team Lead Stage 6.2
 re-checks at aggregation. This is the **producer-pays** convention:
 the agent who discovered the deviation absorbs the cost while the file
 is still warm, instead of routing it through human triage.
@@ -384,7 +384,7 @@ adjusts a transaction scope so a subquery sees the right GUC. But it
 is **not a new RLS policy and not a widening of an existing policy**:
 it is a callsite-level fix that makes a regression-gated handler honor
 the RLS policy that story-02a already shipped. The reviewer
-differential-checked it cycle-1; Phase 5c kept it L1 because the
+differential-checked it cycle-1; Stage 6.2 kept it L1 because the
 producer-pays condition holds (fix landed inline, reversible by
 reverting the tx widening). The line: **if the diff changes a policy
 or widens what data crosses a tenant boundary, route through
@@ -397,7 +397,7 @@ NEEDS_PROMOTION — see veto reasoning above.
 
 ## The `story-NN-<slug>.reconcile.md` schema (one file, two sections)
 
-Created by **Team Lead at Phase 5c** (Deviations section) and updated by
+Created by **Team Lead at Stage 6.2** (Deviations section) and updated by
 **`/bmad-correct-course`** (Reconciliation section). Lives next to the
 story spec file in the same epic directory. Created **only when at
 least one coder reported a deviation** — stories that ship as
@@ -410,7 +410,7 @@ Canonical template:
 # Deviations & Reconciliation: story-NN-<slug>
 
 > Companion to [story-NN-<slug>.md](./story-NN-<slug>.md). Created by
-> Team Lead Phase 5c (Deviations section), updated by
+> Team Lead Stage 6.2 (Deviations section), updated by
 > `/bmad-correct-course` (Reconciliation section). The story spec file
 > itself stays untouched.
 >
@@ -423,7 +423,7 @@ Canonical template:
 
 ## Deviations
 
-> Aggregated by Team Lead at Phase 5c from each coder's `Business
+> Aggregated by Team Lead at Stage 6.2 from each coder's `Business
 > Deviations:` handoff block. Validated by
 > `.claude/tools/hooks/check-post-delivery-schema.sh` on Team Lead
 > SubagentStop. Consumed by `/bmad-correct-course` (per story) and
@@ -538,7 +538,7 @@ Source of truth for the enum: this file. If the enum changes, update both this t
 The HTML comment markers `POST_DELIVERY_BLOCK_BEGIN/END` are **contract
 markers** the validator hook and `/bmad-correct-course` both grep for.
 The `RECONCILE_DONE` marker is what Team Lead's reconciliation guard at
-Phase 6 greps for to determine "this story has been fully reconciled".
+Stage 7 greps for to determine "this story has been fully reconciled".
 
 ### Severity hints for the coder
 
@@ -588,7 +588,7 @@ reconciliation guard).
 ## The queue file: `delivery/_queue/needs-human-review.md`
 
 Append-only by `/bmad-correct-course`, force-closed and archived by
-`/bmad-retrospective`, read by Team Lead at Phase 0c (scope-overlap
+`/bmad-retrospective`, read by Team Lead at Stage 3.2 (scope-overlap
 check) and humans (anytime). Schema and operational rules:
 [`../../delivery/_queue/README.md`](../../delivery/_queue/README.md).
 
@@ -614,7 +614,7 @@ the live file. The move is verbatim: heading, body, status,
 project — archived IDs are **never reused**.
 
 This keeps the live queue scannable for humans and short for Team
-Lead's Phase 0c scope-overlap scan, while preserving the full audit
+Lead's Stage 3.2 scope-overlap scan, while preserving the full audit
 trail under git-tracked archive files. Auditors read both:
 
 - `needs-human-review.md` for "what's currently in flight"
@@ -647,7 +647,7 @@ ID, even after a REJECTED entry.
 | `[OPEN]` | Awaiting human triage |
 | `[RESOLVED]` | Human accepted, action taken |
 | `[REJECTED]` | Human declined |
-| `[PROMOTED]` | Auto-escalated to L3 by Team Lead Phase 0c (scope overlap) |
+| `[PROMOTED]` | Auto-escalated to L3 by Team Lead Stage 3.2 (scope overlap) |
 
 ---
 
@@ -658,7 +658,7 @@ story-N reconcile queues an L2, story-(N+1) needs the same artifact, and
 the second story's coder reinvents the pattern because the queue item is
 "only a proposal".
 
-The protection: at **Phase 0c of every new story**, **Team Lead** scans
+The protection: at **Stage 3.2 of every new story**, **Team Lead** scans
 the queue and asks one question per OPEN L2 entry:
 
 > "Does this new story's scope overlap any of the L2's `Affects (files)`
@@ -670,18 +670,18 @@ This lives in Team Lead, not in tech-spec-writer, because:
   -1 (informal request or partial story). For an existing complete
   story file, tech-spec-writer is skipped — and the queue must still be
   scanned.
-- By Phase 0c, the story file is finalized on disk regardless of whether
-  Phase -1 ran. Team Lead already loaded it at Phase 0a for diff-check.
+- By Stage 3.2, the story file is finalized on disk regardless of whether
+  Stage 2 ran. Team Lead already loaded it at Stage 3.1 for diff-check.
 - The scan is mechanical (grep + path-prefix comparison), no creative
   judgment required. Spawning a sub-agent for it is unnecessary
   overhead.
 
 | Answer | Action |
 |---|---|
-| No | Proceed to Phase 0b. |
+| No | Proceed to Stage 3.3. |
 | Yes (overlap) | **AUTO-PROMOTE** the L2 to L3 — change queue status to `[PROMOTED]`, write an `epic_block` event to `events.jsonl` citing the queue ID with `source: "kiat-team-lead"`. Flip the story to `🛑 Blocked` and escalate to the user. |
 
-Team Lead's audit line on every Phase 0c:
+Team Lead's audit line on every Stage 3.2:
 
 ```
 Queue scope-overlap check: 3 OPEN L2 entries reviewed, 0 overlaps with story-NN scope ✓
@@ -699,13 +699,13 @@ Queue scope-overlap check: 3 OPEN L2 entries reviewed, 1 overlap (Q-014 affects 
 
 | Component | Triggered by | Reads | Writes |
 |---|---|---|---|
-| **Team Lead Phase 5c** (Deviations aggregator) | After Phase 5b (pitfall capture), before Phase 5d (notification) | Each coder's `Business Deviations:` handoff block | If any deviations: creates `story-NN-<slug>.reconcile.md` with `## Deviations` section. If all NONE: nothing. |
+| **Team Lead Stage 6.2** (Deviations aggregator) | After Stage 6.1 (pitfall capture), before Stage 6.3 (notification) | Each coder's `Business Deviations:` handoff block | If any deviations: creates `story-NN-<slug>.reconcile.md` with `## Deviations` section. If all NONE: nothing. |
 | **Validator hook** (`check-post-delivery-schema.sh`) | `SubagentStop` for `kiat-team-lead` | Any `.reconcile.md` modified during the run | nothing — exit 0 (pass) or 2 (block) |
-| **Team Lead Phase 5d** (notification) | After Phase 5c (only if .reconcile.md was created) | nothing | `RECONCILIATION_NEEDED:` notification block in Team Lead's output |
+| **Team Lead Stage 6.3** (notification) | After Stage 6.2 (only if .reconcile.md was created) | nothing | `RECONCILIATION_NEEDED:` notification block in Team Lead's output |
 | **`/bmad-correct-course`** (BMad skill, **human-invoked**) | When human runs `/bmad-correct-course` on a story with a `.reconcile.md` | Companion `.reconcile.md` §Deviations + queue + `delivery/business/` (read-only) | Same `.reconcile.md` (appends `## Reconciliation` section + `RECONCILE_DONE`) + queue (append L2) + `events.jsonl` (epic_block for L3) + `delivery/business/` or `delivery/specs/` (apply L1) |
-| **Team Lead Phase 0** (pre-launch L3 check) | First thing for every new story | `events.jsonl` (search for unresolved `epic_block`) | nothing — refuses to launch on hit |
-| **Team Lead Phase 0c** (queue scope-overlap check) | After spec diff-check, before context budget | Queue file + new story's scope | nothing if no overlap; queue (status → `PROMOTED`) + `events.jsonl` (epic_block) on overlap |
-| **Team Lead Phase 6** (reconciliation guard) | Before flipping epic to `✅ Done` | Every story's `.reconcile.md` (or legacy inline marker) + `_epic.reconcile.md` | nothing — refuses epic close on missing markers |
+| **Team Lead Stage 1.3** (pre-launch L3 check) | First thing for every new story | `events.jsonl` (search for unresolved `epic_block`) | nothing — refuses to launch on hit |
+| **Team Lead Stage 3.2** (queue scope-overlap check) | After spec diff-check, before context budget | Queue file + new story's scope | nothing if no overlap; queue (status → `PROMOTED`) + `events.jsonl` (epic_block) on overlap |
+| **Team Lead Stage 7** (reconciliation guard) | Before flipping epic to `✅ Done` | Every story's `.reconcile.md` (or legacy inline marker) + `_epic.reconcile.md` | nothing — refuses epic close on missing markers |
 | **`/bmad-retrospective`** (BMad skill, **human-invoked**) | After final story `✅ Done` (notification-driven) | All `*.reconcile.md` + queue file | `_epic.reconcile.md` + queue (force-close remaining OPEN entries, then move epic-N entries to `delivery/_queue/archive/epic-N.md`) |
 
 ---
@@ -714,17 +714,17 @@ Queue scope-overlap check: 3 OPEN L2 entries reviewed, 1 overlap (Q-014 affects 
 
 | Artifact | Lives in | Written by | Read by |
 |---|---|---|---|
-| Coder's raw deviation report | coder handoff (transient) | coder | Team Lead Phase 5c |
-| Per-story Deviations | `story-NN-<slug>.reconcile.md` §`## Deviations` | Team Lead Phase 5c | reconcile, retrospective |
-| Per-story Reconciliation outcome | `story-NN-<slug>.reconcile.md` §`## Reconciliation` | `/bmad-correct-course` | retrospective, humans, Team Lead Phase 6 guard |
-| L2 proposal (queued, live) | `delivery/_queue/needs-human-review.md` | `/bmad-correct-course` | Team Lead Phase 0c, retrospective, humans |
+| Coder's raw deviation report | coder handoff (transient) | coder | Team Lead Stage 6.2 |
+| Per-story Deviations | `story-NN-<slug>.reconcile.md` §`## Deviations` | Team Lead Stage 6.2 | reconcile, retrospective |
+| Per-story Reconciliation outcome | `story-NN-<slug>.reconcile.md` §`## Reconciliation` | `/bmad-correct-course` | retrospective, humans, Team Lead Stage 7 guard |
+| L2 proposal (queued, live) | `delivery/_queue/needs-human-review.md` | `/bmad-correct-course` | Team Lead Stage 3.2, retrospective, humans |
 | L2 proposal (archived, closed epic) | `delivery/_queue/archive/epic-N.md` | `/bmad-retrospective` (move) | humans (audit), `git grep` |
-| L3 escalation (blocking) | `delivery/metrics/events.jsonl` event `epic_block` | `/bmad-correct-course` or Team Lead Phase 0c | Team Lead pre-launch, humans |
-| Per-epic reconciliation rollup | `_epic.reconcile.md` | `/bmad-retrospective` | humans, future epic planning, Team Lead Phase 6 guard |
+| L3 escalation (blocking) | `delivery/metrics/events.jsonl` event `epic_block` | `/bmad-correct-course` or Team Lead Stage 3.2 | Team Lead pre-launch, humans |
+| Per-epic reconciliation rollup | `_epic.reconcile.md` | `/bmad-retrospective` | humans, future epic planning, Team Lead Stage 7 guard |
 | L1 changes (applied) | `delivery/business/*.md` or `delivery/specs/*.md` | `/bmad-correct-course` | everyone |
 
 The story spec file (`story-NN-<slug>.md`) is **never modified** by
-Phase 5c, `/bmad-correct-course`, or `/bmad-retrospective`. It carries
+Stage 6.2, `/bmad-correct-course`, or `/bmad-retrospective`. It carries
 its own append-only `## Review Log` section (Team Lead per-cycle) — that
 stays inline. The Deviations + Reconciliation pair lives entirely in the
 companion file. (Historical stories may carry a `## Prod Validation`
@@ -736,11 +736,11 @@ block from before EV-0007 retired Phase 7; new stories do not.)
 
 | Failure mode | Guard |
 |---|---|
-| Coder deviation buried in PR description, never reaches business layer | Phase 5c forces aggregation into `.reconcile.md` `## Deviations`; hook validates schema |
-| `.reconcile.md` exists but no one acts on it | Team Lead Phase 5d emits `RECONCILIATION_NEEDED:` notification; reconciliation guard at Phase 6 refuses epic close |
+| Coder deviation buried in PR description, never reaches business layer | Stage 6.2 forces aggregation into `.reconcile.md` `## Deviations`; hook validates schema |
+| `.reconcile.md` exists but no one acts on it | Team Lead Stage 6.3 emits `RECONCILIATION_NEEDED:` notification; reconciliation guard at Stage 7 refuses epic close |
 | Reconcile applies L1 changes silently, human never sees | every `.reconcile.md` is git-tracked and surfaces in PR diff |
-| L2 proposal queued and forgotten, next story rebuilds the same thing | Team Lead Phase 0c queue scan catches scope overlap and auto-promotes to L3 |
-| L3 in queue but Team Lead launches anyway | Team Lead pre-launch Phase 0 reads `events.jsonl` for open `epic_block` events and refuses |
+| L2 proposal queued and forgotten, next story rebuilds the same thing | Team Lead Stage 3.2 queue scan catches scope overlap and auto-promotes to L3 |
+| L3 in queue but Team Lead launches anyway | Team Lead pre-launch Stage 1.3 reads `events.jsonl` for open `epic_block` events and refuses |
 | Epic closes with proposals still OPEN | reconciliation guard requires `EPIC_RECONCILE_DONE` marker, retro must force-close every OPEN entry |
 | Live queue grows unbounded across epics, becomes unscannable | retro archives the closing epic's entries to `delivery/_queue/archive/epic-N.md` after force-close — IDs preserved, never reused |
 | Reconcile incorrectly applies L1 (wrong content, wrong file) | Doc-state audit at retro re-checks every claimed L1 landing |
@@ -758,7 +758,7 @@ block from before EV-0007 retired Phase 7; new stories do not.)
   `epic_unblock`, `reconcile_complete`, `reconcile_failed` event
   shapes.
 - [`available-skills.md`](available-skills.md) — registry the
-  tech-spec-writer scans during Phase -1 spec authoring.
+  tech-spec-writer scans during Stage 2 spec authoring.
 - [`../../delivery/epics/README.md`](../../delivery/epics/README.md) —
   the project-side contract for the two-layer story model + the
   companion `.reconcile.md` file.
@@ -766,8 +766,8 @@ block from before EV-0007 retired Phase 7; new stories do not.)
   BMad's writing protocol; Review-mode section references this protocol
   as the authoritative spec.
 - [`../agents/kiat-team-lead.md`](../agents/kiat-team-lead.md) — Phase
-  5c (creates `.reconcile.md` Deviations section), Phase 5d
-  (notification), Phase 6 (reconciliation guard).
+  5c (creates `.reconcile.md` Deviations section), Stage 6.3
+  (notification), Stage 7 (reconciliation guard).
 - [`../tools/hooks/check-post-delivery-schema.sh`](../tools/hooks/check-post-delivery-schema.sh) —
   validator hook on Team Lead `SubagentStop`, targets `.reconcile.md`
   files.

@@ -38,10 +38,10 @@ You do NOT invent review criteria. You run the `kiat-review-backend` skill (pre-
 
 The skill is in your context. Follow its phased protocol in order:
 
-1. Phase 1 — Contract check (spec → code)
-2. Phase 2 — `TEST_PATTERNS: ACKNOWLEDGED` grep + drift detection
-3. Phase 3 — Apply `references/checklist.md` category by category
-4. Phase 4 — Decide the verdict
+1. Stage 4.1 — Contract check (spec → code)
+2. Stage 4.2 — `TEST_PATTERNS: ACKNOWLEDGED` grep + drift detection
+3. Stage 4.3 — Apply `references/checklist.md` category by category
+4. Stage 5.1 — Decide the verdict
 
 The skill output format is authoritative. Your review body should follow its template.
 
@@ -221,7 +221,7 @@ Rules for the block:
 
 ## Verdict semantics
 
-- **APPROVED** — All checklist categories pass. No Clerk-auth concerns (or skill returned PASSED). Acknowledgments consistent with code. Ready for Team Lead to proceed to Phase 5.
+- **APPROVED** — All checklist categories pass. No Clerk-auth concerns (or skill returned PASSED). Acknowledgments consistent with code. Ready for Team Lead to proceed to Stage 5.2.
 - **NEEDS_DISCUSSION** — You found something that isn't a concrete bug but needs a human call: an architectural tradeoff, a spec ambiguity the coder interpreted one way that could reasonably be interpreted another, a design choice worth flagging. **Never send these back to the coder as-is** — Team Lead arbitrates or escalates to user.
 - **BLOCKED** — Concrete, fixable issues the coder must address. Aggregate the full list in one pass. Do NOT drip-feed issues across multiple cycles.
 

@@ -1,6 +1,6 @@
 # Backend Review Checklist
 
-This is the reference checklist loaded by `kiat-review-backend/SKILL.md` during Phase 3. Each category below is ordered by blast radius — higher categories first, because they cause the worst production incidents when they slip through.
+This is the reference checklist loaded by `kiat-review-backend/SKILL.md` during Stage 4.3. Each category below is ordered by blast radius — higher categories first, because they cause the worst production incidents when they slip through.
 
 Skim what's obviously fine in the diff and focus on what's non-trivial. A checklist item isn't a nit to flag — it's a question to answer. If the answer is "yes, the code handles this", move on.
 

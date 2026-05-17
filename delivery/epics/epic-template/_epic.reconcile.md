@@ -5,7 +5,7 @@
 > `✅ Done`. This file is the precondition for flipping the epic itself
 > to `✅ Done` — see the reconciliation guard in
 > [`../../../.claude/agents/kiat-team-lead.md`](../../../.claude/agents/kiat-team-lead.md)
-> Phase 6.
+> Stage 7.
 >
 > Schema and protocol authoritative source:
 > [`../../../.claude/specs/reconciliation-protocol.md`](../../../.claude/specs/reconciliation-protocol.md).

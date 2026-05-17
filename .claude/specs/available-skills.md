@@ -216,7 +216,7 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 - **Type**: Kiat-owned (framework)
 - **Size**: ~3k tokens (SKILL.md)
 - **Location**: `.claude/skills/kiat-ultra-review/SKILL.md`
-- **Purpose**: orchestrate a pre-prod / pre-cutover multi-phase audit — Phase 1 parallel 7-axis audit (backend / frontend / infra / CI / DB / docs / ops), Phase 2 three competing remediation plans (minimal / defensive / belt-and-suspenders), Phase 3 two adversarial meta-reviews (cynical + edge-case-hunter), Phase 4 synthesis to a final plan with non-negotiable gates. Distinct from per-PR review skills.
+- **Purpose**: orchestrate a pre-prod / pre-cutover multi-phase audit — Stage 4.1 parallel 7-axis audit (backend / frontend / infra / CI / DB / docs / ops), Stage 4.2 three competing remediation plans (minimal / defensive / belt-and-suspenders), Stage 4.3 two adversarial meta-reviews (cynical + edge-case-hunter), Stage 5.1 synthesis to a final plan with non-negotiable gates. Distinct from per-PR review skills.
 
 **When to use** (orchestrator session's trigger criteria — this skill is NOT invoked by stories, it's invoked by a top-level session before stories exist):
 - Project approaching its first production cutover
@@ -227,7 +227,7 @@ If a skill below shows status `PENDING`, its upstream source has not been identi
 **When to skip**:
 - Reviewing a single PR or diff (use `kiat-review-backend` / `kiat-review-frontend` / `differential-review`)
 - Reviewing a single story spec (use `kiat-validate-spec`)
-- Reviewing one specific dimension only (spawn a single audit sub-agent, Phase 1 only, don't run the full protocol)
+- Reviewing one specific dimension only (spawn a single audit sub-agent, Stage 4.1 only, don't run the full protocol)
 
 **Output**: artefacts under `_bmad-output/ultra-review/` (gitignored — drafts), then transcribed into a Kiat epic + stories under `delivery/epics/epic-NN-pre-prod-cutover-followup/` for the standard per-story flow to take over.
 
@@ -308,7 +308,7 @@ When writing a story, the tech-spec-writer:
 
 ## Relationship with context budgets
 
-Contextual skills declared in a story's `## Skills` section count against the coder's 25k context budget during the Phase 0b pre-flight check. Team Lead reads the `## Skills` section, estimates the total cost, and either:
+Contextual skills declared in a story's `## Skills` section count against the coder's 25k context budget during the Stage 3.3 pre-flight check. Team Lead reads the `## Skills` section, estimates the total cost, and either:
 
 - **Proceeds** if the sum (ambient docs + story spec + contextual skills) fits the budget
 - **Escalates to `kiat-tech-spec-writer`** if it doesn't, asking to either trim skills or split the story
