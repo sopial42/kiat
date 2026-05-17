@@ -79,7 +79,7 @@ _Link only the entries that actually matter for this specific story. Don't list 
 
 > Two valid shapes, pick one per story (never mix). Full rules:
 > [`../README.md#mockups--how-ui-designs-flow-into-stories`](../README.md#mockups--how-ui-designs-flow-into-stories)
-> and [`../../../kiat-how-to.md#5-visual-references--figma-urls-or-static-screenshots`](../../../kiat-how-to.md).
+> and the repo-root [`README.md#linking-a-visual-reference-to-a-story`](../../../README.md#linking-a-visual-reference-to-a-story).
 
 **Shape A — Live Figma URL** (use when the designer actively maintains Figma):
 

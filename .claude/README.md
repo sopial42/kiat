@@ -14,7 +14,15 @@ If you're looking for project-level docs (React patterns, REST conventions, Tail
 ├── settings.json                  # Permissions allowlist + SubagentStop hook wiring (Layer 7)
 ├── agents/                        # 6 kiat-* agent system prompts
 │   ├── kiat-tech-spec-writer.md   # Sub-agent of Team Lead (spawned at Phase -1 for informal requests)
-│   ├── kiat-team-lead.md          # Pipeline orchestrator
+│   ├── kiat-team-lead.md          # Pipeline orchestrator (slim entry — loads stage files on demand)
+│   ├── team-lead/                 # Stage-specific procedures loaded by Team Lead at each pipeline phase
+│   │   ├── intake.md              # Solo-mode, clean tree, reconciliation pre-launch
+│   │   ├── spec-authoring.md      # Phase -1 + prompt hygiene
+│   │   ├── validation.md          # Spec diff-check, queue overlap, context budget
+│   │   ├── delivery.md            # Scope, launch coders, test feedback loop
+│   │   ├── review.md              # 3-way verdict, Review Log append
+│   │   ├── closeout.md            # Pitfall capture, deviations companion, reconciliation notify
+│   │   └── ship.md                # Commit guard, integration test, rollup, final status
 │   ├── kiat-backend-coder.md
 │   ├── kiat-frontend-coder.md
 │   ├── kiat-backend-reviewer.md

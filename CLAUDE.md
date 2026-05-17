@@ -105,8 +105,8 @@ Framework machinery — **not project-specific**, do not edit per project:
 
 | What you need | Where to look |
 |---|---|
-| 7 enforcement layers, monitoring philosophy, vision | [`README.md`](README.md) |
-| Navigation hub | [`INDEX.md`](INDEX.md) |
+| Pitch, quick start, pipeline overview, philosophy | [`README.md`](README.md) |
+| Phase B credentials (Clerk, GCP, GitHub secrets) | [`kiat-getting-started.md`](kiat-getting-started.md) |
 | Agent definitions (6 kiat-* agents) | [`.claude/agents/`](.claude/agents/) |
 | Skill definitions (6 kiat-* skills) | [`.claude/skills/`](.claude/skills/) |
 | Context budgets spec (Layer 5) | [`.claude/specs/context-budgets.md`](.claude/specs/context-budgets.md) |

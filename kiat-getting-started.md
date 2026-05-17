@@ -221,7 +221,7 @@ Go to your GitHub repo → **Actions** tab. Watch `ci.yml` run:
 ## 8. Handoff to your client
 
 Once kiat-getting-started is done:
-- Send your collaborator the repo URL and point them to [`kiat-how-to.md`](kiat-how-to.md) — they'll see the two-persona workflow and can start a BMad session immediately to describe their domain.
+- Send your collaborator the repo URL and point them to [`README.md#the-two-personas`](README.md#the-two-personas) — they'll see the two-persona workflow and can start a BMad session immediately to describe their domain.
 - They never need to touch Clerk, GCP, or GitHub settings unless they're also the tech lead.
 
 ---

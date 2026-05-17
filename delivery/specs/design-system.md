@@ -288,4 +288,4 @@ When in doubt, leave the default. The scaffold stays neutral until a visual refe
 See also:
 - [frontend-architecture.md](frontend-architecture.md) — RSC boundary, hook patterns
 - [testing-pitfalls-frontend.md](testing-pitfalls-frontend.md) — UA01 (contrast), UA02 (auto-save timing)
-- `kiat-how-to.md` (repo root) — the two visual-reference shapes (Figma URL / static screenshots)
+- [`README.md#linking-a-visual-reference-to-a-story`](../../README.md#linking-a-visual-reference-to-a-story) — the two visual-reference shapes (Figma URL / static screenshots)

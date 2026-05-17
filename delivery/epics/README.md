@@ -240,7 +240,7 @@ Write `No mockups — implementer uses the existing design system`. The frontend
 - **Tech-spec-writer does NOT restate visual decisions** in the technical sections — it links. The frontend-coder fills the gap by reading the reference (WebFetch for Figma URLs, Read for screenshots — Claude is multimodal).
 - **The rule applies identically to both shapes**: whichever one carries the reference, it IS binding. Deviations during implementation are discussed in the review, never decided unilaterally.
 
-**What the template says:** see [`epic-template/story-NN-slug.md`](epic-template/story-NN-slug.md) for the canonical `### Mockups` block. The repo-root doc [`../../kiat-how-to.md`](../../kiat-how-to.md) section 5 has the human-oriented overview.
+**What the template says:** see [`epic-template/story-NN-slug.md`](epic-template/story-NN-slug.md) for the canonical `### Mockups` block. The repo-root [`../../README.md#linking-a-visual-reference-to-a-story`](../../README.md#linking-a-visual-reference-to-a-story) has the human-oriented overview.
 
 ### Rules BMad respects when writing here
 

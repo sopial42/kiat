@@ -44,7 +44,7 @@ First "real" feature on the EPIC 00 scaffold. Demonstrates the two-persona workf
 
 **No visual reference shipped with this starter** — implementer uses Shadcn primitives (`<DropdownMenu>`, `<Dialog>`, `<Form>`, `<Input>`, `<Button>`) with the design system's default tokens. The layout is deliberately functional, not branded.
 
-**This is exactly where your visual reference would go** when you adapt or replace this story. Two valid shapes (see `kiat-how-to.md` section 5):
+**This is exactly where your visual reference would go** when you adapt or replace this story. Two valid shapes (see [`README.md#linking-a-visual-reference-to-a-story`](../../../README.md#linking-a-visual-reference-to-a-story)):
 
 ```markdown
 ### Mockups
